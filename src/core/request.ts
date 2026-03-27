@@ -6,10 +6,15 @@ export type NormalizeRequestInput = {
 };
 
 export function normalizeRequest(
-  _input: NormalizeRequestInput
+  input: NormalizeRequestInput
 ): BrokerRequest {
+  if (input.task !== "turn this webpage into markdown") {
+    throw new Error(`Unsupported broker task: ${input.task}`);
+  }
+
   return {
     intent: "webpage_to_markdown",
-    outputMode: "markdown_only"
+    outputMode: "markdown_only",
+    url: input.url
   };
 }

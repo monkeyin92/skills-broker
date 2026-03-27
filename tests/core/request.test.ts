@@ -19,4 +19,22 @@ describe("normalizeRequest", () => {
 
     expect(normalized.outputMode).toBe("markdown_only");
   });
+
+  it("preserves the request url in the normalized broker request", () => {
+    const normalized = normalizeRequest({
+      task: "turn this webpage into markdown",
+      url: "https://example.com/path?q=1"
+    });
+
+    expect(normalized.url).toBe("https://example.com/path?q=1");
+  });
+
+  it("rejects tasks outside the v0 webpage_to_markdown family", () => {
+    expect(() =>
+      normalizeRequest({
+        task: "summarize this webpage",
+        url: "https://example.com"
+      })
+    ).toThrow("Unsupported broker task");
+  });
 });

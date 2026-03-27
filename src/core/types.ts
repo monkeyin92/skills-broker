@@ -11,4 +11,5 @@ export type BrokerOutcomeCode =
 export type BrokerRequest = {
   intent: BrokerIntent;
   outputMode: BrokerOutputMode;
+  url: string;
 };
