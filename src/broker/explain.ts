@@ -1,6 +1,6 @@
-import type { CapabilityCard } from "../core/capability-card";
-import type { BrokerIntent } from "../core/types";
-import type { RoutingHistory } from "./rank";
+import type { CapabilityCard } from "../core/capability-card.js";
+import type { BrokerIntent } from "../core/types.js";
+import type { RoutingHistory } from "./rank.js";
 
 export type ExplainDecisionInput = {
   currentHost: string;

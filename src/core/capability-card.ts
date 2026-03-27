@@ -1,4 +1,4 @@
-import type { BrokerIntent } from "./types";
+import type { BrokerIntent } from "./types.js";
 
 export type CapabilityCardKind = "skill" | "mcp";
 

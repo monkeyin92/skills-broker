@@ -1,4 +1,4 @@
-import { access, mkdtemp, readFile, rm } from "node:fs/promises";
+import { access, mkdtemp, readFile, rename, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { execFile } from "node:child_process";
@@ -13,12 +13,17 @@ describe("Claude Code smoke", () => {
     const runtimeDirectory = await mkdtemp(join(tmpdir(), "skills-broker-claude-code-"));
     const installDirectory = join(runtimeDirectory, "claude-code-plugin");
     const cacheFilePath = join(runtimeDirectory, "broker-cache.json");
+    const packageJsonPath = join(installDirectory, "package.json");
     const manifestPath = join(installDirectory, ".claude-plugin", "plugin.json");
     const installScriptPath = join(
       process.cwd(),
       "scripts",
       "install-claude-code.sh"
     );
+    const hostConfigPath = join(installDirectory, "config", "host-skills.seed.json");
+    const mcpConfigPath = join(installDirectory, "config", "mcp-registry.seed.json");
+    const runnerPath = join(installDirectory, "bin", "run-broker");
+    const distCliPath = join(installDirectory, "dist", "cli.js");
     const skillPath = join(
       installDirectory,
       "skills",
@@ -31,8 +36,13 @@ describe("Claude Code smoke", () => {
         cwd: process.cwd()
       });
 
+      await expect(access(packageJsonPath)).resolves.toBeUndefined();
       await expect(access(manifestPath)).resolves.toBeUndefined();
       await expect(access(skillPath)).resolves.toBeUndefined();
+      await expect(access(hostConfigPath)).resolves.toBeUndefined();
+      await expect(access(mcpConfigPath)).resolves.toBeUndefined();
+      await expect(access(runnerPath)).resolves.toBeUndefined();
+      await expect(access(distCliPath)).resolves.toBeUndefined();
 
       const manifest = JSON.parse(await readFile(manifestPath, "utf8"));
       expect(manifest).toMatchObject({
@@ -43,14 +53,19 @@ describe("Claude Code smoke", () => {
       const skillContents = await readFile(skillPath, "utf8");
       expect(skillContents).toContain("turn this webpage into markdown");
 
+      const relocatedInstallDirectory = join(
+        runtimeDirectory,
+        "claude-code-plugin-relocated"
+      );
+      await rename(installDirectory, relocatedInstallDirectory);
+
       const result = await runClaudeCodeAdapter(
         {
           task: "turn this webpage into markdown",
           url: "https://example.com/article"
         },
         {
-          installDirectory,
-          projectRoot: process.cwd(),
+          installDirectory: relocatedInstallDirectory,
           cacheFilePath
         }
       );
@@ -58,6 +73,7 @@ describe("Claude Code smoke", () => {
       expect(result.ok).toBe(true);
       expect(result.outcome.code).toBe("HANDOFF_READY");
       expect(result.handoff.context.currentHost).toBe("claude-code");
+      expect(result.handoff.request.url).toBe("https://example.com/article");
     } finally {
       await rm(runtimeDirectory, { recursive: true, force: true });
     }

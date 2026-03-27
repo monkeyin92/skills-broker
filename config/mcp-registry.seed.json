@@ -1,16 +1,32 @@
 {
-  "results": [
+  "servers": [
     {
-      "id": "mcp-url-to-markdown",
-      "kind": "mcp",
-      "label": "URL to Markdown",
-      "intent": "webpage_to_markdown"
+      "server": {
+        "name": "io.example/url-to-markdown",
+        "title": "URL to Markdown",
+        "description": "Fetch a webpage URL and convert the page into markdown.",
+        "version": "1.0.0",
+        "remotes": [
+          {
+            "type": "streamable-http",
+            "url": "https://example.com/mcp"
+          }
+        ]
+      }
     },
     {
-      "id": "mcp-image-to-text",
-      "kind": "mcp",
-      "label": "Image to Text",
-      "intent": "image_to_text"
+      "server": {
+        "name": "io.example/image-to-text",
+        "title": "Image to Text",
+        "description": "Extract text from images.",
+        "version": "1.0.0",
+        "remotes": [
+          {
+            "type": "streamable-http",
+            "url": "https://example.com/image"
+          }
+        ]
+      }
     }
   ]
 }

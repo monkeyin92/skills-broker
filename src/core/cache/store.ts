@@ -1,16 +1,14 @@
 import { rename, readFile, unlink, writeFile } from "node:fs/promises";
 
-export type CachedCardRecord<TCard extends { fetchedAt: string }> = {
-  card: TCard;
-};
-
-export class FileBackedCacheStore<TCard extends { fetchedAt: string }> {
+export class FileBackedCacheStore<
+  TRecord extends { card: { fetchedAt: string } }
+> {
   constructor(private readonly filePath: string) {}
 
-  async read(): Promise<CachedCardRecord<TCard> | null> {
+  async read(): Promise<TRecord | null> {
     try {
       const raw = await readFile(this.filePath, "utf8");
-      return JSON.parse(raw) as CachedCardRecord<TCard>;
+      return JSON.parse(raw) as TRecord;
     } catch (error) {
       if (isMissingFileError(error) || error instanceof SyntaxError) {
         return null;
@@ -20,7 +18,7 @@ export class FileBackedCacheStore<TCard extends { fetchedAt: string }> {
     }
   }
 
-  async write(record: CachedCardRecord<TCard>): Promise<void> {
+  async write(record: TRecord): Promise<void> {
     const temporaryFilePath = `${this.filePath}.tmp`;
 
     await writeFile(temporaryFilePath, JSON.stringify(record, null, 2), "utf8");

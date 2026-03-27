@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { buildHandoffEnvelope } from "../../src/broker/handoff";
 import type { CapabilityCard } from "../../src/core/capability-card";
+import type { BrokerRequest } from "../../src/core/types";
 
 function createWinner(): CapabilityCard {
   return {
@@ -25,11 +26,17 @@ function createWinner(): CapabilityCard {
 }
 
 describe("buildHandoffEnvelope", () => {
-  it("returns brokerDone true when handoff is built", () => {
+  it("includes the normalized request when handoff is built", () => {
+    const request: BrokerRequest = {
+      intent: "webpage_to_markdown",
+      outputMode: "markdown_only",
+      url: "https://example.com/article"
+    };
     const handoff = buildHandoffEnvelope(createWinner(), {
       currentHost: "codex"
-    });
+    }, request);
 
     expect(handoff.brokerDone).toBe(true);
+    expect(handoff.request).toEqual(request);
   });
 });

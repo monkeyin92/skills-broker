@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { searchMcpRegistry } from "../../src/sources/mcp-registry";
 
 describe("searchMcpRegistry", () => {
-  it('filters the recorded registry fixture to the matching "webpage_to_markdown" candidate', async () => {
+  it('parses the official-style registry fixture and keeps the matching "webpage_to_markdown" candidate', async () => {
     const fixturePath = join(
       process.cwd(),
       "tests",
@@ -15,11 +15,12 @@ describe("searchMcpRegistry", () => {
     const fixture = JSON.parse(
       await readFile(fixturePath, "utf8")
     ) as {
-      results: Array<{
-        id: string;
-        kind: "mcp";
-        label: string;
-        intent: string;
+      servers: Array<{
+        server: {
+          name: string;
+          title: string;
+          description: string;
+        };
       }>;
     };
 
@@ -28,6 +29,13 @@ describe("searchMcpRegistry", () => {
       fixturePath
     );
 
-    expect(candidates).toEqual([fixture.results[0]]);
+    expect(candidates).toEqual([
+      {
+        id: fixture.servers[0].server.name,
+        kind: "mcp",
+        label: fixture.servers[0].server.title,
+        intent: "webpage_to_markdown"
+      }
+    ]);
   });
 });

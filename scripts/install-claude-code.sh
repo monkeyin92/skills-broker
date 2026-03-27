@@ -13,8 +13,10 @@ PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
 cd "${PROJECT_ROOT}"
 
-INSTALL_DIR="${INSTALL_DIR}" PROJECT_ROOT="${PROJECT_ROOT}" node --loader ts-node/esm --input-type=module <<'EOF'
-import { installClaudeCodePlugin } from "./src/hosts/claude-code/install.ts";
+npm run build >/dev/null
+
+INSTALL_DIR="${INSTALL_DIR}" PROJECT_ROOT="${PROJECT_ROOT}" node --input-type=module <<'EOF'
+import { installClaudeCodePlugin } from "./dist/hosts/claude-code/install.js";
 
 await installClaudeCodePlugin({
   installDirectory: process.env.INSTALL_DIR,

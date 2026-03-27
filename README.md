@@ -31,14 +31,16 @@ npm ci
 ```
 
 脚本会在目标目录生成最小 `.claude-plugin/plugin.json` 和 `skills/webpage-to-markdown/SKILL.md`。
+同时也会写入本地运行所需的 `config/*.json`、`dist/*.js`、`package.json` 和 `bin/run-broker`，让安装目录本身具备可调用入口，不再依赖原始源码 checkout 路径。
 
 ## 测试
 
 ```bash
+npm run build
 npm test
 ```
 
-CI 默认也使用 `npm ci` + `npm test`，并且不依赖真实网络 discovery。
+CI 默认也会验证 `npm run build` 和 `npm test`，并且不依赖真实网络 discovery。
 
 ## Broker 行为约束
 

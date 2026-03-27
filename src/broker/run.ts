@@ -1,21 +1,21 @@
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { buildHandoffEnvelope, type HandoffEnvelope } from "./handoff";
-import { discoverCandidates } from "./discover";
-import { explainDecision } from "./explain";
-import { prepareCandidate } from "./prepare";
-import { rankCapabilities } from "./rank";
-import { toCapabilityCard, type CapabilityCard } from "../core/capability-card";
+import { buildHandoffEnvelope, type HandoffEnvelope } from "./handoff.js";
+import { discoverCandidates } from "./discover.js";
+import { explainDecision } from "./explain.js";
+import { prepareCandidate } from "./prepare.js";
+import { rankCapabilities } from "./rank.js";
+import { toCapabilityCard, type CapabilityCard } from "../core/capability-card.js";
 import {
   handleRefreshFailure,
   isWithinHardTtl,
   shouldRefreshToday
-} from "../core/cache/policy";
-import { FileBackedCacheStore } from "../core/cache/store";
-import { normalizeRequest, type NormalizeRequestInput } from "../core/request";
-import type { BrokerIntent, BrokerOutcomeCode } from "../core/types";
-import { loadHostSkillCandidates } from "../sources/host-skill-catalog";
-import { searchMcpRegistry } from "../sources/mcp-registry";
+} from "../core/cache/policy.js";
+import { FileBackedCacheStore } from "../core/cache/store.js";
+import { normalizeRequest, type NormalizeRequestInput } from "../core/request.js";
+import type { BrokerIntent, BrokerOutcomeCode } from "../core/types.js";
+import { loadHostSkillCandidates } from "../sources/host-skill-catalog.js";
+import { searchMcpRegistry } from "../sources/mcp-registry.js";
 
 type CachedWinnerCard = CapabilityCard & {
   fetchedAt: string;
@@ -105,10 +105,22 @@ async function discoverCapabilityCards(
   hostCatalogFilePath: string,
   mcpRegistryFilePath: string
 ): Promise<CapabilityCard[]> {
-  const [hostCandidates, mcpCandidates] = await Promise.all([
+  const [hostResult, mcpResult] = await Promise.allSettled([
     loadHostSkillCandidates(intent, hostCatalogFilePath),
     searchMcpRegistry(intent, mcpRegistryFilePath)
   ]);
+
+  if (hostResult.status === "rejected" && mcpResult.status === "rejected") {
+    throw new AggregateError(
+      [hostResult.reason, mcpResult.reason],
+      "All discovery sources failed."
+    );
+  }
+
+  const hostCandidates =
+    hostResult.status === "fulfilled" ? hostResult.value : [];
+  const mcpCandidates =
+    mcpResult.status === "fulfilled" ? mcpResult.value : [];
 
   return discoverCandidates(hostCandidates, mcpCandidates).map(toCapabilityCard);
 }
@@ -209,7 +221,11 @@ export async function runBroker(
   const prepared = await prepareCandidate(winner, {
     currentHost
   });
-  const handoff = buildHandoffEnvelope(prepared.candidate, prepared.context);
+  const handoff = buildHandoffEnvelope(
+    prepared.candidate,
+    prepared.context,
+    request
+  );
 
   await cacheStore.write({
     card: {

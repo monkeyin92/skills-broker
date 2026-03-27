@@ -1,4 +1,4 @@
-import type { CapabilityCandidate } from "../core/capability-card";
+import type { CapabilityCandidate } from "../core/capability-card.js";
 
 export function discoverCandidates(
   ...sources: ReadonlyArray<ReadonlyArray<CapabilityCandidate>>

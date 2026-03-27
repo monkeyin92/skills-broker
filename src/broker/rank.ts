@@ -1,5 +1,5 @@
-import type { CapabilityCard } from "../core/capability-card";
-import type { BrokerIntent } from "../core/types";
+import type { CapabilityCard } from "../core/capability-card.js";
+import type { BrokerIntent } from "../core/types.js";
 
 export type RoutingHistory = {
   cacheHit?: boolean;

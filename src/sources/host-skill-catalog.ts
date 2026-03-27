@@ -1,6 +1,6 @@
 import { readFile } from "node:fs/promises";
-import type { CapabilityCandidate } from "../core/capability-card";
-import type { BrokerIntent } from "../core/types";
+import type { CapabilityCandidate } from "../core/capability-card.js";
+import type { BrokerIntent } from "../core/types.js";
 
 type HostSkillCatalog = {
   skills?: CapabilityCandidate[];

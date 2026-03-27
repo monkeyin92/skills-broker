@@ -29,8 +29,9 @@ jobs:
           curl --fail --silent --show-error \
             https://registry.modelcontextprotocol.io/v0.1/servers \
             > "${response_file}"
-          RESPONSE_FILE="${response_file}" node <<'EOF'
-          const fs = require("node:fs");
+          RESPONSE_FILE="${response_file}" node --loader ts-node/esm --input-type=module <<'EOF'
+          import fs from "node:fs";
+          import { searchMcpRegistry } from "./src/sources/mcp-registry.ts";
 
           const payload = JSON.parse(fs.readFileSync(process.env.RESPONSE_FILE, "utf8"));
 
@@ -38,7 +39,18 @@ jobs:
             throw new Error("MCP Registry live response is missing a non-empty servers array.");
           }
 
-          console.log(`Validated ${payload.servers.length} live registry servers.`);
+          const candidates = await searchMcpRegistry(
+            "webpage_to_markdown",
+            process.env.RESPONSE_FILE
+          );
+
+          if (!Array.isArray(candidates)) {
+            throw new Error("searchMcpRegistry did not return an array.");
+          }
+
+          console.log(
+            `Validated ${payload.servers.length} live registry servers and parsed ${candidates.length} webpage-to-markdown candidates.`
+          );
           EOF
 
       - name: Run Claude Code smoke test

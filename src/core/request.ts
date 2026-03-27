@@ -1,4 +1,4 @@
-import type { BrokerRequest } from "./types";
+import type { BrokerRequest } from "./types.js";
 
 export type NormalizeRequestInput = {
   task: string;

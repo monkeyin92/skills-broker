@@ -1,4 +1,4 @@
-import type { CapabilityCard } from "../core/capability-card";
+import type { CapabilityCard } from "../core/capability-card.js";
 
 export type PrepareContext = {
   currentHost: string;
