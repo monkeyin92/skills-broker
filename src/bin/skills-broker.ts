@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 export type LifecycleCliResult = {
   command: "update" | "doctor" | "remove";
   dryRun: boolean;
