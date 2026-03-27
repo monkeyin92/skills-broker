@@ -1,4 +1,5 @@
 import { join } from "node:path";
+import { tmpdir } from "node:os";
 import { buildHandoffEnvelope, type HandoffEnvelope } from "./handoff";
 import { discoverCandidates } from "./discover";
 import { explainDecision } from "./explain";
@@ -68,18 +69,18 @@ export type RunBrokerOptions = {
   now?: Date;
 };
 
-const DEFAULT_CURRENT_HOST = "codex";
+const DEFAULT_CURRENT_HOST = "claude-code";
 
 function defaultHostCatalogFilePath(): string {
-  return join(process.cwd(), "tests/fixtures/host-skill-catalog.json");
+  return join(process.cwd(), "config/host-skills.seed.json");
 }
 
 function defaultMcpRegistryFilePath(): string {
-  return join(process.cwd(), "tests/fixtures/mcp-registry/search-response.json");
+  return join(process.cwd(), "config/mcp-registry.seed.json");
 }
 
 function defaultCacheFilePath(): string {
-  return join(process.cwd(), ".skills-broker-cache.json");
+  return join(tmpdir(), "skills-broker-cache.json");
 }
 
 function createNoCandidateResult(debug: BrokerDebug): BrokerFailureResult {

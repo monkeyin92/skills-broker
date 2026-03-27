@@ -1,7 +1,11 @@
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { test, expect, vi } from "vitest";
 import { runBrokerCli } from "../../src/cli";
 
 test("cli writes the broker result payload to stdout", async () => {
+  const runtimeDirectory = await mkdtemp(join(tmpdir(), "skills-broker-cli-"));
   const writes: string[] = [];
   const writeSpy = vi
     .spyOn(process.stdout, "write")
@@ -15,9 +19,12 @@ test("cli writes the broker result payload to stdout", async () => {
     result = await runBrokerCli({
       task: "turn this webpage into markdown",
       url: "https://example.com"
+    }, {
+      cacheFilePath: join(runtimeDirectory, "cache.json")
     });
   } finally {
     writeSpy.mockRestore();
+    await rm(runtimeDirectory, { recursive: true, force: true });
   }
 
   expect(result).toMatchObject({

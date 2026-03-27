@@ -14,14 +14,6 @@ async function createRuntimePaths() {
 
   return {
     directory,
-    hostCatalogFilePath: join(
-      process.cwd(),
-      "tests/fixtures/host-skill-catalog.json"
-    ),
-    mcpRegistryFilePath: join(
-      process.cwd(),
-      "tests/fixtures/mcp-registry/search-response.json"
-    ),
     cacheFilePath: join(directory, "broker-cache.json")
   };
 }
@@ -33,7 +25,6 @@ describe("runBroker", () => {
     try {
       const result = await runBroker(validUrlRequest, {
         ...runtime,
-        currentHost: "codex",
         now: new Date("2026-03-27T08:00:00.000Z")
       });
 
@@ -54,7 +45,6 @@ describe("runBroker", () => {
     try {
       const firstResult = await runBroker(validUrlRequest, {
         ...runtime,
-        currentHost: "codex",
         now: new Date("2026-03-27T08:00:00.000Z")
       });
       const secondResult = await runBroker(
@@ -64,7 +54,6 @@ describe("runBroker", () => {
         },
         {
           ...runtime,
-          currentHost: "codex",
           now: new Date("2026-03-27T12:00:00.000Z")
         }
       );
@@ -94,7 +83,6 @@ describe("runBroker", () => {
 
     try {
       const result = await runBroker(validUrlRequest, {
-        currentHost: "codex",
         cacheFilePath: runtime.cacheFilePath,
         hostCatalogFilePath: emptyHostCatalogFilePath,
         mcpRegistryFilePath: emptyMcpRegistryFilePath,
