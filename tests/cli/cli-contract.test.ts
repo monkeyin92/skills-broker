@@ -1,7 +1,7 @@
 import { test, expect, vi } from "vitest";
 import { runBrokerCli } from "../../src/cli";
 
-test("cli returns not implemented error when run without pipeline", async () => {
+test("cli writes the broker result payload to stdout", async () => {
   const writes: string[] = [];
   const writeSpy = vi
     .spyOn(process.stdout, "write")
@@ -21,18 +21,30 @@ test("cli returns not implemented error when run without pipeline", async () => 
   }
 
   expect(result).toMatchObject({
-    ok: false,
-    error: {
-      code: "NOT_IMPLEMENTED"
+    ok: true,
+    outcome: {
+      code: "HANDOFF_READY"
+    },
+    winner: {
+      id: "skill-webpage-to-markdown"
+    },
+    handoff: {
+      brokerDone: true
     }
   });
 
   expect(writes).toHaveLength(1);
   const stdoutPayload = JSON.parse(writes[0]);
   expect(stdoutPayload).toMatchObject({
-    ok: false,
-    error: {
-      code: "NOT_IMPLEMENTED"
+    ok: true,
+    outcome: {
+      code: "HANDOFF_READY"
+    },
+    winner: {
+      id: "skill-webpage-to-markdown"
+    },
+    handoff: {
+      brokerDone: true
     }
   });
 });
