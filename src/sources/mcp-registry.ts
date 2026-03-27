@@ -1,5 +1,4 @@
 import { readFile } from "node:fs/promises";
-import { join } from "node:path";
 import type { CapabilityCandidate } from "../core/capability-card";
 import type { BrokerIntent } from "../core/types";
 
@@ -8,23 +7,19 @@ type McpRegistrySearchResponse = {
 };
 
 export async function searchMcpRegistry(
-  intent: BrokerIntent
+  intent: BrokerIntent,
+  responseFilePath: string
 ): Promise<CapabilityCandidate[]> {
-  const response = await readRecordedSearchResponse();
+  const response = await readRecordedSearchResponse(responseFilePath);
 
   return (response.results ?? []).filter(
     (candidate) => candidate.kind === "mcp" && candidate.intent === intent
   );
 }
 
-async function readRecordedSearchResponse(): Promise<McpRegistrySearchResponse> {
-  const filePath = join(
-    process.cwd(),
-    "tests",
-    "fixtures",
-    "mcp-registry",
-    "search-response.json"
-  );
+async function readRecordedSearchResponse(
+  filePath: string
+): Promise<McpRegistrySearchResponse> {
   const raw = await readFile(filePath, "utf8");
 
   return JSON.parse(raw) as McpRegistrySearchResponse;
