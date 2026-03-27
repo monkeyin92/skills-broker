@@ -4,6 +4,7 @@ import { toCapabilityCard } from "../../src/core/capability-card";
 describe("toCapabilityCard", () => {
   it("maps a skill candidate to a skill capability card with current host support", () => {
     const skillFixture = {
+      kind: "skill" as const,
       id: "skill-webpage-to-markdown",
       label: "Webpage to Markdown",
       intent: "webpage_to_markdown"
@@ -17,6 +18,7 @@ describe("toCapabilityCard", () => {
 
   it("maps an mcp candidate to an mcp capability card", () => {
     const mcpFixture = {
+      kind: "mcp" as const,
       id: "mcp-url-to-markdown",
       label: "URL to Markdown",
       intent: "webpage_to_markdown"

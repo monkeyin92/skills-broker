@@ -23,13 +23,14 @@ export type CapabilityCard = {
 };
 
 export type CapabilityCandidate = {
+  kind: CapabilityCardKind;
   id: string;
   label: string;
   intent: BrokerIntent;
 };
 
 export function toCapabilityCard(candidate: CapabilityCandidate): CapabilityCard {
-  const kind = candidate.id.startsWith("mcp-") ? "mcp" : "skill";
+  const kind = candidate.kind;
 
   return {
     id: candidate.id,
