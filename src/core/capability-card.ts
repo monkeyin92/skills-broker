@@ -6,7 +6,7 @@ export type CapabilityCard = {
   id: string;
   kind: CapabilityCardKind;
   label: string;
-  intent: BrokerIntent | string;
+  intent: BrokerIntent;
   hosts: {
     currentHostSupported: boolean;
     portabilityScore: number;
@@ -25,7 +25,7 @@ export type CapabilityCard = {
 export type CapabilityCandidate = {
   id: string;
   label: string;
-  intent: BrokerIntent | string;
+  intent: BrokerIntent;
 };
 
 export function toCapabilityCard(candidate: CapabilityCandidate): CapabilityCard {
@@ -37,7 +37,7 @@ export function toCapabilityCard(candidate: CapabilityCandidate): CapabilityCard
     label: candidate.label,
     intent: candidate.intent,
     hosts: {
-      currentHostSupported: kind === "skill",
+      currentHostSupported: true,
       portabilityScore: kind === "skill" ? 1 : 0
     },
     prepare: {

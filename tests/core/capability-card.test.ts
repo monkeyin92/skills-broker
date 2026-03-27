@@ -25,5 +25,6 @@ describe("toCapabilityCard", () => {
     const card = toCapabilityCard(mcpFixture);
 
     expect(card.kind).toBe("mcp");
+    expect(card.hosts.currentHostSupported).toBe(true);
   });
 });
