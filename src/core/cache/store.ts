@@ -1,4 +1,4 @@
-import { readFile, unlink, writeFile } from "node:fs/promises";
+import { rename, readFile, unlink, writeFile } from "node:fs/promises";
 
 export type CachedCardRecord<TCard extends { fetchedAt: string }> = {
   card: TCard;
@@ -12,7 +12,7 @@ export class FileBackedCacheStore<TCard extends { fetchedAt: string }> {
       const raw = await readFile(this.filePath, "utf8");
       return JSON.parse(raw) as CachedCardRecord<TCard>;
     } catch (error) {
-      if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+      if (isMissingFileError(error) || error instanceof SyntaxError) {
         return null;
       }
 
@@ -21,18 +21,25 @@ export class FileBackedCacheStore<TCard extends { fetchedAt: string }> {
   }
 
   async write(record: CachedCardRecord<TCard>): Promise<void> {
-    await writeFile(this.filePath, JSON.stringify(record, null, 2), "utf8");
+    const temporaryFilePath = `${this.filePath}.tmp`;
+
+    await writeFile(temporaryFilePath, JSON.stringify(record, null, 2), "utf8");
+    await rename(temporaryFilePath, this.filePath);
   }
 
   async delete(): Promise<void> {
     try {
       await unlink(this.filePath);
     } catch (error) {
-      if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+      if (isMissingFileError(error)) {
         return;
       }
 
       throw error;
     }
   }
+}
+
+function isMissingFileError(error: unknown): boolean {
+  return (error as NodeJS.ErrnoException).code === "ENOENT";
 }
