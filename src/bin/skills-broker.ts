@@ -1,6 +1,3 @@
-#!/usr/bin/env node
-import { fileURLToPath } from "node:url";
-
 export type LifecycleCliResult = {
   command: "update" | "doctor" | "remove";
   dryRun: boolean;
@@ -21,10 +18,7 @@ async function main(argv = process.argv.slice(2)): Promise<LifecycleCliResult> {
   return result;
 }
 
-const entryFile = fileURLToPath(import.meta.url);
-const wasInvokedDirectly = process.argv[1] === entryFile;
-
-if (wasInvokedDirectly) {
+if (import.meta.main) {
   void main().catch((error) => {
     console.error(error);
     process.exitCode = 1;
