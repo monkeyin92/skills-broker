@@ -29,6 +29,16 @@ describe("normalizeRequest", () => {
     expect(normalized.url).toBe("https://example.com/path?q=1");
   });
 
+  it("normalizes supported markdown task text before routing", () => {
+    const normalized = normalizeRequest({
+      task: "  turn this webpage into markdown  ",
+      url: "https://example.com"
+    });
+
+    expect(normalized.intent).toBe("webpage_to_markdown");
+    expect(normalized.outputMode).toBe("markdown_only");
+  });
+
   it("rejects tasks outside the v0 webpage_to_markdown family", () => {
     expect(() =>
       normalizeRequest({

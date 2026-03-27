@@ -8,13 +8,16 @@ export type NormalizeRequestInput = {
 export function normalizeRequest(
   input: NormalizeRequestInput
 ): BrokerRequest {
-  if (input.task !== "turn this webpage into markdown") {
-    throw new Error(`Unsupported broker task: ${input.task}`);
+  const { task, url } = input;
+  const normalizedTask = task.trim();
+
+  if (normalizedTask !== "turn this webpage into markdown") {
+    throw new Error(`Unsupported broker task: ${task}`);
   }
 
   return {
     intent: "webpage_to_markdown",
     outputMode: "markdown_only",
-    url: input.url
+    url
   };
 }
