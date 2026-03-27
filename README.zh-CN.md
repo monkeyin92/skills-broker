@@ -106,6 +106,9 @@ v0 当前包含：
 - 可解释、可复现的确定性排序
 - prepare + handoff 边界
 - 可迁移的 Claude Code 插件安装产物
+- 实验性的共享 broker home 安装链路
+- Codex 薄宿主壳支持
+- Claude Code 和 Codex 之间的跨宿主 cache 复用
 - CI 和 live discovery smoke 覆盖
 
 这不是为了“什么都支持”。  
@@ -123,6 +126,33 @@ flowchart LR
   R --> P["准备赢家"]
   P --> H["handoff 并停止 broker"]
 ```
+
+## 共享 Broker Home
+
+共享 home 架构已经开始在这个仓库里落地：
+
+- `skills-broker` 只安装一次
+- 共享 broker home 固定在 `~/.skills-broker/`
+- Claude Code、Codex 以及后续宿主都只接一个很薄的 host shell
+- capability cards、路由历史、缓存和运行时状态跨宿主共享
+
+这意味着用户换宿主时，不应该把能力发现质量清零。
+
+如果某个网页转 markdown 的赢家已经在 Claude Code 中被验证过，后续切到 Codex 时，broker 应该尽量复用同一份共享知识，而不是重新从零发现。
+
+这个模型下，产品级统一维护命令定为：
+
+```bash
+skills-broker update
+```
+
+它的职责应该是：
+
+- 更新 `~/.skills-broker/` 下的共享 runtime 和配置
+- 重新扫描支持的宿主
+- 给新检测到的宿主补装薄适配层
+- 修复已有但损坏或缺失的宿主壳
+- 默认保留 cache、capability history 和成功路由记录
 
 ## 它和别的东西本质上有什么不同
 
@@ -170,6 +200,16 @@ npx vitest run
 - `package.json`
 - `bin/run-broker`
 
+这条链路是 **当前 Claude Code-first 的安装方式**。
+
+这个仓库现在也提供了一条实验性的共享 home 更新脚本：
+
+```bash
+./scripts/update-shared-home.sh <broker-home> [claude-shell-dir] [codex-shell-dir]
+```
+
+它是未来正式 `skills-broker update` 命令的仓库内前身。
+
 ### 4. 直接试跑安装后的 runner
 
 ```bash
@@ -182,6 +222,22 @@ npx vitest run
 - 被选中的 winner
 - handoff envelope
 - 调试信息
+
+### 5. 试一下实验性的共享 home 流程
+
+```bash
+./scripts/update-shared-home.sh \
+  /tmp/.skills-broker \
+  /tmp/claude-code-plugin \
+  /tmp/.codex/skills/webpage-to-markdown
+```
+
+它会：
+
+- 把共享 broker runtime 构建到 `/tmp/.skills-broker`
+- 接上一个 Claude Code 薄壳
+- 接上一个 Codex 薄壳
+- 让两个宿主复用同一份 broker cache 和路由历史
 
 ## 典型使用场景
 
@@ -232,7 +288,7 @@ npx vitest run
 当前还**没有**提供：
 
 - 面向最终用户发布的 `npm` 包
-- 通用的多宿主安装流程
+- 面向真实用户环境的自动宿主发现安装流程
 - 广义开放域任务覆盖
 - 默认走实时联网 discovery 的运行时
 
@@ -240,7 +296,8 @@ npx vitest run
 
 接下来大概率会推进：
 
-- Claude Code 路线稳定后增加 Codex adapter
+- 把仓库内的共享 home 流程提升成正式的 `skills-broker update` 产品命令
+- 在 update 中加入宿主自动检测
 - 扩展到 OpenCode 等更多宿主
 - 增加更多任务族，而不只限于 `webpage -> markdown`
 - 接入更强的 live registry 能力
@@ -253,18 +310,21 @@ src/
   broker/                 路由、排序、prepare、handoff
   core/                   请求类型、能力卡片、缓存策略
   hosts/claude-code/      Claude Code adapter 和 installer
+  hosts/codex/            Codex 薄壳 adapter 和 installer
+  shared-home/            共享 broker home 的 install / update 流程
   sources/                skill / MCP discovery adapter
 tests/
   cli/                    CLI 合约测试
   core/                   request 和 cache 测试
   broker/                 排序、prepare、handoff 测试
   integration/            broker 主链路集成测试
-  e2e/                    Claude Code 插件 smoke test
+  e2e/                    Claude Code 与 shared-home smoke test
 config/
   host-skills.seed.json
   mcp-registry.seed.json
 scripts/
   install-claude-code.sh
+  update-shared-home.sh
 ```
 
 ## 欢迎贡献
@@ -273,7 +333,7 @@ scripts/
 
 特别值得贡献的方向：
 
-- Codex 和 OpenCode host adapter
+- OpenCode 等更多 host shell
 - live discovery 集成
 - 新的任务族
 - 更丰富的 ranking signals
@@ -312,6 +372,14 @@ npx vitest run
 ### 为什么先做 Claude Code？
 
 因为 v0 需要先在一个具体宿主里把 broker 契约端到端跑通，再往更多宿主扩。
+
+### Claude Code 和 Codex 以后会共享同一份能力知识吗？
+
+会。仓库里现在已经有一条实验性的共享 home 流程，Claude Code 和 Codex 可以复用同一份 capability cache、history 和 runtime，而不是各自维护一份孤岛副本。
+
+### `skills-broker update` 以后负责什么？
+
+它会是共享 home 模型下的正式维护命令。当前仓库里已经有一个前身脚本 `./scripts/update-shared-home.sh`；最终产品命令会负责更新共享 runtime、重新扫描宿主、补装或修复薄适配层，同时默认不清空已有 broker 知识。
 
 ### 为什么不直接多装几个 skill？
 

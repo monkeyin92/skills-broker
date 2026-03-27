@@ -1,17 +1,25 @@
 # TODOS
 
-## Host Adapters
+## Completed
 
-### Add Codex adapter after Claude Code v0 stabilizes
+### Added Codex as the second thin host shell on top of the shared broker home
 
-**What:** Add a Codex host adapter after the Claude Code-first v0 broker flow is stable.
+**What:** Codex now plugs into the shared broker home at `~/.skills-broker/` instead of creating a second isolated install.
 
-**Why:** This validates that the broker core is truly host-agnostic rather than accidentally coupled to the first host adapter.
+**Why:** This validates the install-once, use-across-hosts model. Claude Code and Codex can now reuse one shared runtime, one shared capability cache, and one shared routing history.
 
-**Context:** The eng review locked v0 to a single first host adapter and the user changed that first host from Codex to Claude Code because the local Codex environment already has too many installed skills for clean testing. Once the Claude Code adapter proves the install flow, capability-card normalization, cache strategy, and handoff boundary, Codex becomes the next best host to verify portability.
+**Shipped:** shared broker home install/update modules, Codex thin-shell adapter + installer, cross-host cache reuse tests, and a repo-local `./scripts/update-shared-home.sh` flow.
+
+## Next
+
+### Promote the shared-home script into the real `skills-broker update` product command
+
+**What:** Turn `./scripts/update-shared-home.sh` into the final user-facing update entrypoint.
+
+**Why:** The architecture is now partially implemented, but the current flow is still repo-local. Users should eventually get the same behavior through a single stable product command.
+
+**Context:** The core shared-home pieces are in place, but host auto-detection, final packaging, and user-facing distribution are still open.
 
 **Effort:** M
 **Priority:** P2
-**Depends on:** Claude Code v0 broker flow is stable end-to-end
-
-## Completed
+**Depends on:** packaging decisions for the published CLI and host detection rules

@@ -100,6 +100,9 @@ v0 currently includes:
 - deterministic ranking with explanations
 - prepare + handoff boundary
 - relocatable Claude Code plugin package
+- experimental shared broker home install flow
+- Codex thin host shell support
+- cross-host cache reuse between Claude Code and Codex
 - CI and live discovery smoke coverage
 
 This is deliberately not "solve everything."  
@@ -117,6 +120,33 @@ flowchart LR
   R --> P["Prepare winner"]
   P --> H["Handoff and stop"]
 ```
+
+## Shared Broker Home
+
+The shared-home architecture is now actively implemented in this repository:
+
+- install `skills-broker` once
+- keep the shared broker home at `~/.skills-broker/`
+- let Claude Code, Codex, and future hosts attach through thin host shells
+- share capability cards, routing history, cache, and runtime state across hosts
+
+That means switching hosts should not reset discovery quality.
+
+If a user first proves a strong winner in Claude Code and later starts using Codex, the broker should reuse the same shared knowledge instead of rediscovering from zero.
+
+The product-level maintenance command for this model is intended to be:
+
+```bash
+skills-broker update
+```
+
+Its job is meant to be:
+
+- update the shared broker runtime and config under `~/.skills-broker/`
+- rescan supported hosts
+- install missing thin host shells for newly detected hosts
+- repair existing host shells when needed
+- preserve cache, capability history, and successful routing records by default
 
 ## Why It Is Different
 
@@ -163,6 +193,16 @@ This creates a self-contained local package containing:
 - `package.json`
 - `bin/run-broker`
 
+This is the **current Claude Code-first install path**.
+
+This repository also ships an experimental shared-home update flow:
+
+```bash
+./scripts/update-shared-home.sh <broker-home> [claude-shell-dir] [codex-shell-dir]
+```
+
+That script is the repo-local precursor to the eventual user-facing `skills-broker update` command.
+
 ### 4. Try the installed runner
 
 ```bash
@@ -171,6 +211,22 @@ This creates a self-contained local package containing:
 ```
 
 Expected output: a JSON payload containing the selected winner, handoff envelope, and debug information.
+
+### 5. Try the experimental shared-home flow
+
+```bash
+./scripts/update-shared-home.sh \
+  /tmp/.skills-broker \
+  /tmp/claude-code-plugin \
+  /tmp/.codex/skills/webpage-to-markdown
+```
+
+This will:
+
+- build the shared broker runtime into `/tmp/.skills-broker`
+- attach a Claude Code thin shell
+- attach a Codex thin shell
+- let both hosts reuse the same broker cache and routing history
 
 ## Example Use Cases
 
@@ -221,7 +277,7 @@ This repository currently optimizes for:
 It does **not** yet provide:
 
 - a published `npm` package for end users
-- a general multi-host installation flow
+- an auto-detected multi-host install flow for real user environments
 - broad open-domain task coverage
 - live network discovery as the default runtime path
 
@@ -229,7 +285,8 @@ It does **not** yet provide:
 
 Likely next:
 
-- Codex adapter after the Claude Code path is stable
+- promote the repo-local shared-home flow into a real `skills-broker update` product command
+- add host auto-detection during update
 - broader host support such as OpenCode
 - more task families beyond `webpage -> markdown`
 - stronger live registry integration
@@ -242,18 +299,21 @@ src/
   broker/                 routing, ranking, prepare, handoff
   core/                   request types, capability cards, cache policy
   hosts/claude-code/      Claude Code adapter and installer
+  hosts/codex/            Codex thin-shell adapter and installer
+  shared-home/            shared broker home install/update flow
   sources/                skill and MCP discovery adapters
 tests/
   cli/                    CLI contract tests
   core/                   request and cache tests
   broker/                 ranking, prepare, handoff tests
   integration/            end-to-end broker pipeline tests
-  e2e/                    Claude Code plugin smoke test
+  e2e/                    Claude Code and shared-home smoke tests
 config/
   host-skills.seed.json
   mcp-registry.seed.json
 scripts/
   install-claude-code.sh
+  update-shared-home.sh
 ```
 
 ## Contributing
@@ -262,7 +322,7 @@ Contributions are welcome.
 
 Strong contribution areas:
 
-- host adapters for Codex and OpenCode
+- broader host shells such as OpenCode
 - live discovery integrations
 - new task families
 - richer ranking signals
@@ -301,6 +361,14 @@ Not yet. It is a focused v0 with one host and one workflow.
 ### Why Claude Code first?
 
 Because v0 needs one concrete host to prove the broker contract end to end before expanding to more hosts.
+
+### Will Claude Code and Codex share the same capability knowledge?
+
+Yes. The repository now includes an experimental shared-home flow so that Claude Code and Codex can reuse the same capability cache, history, and runtime instead of each building their own isolated copy.
+
+### What is `skills-broker update` supposed to do?
+
+It is the planned product-level maintenance command for the shared-home model. The repository currently ships a repo-local precursor through `./scripts/update-shared-home.sh`; the final command should update the shared runtime, rescan known hosts, and install or repair thin host shells without wiping existing broker knowledge.
 
 ### Why not just install more skills?
 

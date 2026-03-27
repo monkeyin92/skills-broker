@@ -7,32 +7,23 @@ import type { NormalizeRequestInput } from "../../core/request.js";
 
 const execFileAsync = promisify(execFile);
 
-export type RunClaudeCodeAdapterOptions = {
+export type RunCodexAdapterOptions = {
   installDirectory: string;
 } & Pick<RunBrokerOptions, "cacheFilePath" | "now">;
 
-const CURRENT_HOST = "claude-code";
-
-async function assertInstalledPlugin(installDirectory: string): Promise<void> {
-  const manifestPath = join(installDirectory, ".claude-plugin", "plugin.json");
-  const skillPath = join(
-    installDirectory,
-    "skills",
-    "webpage-to-markdown",
-    "SKILL.md"
-  );
+async function assertInstalledSkill(installDirectory: string): Promise<void> {
+  const skillPath = join(installDirectory, "SKILL.md");
   const runnerPath = join(installDirectory, "bin", "run-broker");
 
-  await access(manifestPath);
   await access(skillPath);
   await access(runnerPath);
 }
 
-export async function runClaudeCodeAdapter(
+export async function runCodexAdapter(
   input: NormalizeRequestInput,
-  options: RunClaudeCodeAdapterOptions
+  options: RunCodexAdapterOptions
 ): Promise<RunBrokerResult> {
-  await assertInstalledPlugin(options.installDirectory);
+  await assertInstalledSkill(options.installDirectory);
   const runnerPath = join(options.installDirectory, "bin", "run-broker");
   const env = {
     ...process.env

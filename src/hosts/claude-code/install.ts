@@ -6,6 +6,12 @@ export type InstallClaudeCodePluginOptions = {
   projectRoot?: string;
 };
 
+export type InstallClaudeCodeHostShellOptions = {
+  installDirectory: string;
+  brokerHomeDirectory: string;
+  projectRoot?: string;
+};
+
 export type InstallClaudeCodePluginResult = {
   installDirectory: string;
   packageJsonPath: string;
@@ -43,6 +49,21 @@ function buildSkillMarkdown() {
   return `# Webpage To Markdown
 
 Use this skill when the request is: turn this webpage into markdown
+`;
+}
+
+function buildHostShellRunnerScript(brokerHomeDirectory: string): string {
+  return `#!/usr/bin/env bash
+set -euo pipefail
+
+BROKER_INPUT="\${1:-}"
+
+if [[ -z "\${BROKER_INPUT}" ]]; then
+  echo "usage: $0 '<broker-request-json>'" >&2
+  exit 1
+fi
+
+BROKER_CURRENT_HOST="claude-code" exec "${brokerHomeDirectory}/bin/run-broker" "\${BROKER_INPUT}"
 `;
 }
 
@@ -161,6 +182,58 @@ export async function installClaudeCodePlugin(
     hostCatalogPath,
     mcpRegistryPath,
     distPath,
+    runnerPath
+  };
+}
+
+export async function installClaudeCodeHostShell(
+  options: InstallClaudeCodeHostShellOptions
+): Promise<InstallClaudeCodePluginResult> {
+  const brokerHomeDirectory = resolve(options.brokerHomeDirectory);
+  const version = await readPackageVersion(options.projectRoot);
+  const packageJsonPath = join(options.installDirectory, "package.json");
+  const manifestPath = join(
+    options.installDirectory,
+    ".claude-plugin",
+    "plugin.json"
+  );
+  const skillPath = join(
+    options.installDirectory,
+    "skills",
+    SKILL_DIRECTORY,
+    "SKILL.md"
+  );
+  const runnerPath = join(options.installDirectory, "bin", RUNNER_FILE_NAME);
+
+  await mkdir(dirname(manifestPath), { recursive: true });
+  await mkdir(dirname(skillPath), { recursive: true });
+  await mkdir(dirname(runnerPath), { recursive: true });
+  await writeFile(
+    packageJsonPath,
+    `${JSON.stringify(buildRuntimePackageJson(version), null, 2)}\n`,
+    "utf8"
+  );
+  await writeFile(
+    manifestPath,
+    `${JSON.stringify(buildManifest(version), null, 2)}\n`,
+    "utf8"
+  );
+  await writeFile(skillPath, buildSkillMarkdown(), "utf8");
+  await writeFile(
+    runnerPath,
+    buildHostShellRunnerScript(brokerHomeDirectory),
+    "utf8"
+  );
+  await chmod(runnerPath, 0o755);
+
+  return {
+    installDirectory: options.installDirectory,
+    packageJsonPath,
+    manifestPath,
+    skillPath,
+    hostCatalogPath: join(brokerHomeDirectory, "config", "host-skills.seed.json"),
+    mcpRegistryPath: join(brokerHomeDirectory, "config", "mcp-registry.seed.json"),
+    distPath: join(brokerHomeDirectory, "dist"),
     runnerPath
   };
 }
