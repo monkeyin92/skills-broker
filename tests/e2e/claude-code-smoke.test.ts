@@ -14,6 +14,11 @@ describe("Claude Code smoke", () => {
     const installDirectory = join(runtimeDirectory, "claude-code-plugin");
     const cacheFilePath = join(runtimeDirectory, "broker-cache.json");
     const manifestPath = join(installDirectory, ".claude-plugin", "plugin.json");
+    const installScriptPath = join(
+      process.cwd(),
+      "scripts",
+      "install-claude-code.sh"
+    );
     const skillPath = join(
       installDirectory,
       "skills",
@@ -22,7 +27,7 @@ describe("Claude Code smoke", () => {
     );
 
     try {
-      await execFileAsync("bash", ["scripts/install-claude-code.sh", installDirectory], {
+      await execFileAsync(installScriptPath, [installDirectory], {
         cwd: process.cwd()
       });
 
