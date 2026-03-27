@@ -1,0 +1,32 @@
+{
+  "servers": [
+    {
+      "server": {
+        "name": "io.example/url-to-markdown",
+        "title": "URL to Markdown",
+        "description": "Fetch a webpage URL and convert the page into markdown.",
+        "version": "1.0.0",
+        "remotes": [
+          {
+            "type": "streamable-http",
+            "url": "https://example.com/mcp"
+          }
+        ]
+      }
+    },
+    {
+      "server": {
+        "name": "io.example/image-to-text",
+        "title": "Image to Text",
+        "description": "Extract text from images.",
+        "version": "1.0.0",
+        "remotes": [
+          {
+            "type": "streamable-http",
+            "url": "https://example.com/image"
+          }
+        ]
+      }
+    }
+  ]
+}

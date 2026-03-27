@@ -1,0 +1,16 @@
+{
+  "skills": [
+    {
+      "id": "skill-webpage-to-markdown",
+      "kind": "skill",
+      "label": "Webpage to Markdown",
+      "intent": "webpage_to_markdown"
+    },
+    {
+      "id": "skill-notes-to-summary",
+      "kind": "skill",
+      "label": "Notes to Summary",
+      "intent": "notes_to_summary"
+    }
+  ]
+}
