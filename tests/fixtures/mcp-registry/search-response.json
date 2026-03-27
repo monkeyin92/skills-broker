@@ -1,0 +1,16 @@
+{
+  "results": [
+    {
+      "id": "mcp-url-to-markdown",
+      "kind": "mcp",
+      "label": "URL to Markdown",
+      "intent": "webpage_to_markdown"
+    },
+    {
+      "id": "mcp-image-to-text",
+      "kind": "mcp",
+      "label": "Image to Text",
+      "intent": "image_to_text"
+    }
+  ]
+}
