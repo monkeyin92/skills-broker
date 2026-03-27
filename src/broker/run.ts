@@ -23,7 +23,7 @@ type CachedWinnerCard = CapabilityCard & {
 
 type BrokerCacheRecord = {
   card: CachedWinnerCard;
-  currentHost: string;
+  lastHost: string;
   requestIntent: BrokerIntent;
   successfulRoutes: number;
 };
@@ -143,7 +143,6 @@ export async function runBroker(
   const cachedRecord = await cacheStore.read();
   const cachedCard =
     cachedRecord !== null &&
-    cachedRecord.currentHost === currentHost &&
     cachedRecord.requestIntent === request.intent &&
     isWithinHardTtl(cachedRecord.card, now)
       ? cachedRecord
@@ -232,7 +231,7 @@ export async function runBroker(
       ...winner,
       fetchedAt: now.toISOString()
     },
-    currentHost,
+    lastHost: currentHost,
     requestIntent: request.intent,
     successfulRoutes:
       cachedCard?.card.id === winner.id ? cachedCard.successfulRoutes + 1 : 1

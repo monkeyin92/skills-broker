@@ -74,6 +74,32 @@ describe("runBroker", () => {
     }
   });
 
+  it("reuses a shared cached winner across hosts for the same intent", async () => {
+    const runtime = await createRuntimePaths();
+
+    try {
+      const firstResult = await runBroker(validUrlRequest, {
+        ...runtime,
+        currentHost: "claude-code",
+        now: new Date("2026-03-27T08:00:00.000Z")
+      });
+      const secondResult = await runBroker(validUrlRequest, {
+        ...runtime,
+        currentHost: "codex",
+        now: new Date("2026-03-27T12:00:00.000Z")
+      });
+
+      expect(firstResult.ok).toBe(true);
+      expect(secondResult.ok).toBe(true);
+      expect(secondResult.outcome.code).toBe("HANDOFF_READY");
+      expect(secondResult.winner.id).toBe(firstResult.winner.id);
+      expect(secondResult.debug.cacheHit).toBe(true);
+      expect(secondResult.debug.cachedCandidateId).toBe(firstResult.winner.id);
+    } finally {
+      await rm(runtime.directory, { recursive: true, force: true });
+    }
+  });
+
   it("returns NO_CANDIDATE when local sources cannot match the request", async () => {
     const runtime = await createRuntimePaths();
     const emptyHostCatalogFilePath = join(runtime.directory, "empty-host.json");
