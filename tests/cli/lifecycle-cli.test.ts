@@ -23,35 +23,78 @@ describe("lifecycle cli", () => {
     expect(result.outputMode).toBe("json");
   });
 
-  it("prints lifecycle result when executed as CLI", async () => {
+  it("understands doctor regardless of flag order", async () => {
+    const result = await runLifecycleCli(["--dry-run", "doctor", "--broker-home", "/tmp/test-home"]);
+
+    expect(result.command).toBe("doctor");
+    expect(result.dryRun).toBe(true);
+    expect(result.outputMode).toBe("text");
+  });
+
+  it("supports remove command", async () => {
+    const result = await runLifecycleCli(["remove"]);
+
+    expect(result.command).toBe("remove");
+    expect(result.dryRun).toBe(false);
+    expect(result.outputMode).toBe("text");
+  });
+
+  it("recognizes --json doctor", async () => {
+    const result = await runLifecycleCli(["--json", "doctor"]);
+
+    expect(result.command).toBe("doctor");
+    expect(result.outputMode).toBe("json");
+  });
+
+  it("rejects unknown commands", async () => {
+    await expect(runLifecycleCli(["bogus"])).rejects.toThrow("Unknown command");
+  });
+
+  it("prints lifecycle result as JSON when --json is passed", async () => {
     const scriptPath = resolve("src/bin/skills-broker.ts");
     const { stdout } = await execFileAsync("node", [
       "--loader",
       "ts-node/esm",
       scriptPath,
-      "update",
-      "--dry-run",
       "--json",
-      "--broker-home",
-      "/tmp/test-home"
+      "doctor",
+      "--dry-run"
     ], {
       env: process.env,
       encoding: "utf8"
     });
 
     const result = JSON.parse(stdout.trim());
-    expect(result.command).toBe("update");
-    expect(result.dryRun).toBe(true);
+    expect(result.command).toBe("doctor");
     expect(result.outputMode).toBe("json");
   });
 
+  it("prints text result when executed without --json", async () => {
+    const scriptPath = resolve("src/bin/skills-broker.ts");
+    const { stdout } = await execFileAsync("node", [
+      "--loader",
+      "ts-node/esm",
+      scriptPath,
+      "doctor",
+      "--dry-run"
+    ], {
+      env: process.env,
+      encoding: "utf8"
+    });
+
+    const output = stdout.trim();
+    expect(output).toContain("command=doctor");
+    expect(output).toContain("dry-run");
+    expect(output).not.toMatch(/^\s*\{/);
+  });
+
   it("runs when the published bin is executed via symlink", async () => {
-    const distBin = resolve("dist/bin/skills-broker.js");
     await execFileAsync("npm", ["run", "build"], {
       env: process.env,
       encoding: "utf8"
     });
 
+    const distBin = resolve("dist/bin/skills-broker.js");
     const binDir = await mkdtemp(resolve(tmpdir(), "skills-broker-bin-"));
     const symlinkPath = resolve(binDir, "skills-broker");
 
@@ -62,19 +105,16 @@ describe("lifecycle cli", () => {
     try {
       const { stdout } = await execFileAsync(symlinkPath, [
         "update",
-        "--dry-run",
-        "--json",
-        "--broker-home",
-        "/tmp/test-home"
+        "--dry-run"
       ], {
         env: process.env,
         encoding: "utf8"
       });
 
-      const result = JSON.parse(stdout.trim());
-      expect(result.command).toBe("update");
-      expect(result.dryRun).toBe(true);
-      expect(result.outputMode).toBe("json");
+      const output = stdout.trim();
+      expect(output).toContain("command=update");
+      expect(output).toContain("dry-run");
+      expect(output).not.toMatch(/^\s*\{/);
     } finally {
       await rm(binDir, { recursive: true, force: true });
     }

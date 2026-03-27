@@ -1,22 +1,65 @@
 #!/usr/bin/env node
 
+const validCommands = ["update", "doctor", "remove"] as const;
+type ValidCommand = (typeof validCommands)[number];
+
 export type LifecycleCliResult = {
-  command: "update" | "doctor" | "remove";
+  command: ValidCommand;
   dryRun: boolean;
   outputMode: "text" | "json";
 };
 
 export async function runLifecycleCli(argv: string[]): Promise<LifecycleCliResult> {
-  const outputMode = argv.includes("--json") ? "json" : "text";
-  const dryRun = argv.includes("--dry-run");
-  const command = (argv[0] ?? "update") as LifecycleCliResult["command"];
+  let commandInput: string | undefined;
+  let dryRun = false;
+  let outputMode: LifecycleCliResult["outputMode"] = "text";
 
-  return { command, dryRun, outputMode };
+  for (const arg of argv) {
+    if (arg === "--dry-run") {
+      dryRun = true;
+      continue;
+    }
+
+    if (arg === "--json") {
+      outputMode = "json";
+      continue;
+    }
+
+    if (arg.startsWith("-")) {
+      continue;
+    }
+
+    if (!commandInput) {
+      commandInput = arg;
+    }
+  }
+
+  const candidate = (commandInput ?? "update") as ValidCommand;
+  if (!validCommands.includes(candidate)) {
+    throw new Error(`Unknown command: ${candidate}`);
+  }
+
+  return {
+    command: candidate,
+    dryRun,
+    outputMode
+  };
 }
 
 async function main(argv = process.argv.slice(2)): Promise<LifecycleCliResult> {
   const result = await runLifecycleCli(argv);
-  console.log(JSON.stringify(result));
+
+  if (result.outputMode === "json") {
+    console.log(JSON.stringify(result));
+    return result;
+  }
+
+  const pieces = [`command=${result.command}`, "output=text"];
+  if (result.dryRun) {
+    pieces.push("dry-run");
+  }
+  console.log(pieces.join("; "));
+
   return result;
 }
 
