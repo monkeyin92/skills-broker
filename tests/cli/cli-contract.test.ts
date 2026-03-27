@@ -7,11 +7,10 @@ test("cli returns not implemented error when run without pipeline", async () => 
     url: "https://example.com"
   });
 
-  expect(result).toEqual({
+  expect(result).toMatchObject({
     ok: false,
     error: {
-      code: "NOT_IMPLEMENTED",
-      message: "broker pipeline not wired yet"
+      code: "NOT_IMPLEMENTED"
     }
   });
 });

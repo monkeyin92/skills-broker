@@ -7,7 +7,7 @@ export type RunBrokerCliOutput = {
   ok: false;
   error: {
     code: "NOT_IMPLEMENTED";
-    message: "broker pipeline not wired yet";
+    message?: string;
   };
 };
 
