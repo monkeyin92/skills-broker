@@ -1,0 +1,45 @@
+name: Live Discovery Smoke
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 3 * * *"
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Validate live MCP Registry response
+        run: |
+          set -euo pipefail
+          response_file="$(mktemp)"
+          curl --fail --silent --show-error \
+            https://registry.modelcontextprotocol.io/v0.1/servers \
+            > "${response_file}"
+          RESPONSE_FILE="${response_file}" node <<'EOF'
+          const fs = require("node:fs");
+
+          const payload = JSON.parse(fs.readFileSync(process.env.RESPONSE_FILE, "utf8"));
+
+          if (!Array.isArray(payload.servers) || payload.servers.length === 0) {
+            throw new Error("MCP Registry live response is missing a non-empty servers array.");
+          }
+
+          console.log(`Validated ${payload.servers.length} live registry servers.`);
+          EOF
+
+      - name: Run Claude Code smoke test
+        run: npm test -- --run tests/e2e/claude-code-smoke.test.ts
