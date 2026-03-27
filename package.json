@@ -1,8 +1,16 @@
 {
   "name": "skills-broker",
   "version": "0.1.0",
-  "private": true,
   "type": "module",
+  "bin": {
+    "skills-broker": "./dist/bin/skills-broker.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "README.zh-CN.md",
+    "LICENSE"
+  ],
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "test": "vitest"
