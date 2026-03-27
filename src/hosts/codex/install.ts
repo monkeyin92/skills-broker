@@ -1,5 +1,5 @@
 import { chmod, mkdir, writeFile } from "node:fs/promises";
-import { dirname, join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 
 export type InstallCodexHostShellOptions = {
   installDirectory: string;
@@ -50,13 +50,14 @@ BROKER_CURRENT_HOST="codex" exec "${brokerHomeDirectory}/bin/run-broker" "\${BRO
 export async function installCodexHostShell(
   options: InstallCodexHostShellOptions
 ): Promise<InstallCodexHostShellResult> {
+  const brokerHomeDirectory = resolve(options.brokerHomeDirectory);
   const skillPath = join(options.installDirectory, "SKILL.md");
   const runnerPath = join(options.installDirectory, "bin", RUNNER_FILE_NAME);
 
   await mkdir(dirname(skillPath), { recursive: true });
   await mkdir(dirname(runnerPath), { recursive: true });
   await writeFile(skillPath, buildSkillMarkdown(options.installDirectory), "utf8");
-  await writeFile(runnerPath, buildRunnerScript(options.brokerHomeDirectory), "utf8");
+  await writeFile(runnerPath, buildRunnerScript(brokerHomeDirectory), "utf8");
   await chmod(runnerPath, 0o755);
 
   return {

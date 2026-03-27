@@ -189,6 +189,7 @@ export async function installClaudeCodePlugin(
 export async function installClaudeCodeHostShell(
   options: InstallClaudeCodeHostShellOptions
 ): Promise<InstallClaudeCodePluginResult> {
+  const brokerHomeDirectory = resolve(options.brokerHomeDirectory);
   const version = await readPackageVersion(options.projectRoot);
   const packageJsonPath = join(options.installDirectory, "package.json");
   const manifestPath = join(
@@ -220,7 +221,7 @@ export async function installClaudeCodeHostShell(
   await writeFile(skillPath, buildSkillMarkdown(), "utf8");
   await writeFile(
     runnerPath,
-    buildHostShellRunnerScript(options.brokerHomeDirectory),
+    buildHostShellRunnerScript(brokerHomeDirectory),
     "utf8"
   );
   await chmod(runnerPath, 0o755);
@@ -230,9 +231,9 @@ export async function installClaudeCodeHostShell(
     packageJsonPath,
     manifestPath,
     skillPath,
-    hostCatalogPath: join(options.brokerHomeDirectory, "config", "host-skills.seed.json"),
-    mcpRegistryPath: join(options.brokerHomeDirectory, "config", "mcp-registry.seed.json"),
-    distPath: join(options.brokerHomeDirectory, "dist"),
+    hostCatalogPath: join(brokerHomeDirectory, "config", "host-skills.seed.json"),
+    mcpRegistryPath: join(brokerHomeDirectory, "config", "mcp-registry.seed.json"),
+    distPath: join(brokerHomeDirectory, "dist"),
     runnerPath
   };
 }
