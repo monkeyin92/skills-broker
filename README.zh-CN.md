@@ -170,60 +170,15 @@ skills-broker update
 
 ## 快速安装和使用
 
-### 1. 克隆仓库并安装依赖
-
-```bash
-git clone https://github.com/monkeyin92/skills-broker.git
-cd skills-broker
-npm ci
-```
-
-### 2. 构建并验证
-
-```bash
-npm run build
-npx vitest run
-```
-
-### 3. 安装本地 Claude Code 插件包
-
-```bash
-./scripts/install-claude-code.sh /absolute/path/to/claude-code-plugin
-```
-
-这个命令会生成一个自包含的本地插件目录，里面包括：
-
-- `.claude-plugin/plugin.json`
-- `skills/webpage-to-markdown/SKILL.md`
-- `config/*.json`
-- `dist/*.js`
-- `package.json`
-- `bin/run-broker`
-
-这条链路是 **当前 Claude Code-first 的安装方式**。
-
-这个仓库现在也提供了共享 home 生命周期 CLI：
+### 1. 初始化或刷新共享 broker home
 
 ```bash
 npx skills-broker update
 ```
 
-使用 `npx skills-broker update` 可以初始化或刷新共享 broker home，接上薄宿主壳，并让 Claude Code 和 Codex 复用同一份路由缓存。`npx skills-broker doctor` 用来只读诊断环境，`npx skills-broker remove` 默认只拆卸受管宿主壳，不会删除共享历史。
+使用 `npx skills-broker update` 可以初始化或刷新共享 broker home，接上薄宿主壳，并让 Claude Code 和 Codex 复用同一份路由缓存。`npx skills-broker doctor` 用来只读诊断环境，`npx skills-broker remove` 默认只拆卸受管宿主壳而不删除共享历史，`npx skills-broker remove --purge` 会把共享 broker home 一起清掉。
 
-### 4. 直接试跑安装后的 runner
-
-```bash
-/absolute/path/to/claude-code-plugin/bin/run-broker \
-  '{"task":"turn this webpage into markdown","url":"https://example.com/article"}'
-```
-
-预期输出是一段 JSON，里面包含：
-
-- 被选中的 winner
-- handoff envelope
-- 调试信息
-
-### 5. 试一下共享 home 流程
+### 2. 用显式目录试跑共享 home
 
 ```bash
 npx skills-broker update \
@@ -238,6 +193,53 @@ npx skills-broker update \
 - 接上一个 Claude Code 薄壳
 - 接上一个 Codex 薄壳
 - 让两个宿主复用同一份 broker cache 和路由历史
+
+如果你要接到自动化或 CI，所有 lifecycle 命令也都支持 `--json`。
+
+### 3. 为本地开发克隆仓库并安装依赖
+
+```bash
+git clone https://github.com/monkeyin92/skills-broker.git
+cd skills-broker
+npm ci
+```
+
+### 4. 构建并验证本地 checkout
+
+```bash
+npm run build
+npx vitest run
+```
+
+### 5. 安装仓库内的 Claude Code 本地包
+
+```bash
+./scripts/install-claude-code.sh /absolute/path/to/claude-code-plugin
+```
+
+这个命令会生成一个自包含的本地插件目录，里面包括：
+
+- `.claude-plugin/plugin.json`
+- `skills/webpage-to-markdown/SKILL.md`
+- `config/*.json`
+- `dist/*.js`
+- `package.json`
+- `bin/run-broker`
+
+这条链路是 **仓库内的 Claude Code 开发路径**，不是当前主推的发布态安装入口。
+
+### 6. 直接试跑安装后的 runner
+
+```bash
+/absolute/path/to/claude-code-plugin/bin/run-broker \
+  '{"task":"turn this webpage into markdown","url":"https://example.com/article"}'
+```
+
+预期输出是一段 JSON，里面包含：
+
+- 被选中的 winner
+- handoff envelope
+- 调试信息
 
 ## 典型使用场景
 

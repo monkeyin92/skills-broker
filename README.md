@@ -163,56 +163,15 @@ That distinction matters because the hardest part is not storing tools. The hard
 
 ## Quick Start
 
-### 1. Clone and install dependencies
-
-```bash
-git clone https://github.com/monkeyin92/skills-broker.git
-cd skills-broker
-npm ci
-```
-
-### 2. Build and verify
-
-```bash
-npm run build
-npx vitest run
-```
-
-### 3. Install the local Claude Code plugin package
-
-```bash
-./scripts/install-claude-code.sh /absolute/path/to/claude-code-plugin
-```
-
-This creates a self-contained local package containing:
-
-- `.claude-plugin/plugin.json`
-- `skills/webpage-to-markdown/SKILL.md`
-- `config/*.json`
-- `dist/*.js`
-- `package.json`
-- `bin/run-broker`
-
-This is the **current Claude Code-first install path**.
-
-This repository also ships the shared-home lifecycle CLI:
+### 1. Install or refresh the shared broker home
 
 ```bash
 npx skills-broker update
 ```
 
-Use `npx skills-broker update` to initialize or refresh the shared broker home, attach thin host shells, and reuse the same routing cache across Claude Code and Codex. `npx skills-broker doctor` inspects the environment without writing, and `npx skills-broker remove` detaches only the managed host shells by default.
+Use `npx skills-broker update` to initialize or refresh the shared broker home, attach thin host shells, and reuse the same routing cache across Claude Code and Codex. `npx skills-broker doctor` inspects the environment without writing, `npx skills-broker remove` detaches only the managed host shells by default, and `npx skills-broker remove --purge` fully removes the shared broker home.
 
-### 4. Try the installed runner
-
-```bash
-/absolute/path/to/claude-code-plugin/bin/run-broker \
-  '{"task":"turn this webpage into markdown","url":"https://example.com/article"}'
-```
-
-Expected output: a JSON payload containing the selected winner, handoff envelope, and debug information.
-
-### 5. Try the shared-home flow
+### 2. Try explicit shared-home directories
 
 ```bash
 npx skills-broker update \
@@ -227,6 +186,49 @@ This will:
 - attach a Claude Code thin shell
 - attach a Codex thin shell
 - let both hosts reuse the same broker cache and routing history
+
+For automation or CI, every lifecycle command also supports `--json`.
+
+### 3. Clone the repository for local development
+
+```bash
+git clone https://github.com/monkeyin92/skills-broker.git
+cd skills-broker
+npm ci
+```
+
+### 4. Build and verify the local checkout
+
+```bash
+npm run build
+npx vitest run
+```
+
+### 5. Install the repo-local Claude Code package
+
+```bash
+./scripts/install-claude-code.sh /absolute/path/to/claude-code-plugin
+```
+
+This creates a self-contained local package containing:
+
+- `.claude-plugin/plugin.json`
+- `skills/webpage-to-markdown/SKILL.md`
+- `config/*.json`
+- `dist/*.js`
+- `package.json`
+- `bin/run-broker`
+
+This is the **repo-local Claude Code development path**, not the primary published install flow.
+
+### 6. Try the installed runner
+
+```bash
+/absolute/path/to/claude-code-plugin/bin/run-broker \
+  '{"task":"turn this webpage into markdown","url":"https://example.com/article"}'
+```
+
+Expected output: a JSON payload containing the selected winner, handoff envelope, and debug information.
 
 ## Example Use Cases
 

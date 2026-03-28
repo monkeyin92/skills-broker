@@ -124,7 +124,7 @@ Running `npx skills-broker remove` should by default:
 - preserve `~/.skills-broker`
 - print what was removed and what was preserved
 
-An explicit destructive flag should be available for full cleanup of the shared broker home. The exact flag name can be finalized in implementation, but the behavior is in scope now.
+An explicit destructive flag should be available for full cleanup of the shared broker home. The implemented flags are `--purge` and `--all` (alias), with `remove` remaining the safe default.
 
 ## Escape Hatches
 
