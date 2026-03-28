@@ -5,6 +5,7 @@ import { promisify } from "node:util";
 import { resolve } from "node:path";
 import { access, chmod, mkdtemp, mkdir, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
+import { installSharedBrokerHome } from "../../src/shared-home/install";
 import { writeManagedShellManifest } from "../../src/shared-home/ownership";
 
 const execFileAsync = promisify(execFile);
@@ -38,7 +39,15 @@ describe("lifecycle cli", () => {
 
     expect(result.command).toBe("remove");
     expect(result.dryRun).toBe(false);
+    expect(result.purgeSharedHome).toBe(false);
     expect(result.outputMode).toBe("text");
+  });
+
+  it("treats --all as remove purge", async () => {
+    const result = await runLifecycleCli(["remove", "--all"]);
+
+    expect(result.command).toBe("remove");
+    expect(result.purgeSharedHome).toBe(true);
   });
 
   it("recognizes --json doctor", async () => {
@@ -88,6 +97,101 @@ describe("lifecycle cli", () => {
           reason: expect.stringContaining("missing")
         })
       );
+    } finally {
+      await rm(runtimeDirectory, { recursive: true, force: true });
+    }
+  });
+
+  it("prints remove result as JSON when --json is passed", async () => {
+    const scriptPath = resolve("src/bin/skills-broker.ts");
+    const runtimeDirectory = await mkdtemp(resolve(tmpdir(), "skills-broker-cli-remove-json-"));
+    const brokerHomeDirectory = resolve(runtimeDirectory, ".skills-broker");
+    const codexInstallDirectory = resolve(
+      runtimeDirectory,
+      ".codex",
+      "skills",
+      "webpage-to-markdown"
+    );
+
+    try {
+      await installSharedBrokerHome({
+        brokerHomeDirectory,
+        projectRoot: process.cwd()
+      });
+      await mkdir(codexInstallDirectory, { recursive: true });
+      await writeFile(
+        resolve(codexInstallDirectory, ".skills-broker.json"),
+        `${JSON.stringify({
+          managedBy: "skills-broker",
+          host: "codex",
+          version: "0.1.0",
+          brokerHome: brokerHomeDirectory
+        }, null, 2)}\n`,
+        "utf8"
+      );
+
+      const { stdout } = await execFileAsync("node", [
+        "--loader",
+        tsNodeLoaderPath,
+        scriptPath,
+        "remove",
+        "--json",
+        "--broker-home",
+        brokerHomeDirectory,
+        "--codex-dir",
+        codexInstallDirectory
+      ], {
+        env: process.env,
+        encoding: "utf8"
+      });
+
+      const result = JSON.parse(stdout.trim());
+      expect(result.command).toBe("remove");
+      expect(result.sharedHome).toEqual({
+        path: brokerHomeDirectory,
+        status: "preserved"
+      });
+      expect(result.hosts).toContainEqual({
+        name: "codex",
+        status: "removed"
+      });
+    } finally {
+      await rm(runtimeDirectory, { recursive: true, force: true });
+    }
+  });
+
+  it("purges shared home when remove is executed with --purge", async () => {
+    const scriptPath = resolve("src/bin/skills-broker.ts");
+    const runtimeDirectory = await mkdtemp(resolve(tmpdir(), "skills-broker-cli-remove-purge-"));
+    const brokerHomeDirectory = resolve(runtimeDirectory, ".skills-broker");
+
+    try {
+      await installSharedBrokerHome({
+        brokerHomeDirectory,
+        projectRoot: process.cwd()
+      });
+
+      const { stdout } = await execFileAsync("node", [
+        "--loader",
+        tsNodeLoaderPath,
+        scriptPath,
+        "remove",
+        "--json",
+        "--purge",
+        "--broker-home",
+        brokerHomeDirectory
+      ], {
+        env: process.env,
+        encoding: "utf8"
+      });
+
+      const result = JSON.parse(stdout.trim());
+      expect(result.command).toBe("remove");
+      expect(result.sharedHome).toEqual({
+        path: brokerHomeDirectory,
+        status: "purged"
+      });
+      await expect(access(brokerHomeDirectory)).rejects.toThrow();
     } finally {
       await rm(runtimeDirectory, { recursive: true, force: true });
     }

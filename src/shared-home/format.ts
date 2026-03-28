@@ -1,8 +1,9 @@
 import type { DoctorLifecycleResult } from "./doctor.js";
+import type { RemoveLifecycleResult } from "./remove.js";
 import type { UpdateLifecycleResult } from "./update.js";
 
 export function formatLifecycleResult(
-  result: UpdateLifecycleResult | DoctorLifecycleResult,
+  result: UpdateLifecycleResult | DoctorLifecycleResult | RemoveLifecycleResult,
   outputMode: "text" | "json"
 ): string {
   if (outputMode === "json") {
@@ -15,6 +16,26 @@ export function formatLifecycleResult(
       "",
       `Shared home: ${result.sharedHome.path}`,
       `Shared home exists: ${result.sharedHome.exists ? "yes" : "no"}`
+    ];
+
+    for (const host of result.hosts) {
+      const suffix = host.reason ? ` (${host.reason})` : "";
+      lines.push(`Host ${host.name}: ${host.status}${suffix}`);
+    }
+
+    for (const warning of result.warnings) {
+      lines.push(`Warning: ${warning}`);
+    }
+
+    return lines.join("\n");
+  }
+
+  if (result.command === "remove") {
+    const lines = [
+      "skills-broker removed",
+      "",
+      `Shared home: ${result.sharedHome.path}`,
+      `Shared home status: ${result.sharedHome.status}`
     ];
 
     for (const host of result.hosts) {

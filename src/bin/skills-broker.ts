@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 import { doctorSharedBrokerHome } from "../shared-home/doctor.js";
 import { formatLifecycleResult } from "../shared-home/format.js";
 import { resolveLifecyclePaths } from "../shared-home/paths.js";
+import { removeSharedBrokerHome } from "../shared-home/remove.js";
 import { updateSharedBrokerHome } from "../shared-home/update.js";
 
 const validCommands = ["update", "doctor", "remove"] as const;
@@ -27,6 +28,7 @@ function readFlagValue(argv: string[], index: number, flagName: string): string 
 export type LifecycleCliResult = {
   command: ValidCommand;
   dryRun: boolean;
+  purgeSharedHome: boolean;
   outputMode: "text" | "json";
   brokerHomeOverride?: string;
   claudeDirOverride?: string;
@@ -36,6 +38,7 @@ export type LifecycleCliResult = {
 export async function runLifecycleCli(argv: string[]): Promise<LifecycleCliResult> {
   let commandInput: string | undefined;
   let dryRun = false;
+  let purgeSharedHome = false;
   let outputMode: LifecycleCliResult["outputMode"] = "text";
   let brokerHomeOverride: string | undefined;
   let claudeDirOverride: string | undefined;
@@ -50,6 +53,11 @@ export async function runLifecycleCli(argv: string[]): Promise<LifecycleCliResul
 
     if (arg === "--json") {
       outputMode = "json";
+      continue;
+    }
+
+    if (arg === "--purge" || arg === "--all") {
+      purgeSharedHome = true;
       continue;
     }
 
@@ -88,6 +96,7 @@ export async function runLifecycleCli(argv: string[]): Promise<LifecycleCliResul
   return {
     command: candidate,
     dryRun,
+    purgeSharedHome,
     outputMode,
     brokerHomeOverride,
     claudeDirOverride,
@@ -134,12 +143,27 @@ async function main(argv = process.argv.slice(2)) {
     return lifecycleResult;
   }
 
+  if (result.command === "remove") {
+    const lifecycleResult = await removeSharedBrokerHome({
+      brokerHomeDirectory: paths.brokerHomeDirectory,
+      claudeCodeInstallDirectory: paths.claudeCodeInstallDirectory,
+      codexInstallDirectory: paths.codexInstallDirectory,
+      purgeSharedHome: result.purgeSharedHome
+    });
+
+    process.stdout.write(`${formatLifecycleResult(lifecycleResult, result.outputMode)}\n`);
+    return lifecycleResult;
+  }
+
   if (result.outputMode === "json") {
     console.log(JSON.stringify(result));
   } else {
     const pieces = [`command=${result.command}`, "output=text"];
     if (result.dryRun) {
       pieces.push("dry-run");
+    }
+    if (result.purgeSharedHome) {
+      pieces.push("purge");
     }
     console.log(pieces.join("; "));
   }
