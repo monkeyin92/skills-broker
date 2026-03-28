@@ -8,6 +8,38 @@ export type ManagedShellManifest = {
   brokerHome: string;
 };
 
+export type ManagedShellManifestState =
+  | {
+      status: "absent";
+      manifestPath: string;
+    }
+  | {
+      status: "unreadable";
+      manifestPath: string;
+      error: NodeJS.ErrnoException;
+    }
+  | {
+      status: "invalid-json";
+      manifestPath: string;
+      error: SyntaxError;
+    }
+  | {
+      status: "foreign";
+      manifestPath: string;
+      manifest: Record<string, unknown>;
+      managedBy: unknown;
+    }
+  | {
+      status: "invalid-manifest";
+      manifestPath: string;
+      manifest: Record<string, unknown>;
+    }
+  | {
+      status: "managed";
+      manifestPath: string;
+      manifest: ManagedShellManifest;
+    };
+
 export const OWNERSHIP_FILE = ".skills-broker.json";
 
 function isManagedShellManifest(value: unknown): value is ManagedShellManifest {
@@ -27,15 +59,69 @@ function isManagedShellManifest(value: unknown): value is ManagedShellManifest {
 
 export async function readManagedShellManifest(
   shellDirectory: string
-): Promise<ManagedShellManifest | undefined> {
-  try {
-    const manifest = JSON.parse(
-      await readFile(join(shellDirectory, OWNERSHIP_FILE), "utf8")
-    ) as unknown;
+): Promise<ManagedShellManifestState> {
+  const manifestPath = join(shellDirectory, OWNERSHIP_FILE);
 
-    return isManagedShellManifest(manifest) ? manifest : undefined;
-  } catch {
-    return undefined;
+  try {
+    const contents = await readFile(manifestPath, "utf8");
+
+    try {
+      const manifest = JSON.parse(contents) as unknown;
+
+      if (manifest === null || typeof manifest !== "object") {
+        return {
+          status: "invalid-manifest",
+          manifestPath,
+          manifest: {}
+        };
+      }
+
+      const candidate = manifest as Record<string, unknown>;
+
+      if (candidate.managedBy !== "skills-broker") {
+        return {
+          status: "foreign",
+          manifestPath,
+          manifest: candidate,
+          managedBy: candidate.managedBy
+        };
+      }
+
+      if (isManagedShellManifest(candidate)) {
+        return {
+          status: "managed",
+          manifestPath,
+          manifest: candidate
+        };
+      }
+
+      return {
+        status: "invalid-manifest",
+        manifestPath,
+        manifest: candidate
+      };
+    } catch (error) {
+      return {
+        status: "invalid-json",
+        manifestPath,
+        error: error as SyntaxError
+      };
+    }
+  } catch (error) {
+    const nodeError = error as NodeJS.ErrnoException;
+
+    if (nodeError.code === "ENOENT") {
+      return {
+        status: "absent",
+        manifestPath
+      };
+    }
+
+    return {
+      status: "unreadable",
+      manifestPath,
+      error: nodeError
+    };
   }
 }
 
