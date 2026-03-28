@@ -121,9 +121,12 @@ async function updateHost(
   installDirectory: string | undefined,
   options: UpdateSharedBrokerHomeOptions,
   warnings: string[]
-): Promise<HostLifecycleEntry | undefined> {
+): Promise<HostLifecycleEntry> {
   if (installDirectory === undefined) {
-    return undefined;
+    return {
+      name,
+      status: "skipped_not_detected"
+    };
   }
 
   const manifestState = await readManagedShellManifest(installDirectory);
@@ -200,7 +203,7 @@ export async function updateSharedBrokerHome(
       updateHost("claude-code", options.claudeCodeInstallDirectory, options, warnings),
       updateHost("codex", options.codexInstallDirectory, options, warnings)
     ])
-  ).filter((host): host is HostLifecycleEntry => host !== undefined);
+  );
 
   return {
     command: "update",

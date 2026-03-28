@@ -1,11 +1,17 @@
 #!/usr/bin/env node
 
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { formatLifecycleResult } from "../shared-home/format.js";
 import { resolveLifecyclePaths } from "../shared-home/paths.js";
 import { updateSharedBrokerHome } from "../shared-home/update.js";
 
 const validCommands = ["update", "doctor", "remove"] as const;
 type ValidCommand = (typeof validCommands)[number];
+
+function resolvePackageRoot(): string {
+  return resolve(dirname(fileURLToPath(import.meta.url)), "..", "..");
+}
 
 export type LifecycleCliResult = {
   command: ValidCommand;
@@ -90,9 +96,16 @@ async function main(argv = process.argv.slice(2)): Promise<LifecycleCliResult> {
 
     const lifecycleResult = await updateSharedBrokerHome({
       brokerHomeDirectory: paths.brokerHomeDirectory,
-      claudeCodeInstallDirectory: paths.claudeCodeInstallDirectory,
-      codexInstallDirectory: paths.codexInstallDirectory,
-      dryRun: result.dryRun
+      claudeCodeInstallDirectory:
+        result.claudeDirOverride === undefined
+          ? undefined
+          : paths.claudeCodeInstallDirectory,
+      codexInstallDirectory:
+        result.codexDirOverride === undefined
+          ? undefined
+          : paths.codexInstallDirectory,
+      dryRun: result.dryRun,
+      projectRoot: resolvePackageRoot()
     });
 
     console.log(formatLifecycleResult(lifecycleResult, result.outputMode));

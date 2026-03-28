@@ -7,6 +7,7 @@ import { access, chmod, mkdtemp, mkdir, rm, symlink, writeFile } from "node:fs/p
 import { tmpdir } from "node:os";
 
 const execFileAsync = promisify(execFile);
+const tsNodeLoaderPath = resolve("node_modules/ts-node/esm.mjs");
 
 describe("lifecycle cli", () => {
   it("dispatches update --dry-run --json", async () => {
@@ -64,7 +65,7 @@ describe("lifecycle cli", () => {
     try {
       const { stdout } = await execFileAsync("node", [
         "--loader",
-        "ts-node/esm",
+        tsNodeLoaderPath,
         scriptPath,
         "--json",
         "update",
@@ -98,7 +99,7 @@ describe("lifecycle cli", () => {
     try {
       const { stdout } = await execFileAsync("node", [
         "--loader",
-        "ts-node/esm",
+        tsNodeLoaderPath,
         scriptPath,
         "update",
         "--dry-run",
@@ -112,9 +113,51 @@ describe("lifecycle cli", () => {
       const output = stdout.trim();
       expect(output).toContain("skills-broker updated");
       expect(output).toContain(`Shared home: ${brokerHomeDirectory}`);
+      expect(output).toContain("Host claude-code: skipped_not_detected");
+      expect(output).toContain("Host codex: skipped_not_detected");
       expect(output).not.toMatch(/^\s*\{/);
     } finally {
       await rm(runtimeDirectory, { recursive: true, force: true });
+    }
+  });
+
+  it("finds shared-home resources when executed from a non-repo cwd", async () => {
+    await execFileAsync("npm", ["run", "build"], {
+      env: process.env,
+      encoding: "utf8"
+    });
+
+    const scriptPath = resolve("dist/bin/skills-broker.js");
+    const runtimeDirectory = await mkdtemp(resolve(tmpdir(), "skills-broker-cli-nonrepo-"));
+    const externalWorkingDirectory = await mkdtemp(resolve(tmpdir(), "skills-broker-cli-cwd-"));
+    const brokerHomeDirectory = resolve(runtimeDirectory, ".skills-broker");
+    const codexInstallDirectory = resolve(
+      runtimeDirectory,
+      ".codex",
+      "skills",
+      "webpage-to-markdown"
+    );
+
+    try {
+      const { stdout } = await execFileAsync("node", [
+        scriptPath,
+        "update",
+        "--broker-home",
+        brokerHomeDirectory,
+        "--codex-dir",
+        codexInstallDirectory
+      ], {
+        cwd: externalWorkingDirectory,
+        env: process.env,
+        encoding: "utf8"
+      });
+
+      expect(stdout).toContain("skills-broker updated");
+      await expect(access(resolve(brokerHomeDirectory, "package.json"))).resolves.toBeUndefined();
+      await expect(access(resolve(codexInstallDirectory, "SKILL.md"))).resolves.toBeUndefined();
+    } finally {
+      await rm(runtimeDirectory, { recursive: true, force: true });
+      await rm(externalWorkingDirectory, { recursive: true, force: true });
     }
   });
 
@@ -140,7 +183,7 @@ describe("lifecycle cli", () => {
 
       const { stdout } = await execFileAsync("node", [
         "--loader",
-        "ts-node/esm",
+        tsNodeLoaderPath,
         scriptPath,
         "update",
         "--json",
@@ -187,12 +230,17 @@ describe("lifecycle cli", () => {
     await chmod(distBin, 0o755);
     await symlink(distBin, symlinkPath);
     await chmod(symlinkPath, 0o755);
+    const runtimeDirectory = await mkdtemp(resolve(tmpdir(), "skills-broker-bin-runtime-"));
 
     try {
       const { stdout } = await execFileAsync(symlinkPath, [
         "update",
-        "--dry-run"
+        "--broker-home",
+        resolve(runtimeDirectory, ".skills-broker"),
+        "--codex-dir",
+        resolve(runtimeDirectory, ".codex", "skills", "webpage-to-markdown")
       ], {
+        cwd: runtimeDirectory,
         env: process.env,
         encoding: "utf8"
       });
@@ -201,6 +249,7 @@ describe("lifecycle cli", () => {
       expect(output).toContain("skills-broker updated");
       expect(output).not.toMatch(/^\s*\{/);
     } finally {
+      await rm(runtimeDirectory, { recursive: true, force: true });
       await rm(binDir, { recursive: true, force: true });
     }
   });

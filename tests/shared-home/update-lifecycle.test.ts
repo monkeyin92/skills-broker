@@ -207,8 +207,34 @@ describe("shared-home lifecycle paths", () => {
         name: "codex",
         status: "planned_install"
       });
+      expect(result.hosts).toContainEqual({
+        name: "claude-code",
+        status: "skipped_not_detected"
+      });
       await expect(access(join(codexInstallDirectory, "SKILL.md"))).rejects.toThrow();
       await expect(access(join(brokerHomeDirectory, "package.json"))).rejects.toThrow();
+    } finally {
+      await rm(runtimeDirectory, { recursive: true, force: true });
+    }
+  });
+
+  it("skips hosts that are not explicitly detected", async () => {
+    const runtimeDirectory = await mkdtemp(
+      join(tmpdir(), "skills-broker-update-not-detected-")
+    );
+    const brokerHomeDirectory = join(runtimeDirectory, ".skills-broker");
+
+    try {
+      const result = await updateSharedBrokerHome({
+        brokerHomeDirectory,
+        dryRun: true
+      });
+
+      expect(result.status).toBe("success");
+      expect(result.hosts).toEqual([
+        { name: "claude-code", status: "skipped_not_detected" },
+        { name: "codex", status: "skipped_not_detected" }
+      ]);
     } finally {
       await rm(runtimeDirectory, { recursive: true, force: true });
     }
