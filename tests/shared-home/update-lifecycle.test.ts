@@ -1,4 +1,4 @@
-import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { access, mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -6,6 +6,7 @@ import { installCodexHostShell } from "../../src/hosts/codex/install";
 import { detectWritableDirectory } from "../../src/shared-home/detect";
 import { resolveLifecyclePaths } from "../../src/shared-home/paths";
 import { readManagedShellManifest } from "../../src/shared-home/ownership";
+import { updateSharedBrokerHome } from "../../src/shared-home/update";
 
 describe("shared-home lifecycle paths", () => {
   it("prefers overrides but falls back to ~/.skills-broker and default host dirs", () => {
@@ -171,6 +172,92 @@ describe("shared-home lifecycle paths", () => {
       const manifest = await readManagedShellManifest(codexShellDirectory);
 
       expect(manifest.status).toBe("invalid-json");
+    } finally {
+      await rm(runtimeDirectory, { recursive: true, force: true });
+    }
+  });
+
+  it("dry-run reports planned installs without writing files", async () => {
+    const runtimeDirectory = await mkdtemp(
+      join(tmpdir(), "skills-broker-update-dry-run-")
+    );
+    const brokerHomeDirectory = join(runtimeDirectory, ".skills-broker");
+    const codexInstallDirectory = join(
+      runtimeDirectory,
+      ".codex",
+      "skills",
+      "webpage-to-markdown"
+    );
+
+    try {
+      const result = await updateSharedBrokerHome({
+        brokerHomeDirectory,
+        codexInstallDirectory,
+        dryRun: true
+      });
+
+      expect(result.command).toBe("update");
+      expect(result.dryRun).toBe(true);
+      expect(result.status).toBe("success");
+      expect(result.sharedHome).toMatchObject({
+        path: brokerHomeDirectory,
+        status: "planned"
+      });
+      expect(result.hosts).toContainEqual({
+        name: "codex",
+        status: "planned_install"
+      });
+      await expect(access(join(codexInstallDirectory, "SKILL.md"))).rejects.toThrow();
+      await expect(access(join(brokerHomeDirectory, "package.json"))).rejects.toThrow();
+    } finally {
+      await rm(runtimeDirectory, { recursive: true, force: true });
+    }
+  });
+
+  it("continues when one host conflicts and the other installs", async () => {
+    const runtimeDirectory = await mkdtemp(
+      join(tmpdir(), "skills-broker-update-partial-success-")
+    );
+    const brokerHomeDirectory = join(runtimeDirectory, ".skills-broker");
+    const claudeCodeInstallDirectory = join(runtimeDirectory, ".claude-code-plugin");
+    const codexInstallDirectory = join(
+      runtimeDirectory,
+      ".codex",
+      "skills",
+      "webpage-to-markdown"
+    );
+
+    try {
+      await mkdir(codexInstallDirectory, { recursive: true });
+      await writeFile(
+        join(codexInstallDirectory, ".skills-broker.json"),
+        `${JSON.stringify({ managedBy: "other-tool", host: "codex" }, null, 2)}\n`,
+        "utf8"
+      );
+
+      const result = await updateSharedBrokerHome({
+        brokerHomeDirectory,
+        claudeCodeInstallDirectory,
+        codexInstallDirectory
+      });
+
+      expect(result.status).toBe("degraded_success");
+      expect(result.sharedHome).toMatchObject({
+        path: brokerHomeDirectory,
+        status: "installed"
+      });
+      expect(result.hosts).toContainEqual({
+        name: "claude-code",
+        status: "installed"
+      });
+      expect(result.hosts).toContainEqual({
+        name: "codex",
+        status: "skipped_conflict",
+        reason: "foreign ownership manifest"
+      });
+      await expect(
+        access(join(claudeCodeInstallDirectory, "skills", "webpage-to-markdown", "SKILL.md"))
+      ).resolves.toBeUndefined();
     } finally {
       await rm(runtimeDirectory, { recursive: true, force: true });
     }

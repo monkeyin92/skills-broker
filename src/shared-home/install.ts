@@ -92,24 +92,31 @@ async function readPackageVersion(projectRoot?: string): Promise<string> {
   }
 }
 
+export function resolveSharedBrokerHomeLayout(
+  brokerHomeDirectory: string
+): InstallSharedBrokerHomeResult {
+  return {
+    brokerHomeDirectory,
+    packageJsonPath: join(brokerHomeDirectory, "package.json"),
+    hostCatalogPath: join(brokerHomeDirectory, "config", "host-skills.seed.json"),
+    mcpRegistryPath: join(brokerHomeDirectory, "config", "mcp-registry.seed.json"),
+    distPath: join(brokerHomeDirectory, "dist"),
+    runnerPath: join(brokerHomeDirectory, "bin", "run-broker")
+  };
+}
+
 export async function installSharedBrokerHome(
   options: InstallSharedBrokerHomeOptions
 ): Promise<InstallSharedBrokerHomeResult> {
   const sourceRoot = resolve(options.projectRoot ?? process.cwd());
   const version = await readPackageVersion(options.projectRoot);
-  const packageJsonPath = join(options.brokerHomeDirectory, "package.json");
-  const hostCatalogPath = join(
-    options.brokerHomeDirectory,
-    "config",
-    "host-skills.seed.json"
-  );
-  const mcpRegistryPath = join(
-    options.brokerHomeDirectory,
-    "config",
-    "mcp-registry.seed.json"
-  );
-  const distPath = join(options.brokerHomeDirectory, "dist");
-  const runnerPath = join(options.brokerHomeDirectory, "bin", "run-broker");
+  const {
+    packageJsonPath,
+    hostCatalogPath,
+    mcpRegistryPath,
+    distPath,
+    runnerPath
+  } = resolveSharedBrokerHomeLayout(options.brokerHomeDirectory);
 
   await mkdir(dirname(packageJsonPath), { recursive: true });
   await mkdir(dirname(hostCatalogPath), { recursive: true });
@@ -127,12 +134,5 @@ export async function installSharedBrokerHome(
   await writeFile(runnerPath, buildRunnerScript(), "utf8");
   await chmod(runnerPath, 0o755);
 
-  return {
-    brokerHomeDirectory: options.brokerHomeDirectory,
-    packageJsonPath,
-    hostCatalogPath,
-    mcpRegistryPath,
-    distPath,
-    runnerPath
-  };
+  return resolveSharedBrokerHomeLayout(options.brokerHomeDirectory);
 }
