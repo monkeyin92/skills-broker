@@ -31,9 +31,7 @@ describe("shared broker home smoke", () => {
     const codexSkillPath = join(codexShellDirectory, "SKILL.md");
 
     try {
-      await execFileAsync("npm", ["run", "build"], {
-        cwd: process.cwd()
-      });
+      await expect(access(buildScriptPath)).resolves.toBeUndefined();
       await execFileAsync("node", [
         buildScriptPath,
         "update",
