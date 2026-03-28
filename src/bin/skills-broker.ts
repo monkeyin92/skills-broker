@@ -13,6 +13,16 @@ function resolvePackageRoot(): string {
   return resolve(dirname(fileURLToPath(import.meta.url)), "..", "..");
 }
 
+function readFlagValue(argv: string[], index: number, flagName: string): string {
+  const value = argv[index + 1];
+
+  if (value === undefined || value.startsWith("-")) {
+    throw new Error(`Missing value for ${flagName}`);
+  }
+
+  return value;
+}
+
 export type LifecycleCliResult = {
   command: ValidCommand;
   dryRun: boolean;
@@ -43,19 +53,19 @@ export async function runLifecycleCli(argv: string[]): Promise<LifecycleCliResul
     }
 
     if (arg === "--broker-home") {
-      brokerHomeOverride = argv[index + 1];
+      brokerHomeOverride = readFlagValue(argv, index, "--broker-home");
       index += 1;
       continue;
     }
 
     if (arg === "--claude-dir") {
-      claudeDirOverride = argv[index + 1];
+      claudeDirOverride = readFlagValue(argv, index, "--claude-dir");
       index += 1;
       continue;
     }
 
     if (arg === "--codex-dir") {
-      codexDirOverride = argv[index + 1];
+      codexDirOverride = readFlagValue(argv, index, "--codex-dir");
       index += 1;
       continue;
     }

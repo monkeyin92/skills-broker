@@ -288,4 +288,114 @@ describe("shared-home lifecycle paths", () => {
       await rm(runtimeDirectory, { recursive: true, force: true });
     }
   });
+
+  it("does not overwrite an existing unmanaged host directory", async () => {
+    const runtimeDirectory = await mkdtemp(
+      join(tmpdir(), "skills-broker-update-unmanaged-conflict-")
+    );
+    const brokerHomeDirectory = join(runtimeDirectory, ".skills-broker");
+    const codexInstallDirectory = join(
+      runtimeDirectory,
+      ".codex",
+      "skills",
+      "webpage-to-markdown"
+    );
+    const existingSkillPath = join(codexInstallDirectory, "SKILL.md");
+
+    try {
+      await mkdir(codexInstallDirectory, { recursive: true });
+      await writeFile(existingSkillPath, "user managed content\n", "utf8");
+
+      const result = await updateSharedBrokerHome({
+        brokerHomeDirectory,
+        codexInstallDirectory
+      });
+
+      expect(result.status).toBe("degraded_success");
+      expect(result.hosts).toContainEqual({
+        name: "codex",
+        status: "skipped_conflict",
+        reason: "existing unmanaged host directory"
+      });
+      await expect(readFile(existingSkillPath, "utf8")).resolves.toBe("user managed content\n");
+    } finally {
+      await rm(runtimeDirectory, { recursive: true, force: true });
+    }
+  });
+
+  it("treats shared home success plus host conflicts as degraded success", async () => {
+    const runtimeDirectory = await mkdtemp(
+      join(tmpdir(), "skills-broker-update-all-hosts-conflict-")
+    );
+    const brokerHomeDirectory = join(runtimeDirectory, ".skills-broker");
+    const claudeCodeInstallDirectory = join(runtimeDirectory, ".claude-code-plugin");
+    const codexInstallDirectory = join(
+      runtimeDirectory,
+      ".codex",
+      "skills",
+      "webpage-to-markdown"
+    );
+
+    try {
+      await mkdir(claudeCodeInstallDirectory, { recursive: true });
+      await mkdir(codexInstallDirectory, { recursive: true });
+      await writeFile(
+        join(claudeCodeInstallDirectory, ".skills-broker.json"),
+        `${JSON.stringify({ managedBy: "other-tool", host: "claude-code" }, null, 2)}\n`,
+        "utf8"
+      );
+      await writeFile(
+        join(codexInstallDirectory, ".skills-broker.json"),
+        `${JSON.stringify({ managedBy: "other-tool", host: "codex" }, null, 2)}\n`,
+        "utf8"
+      );
+
+      const result = await updateSharedBrokerHome({
+        brokerHomeDirectory,
+        claudeCodeInstallDirectory,
+        codexInstallDirectory
+      });
+
+      expect(result.sharedHome.status).toBe("installed");
+      expect(result.status).toBe("degraded_success");
+      expect(result.hosts).toContainEqual({
+        name: "claude-code",
+        status: "skipped_conflict",
+        reason: "foreign ownership manifest"
+      });
+      expect(result.hosts).toContainEqual({
+        name: "codex",
+        status: "skipped_conflict",
+        reason: "foreign ownership manifest"
+      });
+    } finally {
+      await rm(runtimeDirectory, { recursive: true, force: true });
+    }
+  });
+
+  it("returns a structured failure when shared home installation fails", async () => {
+    const runtimeDirectory = await mkdtemp(
+      join(tmpdir(), "skills-broker-update-shared-home-failure-")
+    );
+    const brokerHomeDirectory = join(runtimeDirectory, "blocked", "home");
+
+    try {
+      await writeFile(join(runtimeDirectory, "blocked"), "no directory here", "utf8");
+
+      const result = await updateSharedBrokerHome({
+        brokerHomeDirectory,
+        projectRoot: process.cwd()
+      });
+
+      expect(result.status).toBe("failed");
+      expect(result.sharedHome.status).toBe("failed");
+      expect(result.sharedHome.reason).toContain("ENOTDIR");
+      expect(result.hosts).toEqual([
+        { name: "claude-code", status: "skipped_not_detected" },
+        { name: "codex", status: "skipped_not_detected" }
+      ]);
+    } finally {
+      await rm(runtimeDirectory, { recursive: true, force: true });
+    }
+  });
 });

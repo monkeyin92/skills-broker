@@ -1,4 +1,4 @@
-import { access } from "node:fs/promises";
+import { access, readdir, stat } from "node:fs/promises";
 import {
   installClaudeCodeHostShell,
   type InstallClaudeCodePluginResult
@@ -29,7 +29,8 @@ export type UpdateLifecycleResult = {
   dryRun: boolean;
   sharedHome: {
     path: string;
-    status: "installed" | "updated" | "planned";
+    status: "installed" | "updated" | "planned" | "failed";
+    reason?: string;
   };
   hosts: Array<{
     name: "claude-code" | "codex";
@@ -66,7 +67,20 @@ function statusCountsAsSuccess(status: HostLifecycleStatus): boolean {
   );
 }
 
-function resolveOverallStatus(hosts: HostLifecycleEntry[]): UpdateLifecycleResult["status"] {
+function sharedHomeCountsAsSuccess(
+  status: UpdateLifecycleResult["sharedHome"]["status"]
+): boolean {
+  return status === "installed" || status === "updated" || status === "planned";
+}
+
+function resolveOverallStatus(
+  sharedHome: UpdateLifecycleResult["sharedHome"],
+  hosts: HostLifecycleEntry[]
+): UpdateLifecycleResult["status"] {
+  if (sharedHome.status === "failed") {
+    return "failed";
+  }
+
   const problemCount = hosts.filter(
     (host) => host.status === "skipped_conflict" || host.status === "failed"
   ).length;
@@ -75,7 +89,9 @@ function resolveOverallStatus(hosts: HostLifecycleEntry[]): UpdateLifecycleResul
     return "success";
   }
 
-  const successCount = hosts.filter((host) => statusCountsAsSuccess(host.status)).length;
+  const successCount =
+    (sharedHomeCountsAsSuccess(sharedHome.status) ? 1 : 0) +
+    hosts.filter((host) => statusCountsAsSuccess(host.status)).length;
   return successCount > 0 ? "degraded_success" : "failed";
 }
 
@@ -116,6 +132,43 @@ async function installHostShell(
   });
 }
 
+async function detectUnmanagedHostConflict(
+  name: "claude-code" | "codex",
+  installDirectory: string
+): Promise<string | undefined> {
+  try {
+    const directoryStat = await stat(installDirectory);
+
+    if (!directoryStat.isDirectory()) {
+      return "existing unmanaged host path is not a directory";
+    }
+  } catch (error) {
+    const nodeError = error as NodeJS.ErrnoException;
+
+    if (nodeError.code === "ENOENT") {
+      return undefined;
+    }
+
+    throw error;
+  }
+
+  const entries = await readdir(installDirectory);
+  if (entries.length === 0) {
+    return undefined;
+  }
+
+  const knownHostFiles =
+    name === "claude-code"
+      ? ["SKILL.md", "package.json", ".claude-plugin", "skills", "bin"]
+      : ["SKILL.md", "bin", ".skills-broker.json"];
+
+  if (entries.some((entry) => knownHostFiles.includes(entry)) || entries.length > 0) {
+    return "existing unmanaged host directory";
+  }
+
+  return undefined;
+}
+
 async function updateHost(
   name: "claude-code" | "codex",
   installDirectory: string | undefined,
@@ -154,6 +207,19 @@ async function updateHost(
   }
 
   const wasManaged = manifestState.status === "managed";
+  if (manifestState.status === "absent") {
+    const unmanagedConflictReason = await detectUnmanagedHostConflict(name, installDirectory);
+
+    if (unmanagedConflictReason !== undefined) {
+      warnings.push(`${name}: ${unmanagedConflictReason}`);
+      return {
+        name,
+        status: "skipped_conflict",
+        reason: unmanagedConflictReason
+      };
+    }
+  }
+
   if (options.dryRun) {
     return {
       name,
@@ -190,29 +256,60 @@ export async function updateSharedBrokerHome(
   const sharedHomeLayout = resolveSharedBrokerHomeLayout(options.brokerHomeDirectory);
   const sharedHomeExists = await pathExists(sharedHomeLayout.packageJsonPath);
   const warnings: string[] = [];
+  let sharedHome: UpdateLifecycleResult["sharedHome"] = {
+    path: options.brokerHomeDirectory,
+    status: options.dryRun ? "planned" : sharedHomeExists ? "updated" : "installed"
+  };
 
   if (!options.dryRun) {
-    await installSharedBrokerHome({
-      brokerHomeDirectory: options.brokerHomeDirectory,
-      projectRoot: options.projectRoot
-    });
+    try {
+      await installSharedBrokerHome({
+        brokerHomeDirectory: options.brokerHomeDirectory,
+        projectRoot: options.projectRoot
+      });
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : String(error);
+      warnings.push(`shared-home: ${reason}`);
+      sharedHome = {
+        path: options.brokerHomeDirectory,
+        status: "failed",
+        reason
+      };
+    }
   }
 
-  const hosts = (
-    await Promise.all([
-      updateHost("claude-code", options.claudeCodeInstallDirectory, options, warnings),
-      updateHost("codex", options.codexInstallDirectory, options, warnings)
-    ])
-  );
+  const hosts =
+    sharedHome.status === "failed"
+      ? [
+          {
+            name: "claude-code" as const,
+            status:
+              options.claudeCodeInstallDirectory === undefined
+                ? ("skipped_not_detected" as const)
+                : ("failed" as const),
+            reason:
+              options.claudeCodeInstallDirectory === undefined ? undefined : sharedHome.reason
+          },
+          {
+            name: "codex" as const,
+            status:
+              options.codexInstallDirectory === undefined
+                ? ("skipped_not_detected" as const)
+                : ("failed" as const),
+            reason:
+              options.codexInstallDirectory === undefined ? undefined : sharedHome.reason
+          }
+        ]
+      : await Promise.all([
+          updateHost("claude-code", options.claudeCodeInstallDirectory, options, warnings),
+          updateHost("codex", options.codexInstallDirectory, options, warnings)
+        ]);
 
   return {
     command: "update",
-    status: resolveOverallStatus(hosts),
+    status: resolveOverallStatus(sharedHome, hosts),
     dryRun: options.dryRun ?? false,
-    sharedHome: {
-      path: options.brokerHomeDirectory,
-      status: options.dryRun ? "planned" : sharedHomeExists ? "updated" : "installed"
-    },
+    sharedHome,
     hosts,
     warnings
   };

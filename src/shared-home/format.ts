@@ -8,7 +8,16 @@ export function formatLifecycleResult(
     return JSON.stringify(result);
   }
 
-  const lines = ["skills-broker updated", "", `Shared home: ${result.sharedHome.path}`];
+  const lines = [
+    "skills-broker updated",
+    "",
+    `Shared home: ${result.sharedHome.path}`,
+    `Shared home status: ${result.sharedHome.status}`
+  ];
+
+  if (result.sharedHome.reason) {
+    lines.push(`Shared home reason: ${result.sharedHome.reason}`);
+  }
 
   if (result.dryRun) {
     lines.push("Mode: dry-run");

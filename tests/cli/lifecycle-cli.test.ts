@@ -51,6 +51,12 @@ describe("lifecycle cli", () => {
     await expect(runLifecycleCli(["bogus"])).rejects.toThrow("Unknown command");
   });
 
+  it("rejects flags that are missing a value", async () => {
+    await expect(runLifecycleCli(["update", "--codex-dir", "--json"])).rejects.toThrow(
+      "Missing value for --codex-dir"
+    );
+  });
+
   it("prints lifecycle result as JSON when --json is passed", async () => {
     const scriptPath = resolve("src/bin/skills-broker.ts");
     const runtimeDirectory = await mkdtemp(resolve(tmpdir(), "skills-broker-cli-json-"));
@@ -212,6 +218,66 @@ describe("lifecycle cli", () => {
       await expect(
         access(resolve(claudeCodeInstallDirectory, "skills", "webpage-to-markdown", "SKILL.md"))
       ).resolves.toBeUndefined();
+    } finally {
+      await rm(runtimeDirectory, { recursive: true, force: true });
+    }
+  });
+
+  it("prints structured JSON when shared home installation fails", async () => {
+    const scriptPath = resolve("src/bin/skills-broker.ts");
+    const runtimeDirectory = await mkdtemp(resolve(tmpdir(), "skills-broker-cli-shared-fail-"));
+    const blockedPath = resolve(runtimeDirectory, "blocked");
+    const brokerHomeDirectory = resolve(blockedPath, "home");
+
+    try {
+      await writeFile(blockedPath, "not a directory\n", "utf8");
+
+      const { stdout } = await execFileAsync("node", [
+        "--loader",
+        tsNodeLoaderPath,
+        scriptPath,
+        "update",
+        "--json",
+        "--broker-home",
+        brokerHomeDirectory
+      ], {
+        env: process.env,
+        encoding: "utf8"
+      });
+
+      const result = JSON.parse(stdout.trim());
+      expect(result.status).toBe("failed");
+      expect(result.sharedHome.status).toBe("failed");
+      expect(result.sharedHome.reason).toContain("ENOTDIR");
+    } finally {
+      await rm(runtimeDirectory, { recursive: true, force: true });
+    }
+  });
+
+  it("prints structured text when shared home installation fails", async () => {
+    const scriptPath = resolve("src/bin/skills-broker.ts");
+    const runtimeDirectory = await mkdtemp(resolve(tmpdir(), "skills-broker-cli-shared-fail-text-"));
+    const blockedPath = resolve(runtimeDirectory, "blocked");
+    const brokerHomeDirectory = resolve(blockedPath, "home");
+
+    try {
+      await writeFile(blockedPath, "not a directory\n", "utf8");
+
+      const { stdout } = await execFileAsync("node", [
+        "--loader",
+        tsNodeLoaderPath,
+        scriptPath,
+        "update",
+        "--broker-home",
+        brokerHomeDirectory
+      ], {
+        env: process.env,
+        encoding: "utf8"
+      });
+
+      expect(stdout).toContain("skills-broker updated");
+      expect(stdout).toContain("Shared home status: failed");
+      expect(stdout).toContain("ENOTDIR");
     } finally {
       await rm(runtimeDirectory, { recursive: true, force: true });
     }
