@@ -163,7 +163,33 @@ That distinction matters because the hardest part is not storing tools. The hard
 
 ## Quick Start
 
-### 1. Clone and install dependencies
+### 1. Install or refresh the shared broker home
+
+```bash
+npx skills-broker update
+```
+
+Use `npx skills-broker update` to initialize or refresh the shared broker home, attach thin host shells, and reuse the same routing cache across Claude Code and Codex. `npx skills-broker doctor` inspects the environment without writing, `npx skills-broker remove` detaches only the managed host shells by default, and `npx skills-broker remove --purge` fully removes the shared broker home.
+
+### 2. Try explicit shared-home directories
+
+```bash
+npx skills-broker update \
+  --broker-home /tmp/.skills-broker \
+  --claude-dir /tmp/claude-code-plugin \
+  --codex-dir /tmp/.codex/skills/webpage-to-markdown
+```
+
+This will:
+
+- build the shared broker runtime into `/tmp/.skills-broker`
+- attach a Claude Code thin shell
+- attach a Codex thin shell
+- let both hosts reuse the same broker cache and routing history
+
+For automation or CI, every lifecycle command also supports `--json`.
+
+### 3. Clone the repository for local development
 
 ```bash
 git clone https://github.com/monkeyin92/skills-broker.git
@@ -171,14 +197,14 @@ cd skills-broker
 npm ci
 ```
 
-### 2. Build and verify
+### 4. Build and verify the local checkout
 
 ```bash
 npm run build
 npx vitest run
 ```
 
-### 3. Install the local Claude Code plugin package
+### 5. Install the repo-local Claude Code package
 
 ```bash
 ./scripts/install-claude-code.sh /absolute/path/to/claude-code-plugin
@@ -193,17 +219,9 @@ This creates a self-contained local package containing:
 - `package.json`
 - `bin/run-broker`
 
-This is the **current Claude Code-first install path**.
+This is the **repo-local Claude Code development path**, not the primary published install flow.
 
-This repository also ships an experimental shared-home update flow:
-
-```bash
-./scripts/update-shared-home.sh <broker-home> [claude-shell-dir] [codex-shell-dir]
-```
-
-That script is the repo-local precursor to the eventual user-facing `skills-broker update` command.
-
-### 4. Try the installed runner
+### 6. Try the installed runner
 
 ```bash
 /absolute/path/to/claude-code-plugin/bin/run-broker \
@@ -211,22 +229,6 @@ That script is the repo-local precursor to the eventual user-facing `skills-brok
 ```
 
 Expected output: a JSON payload containing the selected winner, handoff envelope, and debug information.
-
-### 5. Try the experimental shared-home flow
-
-```bash
-./scripts/update-shared-home.sh \
-  /tmp/.skills-broker \
-  /tmp/claude-code-plugin \
-  /tmp/.codex/skills/webpage-to-markdown
-```
-
-This will:
-
-- build the shared broker runtime into `/tmp/.skills-broker`
-- attach a Claude Code thin shell
-- attach a Codex thin shell
-- let both hosts reuse the same broker cache and routing history
 
 ## Example Use Cases
 

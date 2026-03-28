@@ -24,9 +24,19 @@ describe("host shell installers", () => {
 
       const claudeRunner = await readFile(claudeResult.runnerPath, "utf8");
       const codexRunner = await readFile(codexResult.runnerPath, "utf8");
+      const claudeManifest = JSON.parse(
+        await readFile(join(claudeResult.installDirectory, ".skills-broker.json"), "utf8")
+      ) as { managedBy?: string };
 
       expect(claudeRunner).toContain(resolve(relativeBrokerHomeDirectory));
       expect(codexRunner).toContain(resolve(relativeBrokerHomeDirectory));
+      expect(claudeManifest.managedBy).toBe("skills-broker");
+
+      const codexManifest = JSON.parse(
+        await readFile(join(codexResult.installDirectory, ".skills-broker.json"), "utf8")
+      ) as { managedBy?: string };
+
+      expect(codexManifest.managedBy).toBe("skills-broker");
     } finally {
       await rm(runtimeDirectory, { recursive: true, force: true });
     }

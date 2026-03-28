@@ -17,17 +17,18 @@ cd "${PROJECT_ROOT}"
 
 npm run build >/dev/null
 
-BROKER_HOME_DIR="${BROKER_HOME_DIR}" \
-CLAUDE_SHELL_DIR="${CLAUDE_SHELL_DIR}" \
-CODEX_SHELL_DIR="${CODEX_SHELL_DIR}" \
-PROJECT_ROOT="${PROJECT_ROOT}" \
-node --input-type=module <<'EOF'
-import { updateSharedBrokerHome } from "./dist/shared-home/update.js";
+ARGS=(
+  node "${PROJECT_ROOT}/dist/bin/skills-broker.js"
+  update
+  --broker-home "${BROKER_HOME_DIR}"
+)
 
-await updateSharedBrokerHome({
-  brokerHomeDirectory: process.env.BROKER_HOME_DIR,
-  claudeCodeInstallDirectory: process.env.CLAUDE_SHELL_DIR || undefined,
-  codexInstallDirectory: process.env.CODEX_SHELL_DIR || undefined,
-  projectRoot: process.env.PROJECT_ROOT
-});
-EOF
+if [[ -n "${CLAUDE_SHELL_DIR}" ]]; then
+  ARGS+=(--claude-dir "${CLAUDE_SHELL_DIR}")
+fi
+
+if [[ -n "${CODEX_SHELL_DIR}" ]]; then
+  ARGS+=(--codex-dir "${CODEX_SHELL_DIR}")
+fi
+
+"${ARGS[@]}"

@@ -1,5 +1,6 @@
 import { chmod, copyFile, cp, mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
+import { writeManagedShellManifest } from "../../shared-home/ownership.js";
 
 export type InstallClaudeCodePluginOptions = {
   installDirectory: string;
@@ -225,6 +226,12 @@ export async function installClaudeCodeHostShell(
     "utf8"
   );
   await chmod(runnerPath, 0o755);
+  await writeManagedShellManifest(options.installDirectory, {
+    managedBy: "skills-broker",
+    host: "claude-code",
+    version,
+    brokerHome: brokerHomeDirectory
+  });
 
   return {
     installDirectory: options.installDirectory,

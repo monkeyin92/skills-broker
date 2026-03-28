@@ -1,5 +1,6 @@
 import { chmod, mkdir, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
+import { writeManagedShellManifest } from "../../shared-home/ownership.js";
 
 export type InstallCodexHostShellOptions = {
   installDirectory: string;
@@ -13,6 +14,7 @@ export type InstallCodexHostShellResult = {
 };
 
 const RUNNER_FILE_NAME = "run-broker";
+const DEFAULT_VERSION = "0.1.0";
 
 function buildSkillMarkdown(installDirectory: string): string {
   return `---
@@ -59,6 +61,12 @@ export async function installCodexHostShell(
   await writeFile(skillPath, buildSkillMarkdown(options.installDirectory), "utf8");
   await writeFile(runnerPath, buildRunnerScript(brokerHomeDirectory), "utf8");
   await chmod(runnerPath, 0o755);
+  await writeManagedShellManifest(options.installDirectory, {
+    managedBy: "skills-broker",
+    host: "codex",
+    version: DEFAULT_VERSION,
+    brokerHome: brokerHomeDirectory
+  });
 
   return {
     installDirectory: options.installDirectory,
