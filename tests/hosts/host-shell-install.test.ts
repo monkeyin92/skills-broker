@@ -30,6 +30,8 @@ describe("host shell installers", () => {
 
       expect(claudeRunner).toContain(resolve(relativeBrokerHomeDirectory));
       expect(codexRunner).toContain(resolve(relativeBrokerHomeDirectory));
+      expect(await readFile(claudeResult.skillPath, "utf8")).toContain("# Skills Broker");
+      expect(await readFile(codexResult.skillPath, "utf8")).toContain("# Skills Broker");
       expect(claudeManifest.managedBy).toBe("skills-broker");
 
       const codexManifest = JSON.parse(

@@ -18,10 +18,8 @@ describe("shared-home lifecycle paths", () => {
     });
 
     expect(paths.brokerHomeDirectory).toBe("/tmp/home/.skills-broker");
-    expect(paths.claudeCodeInstallDirectory).toBe("/tmp/home/.claude-code-plugin");
-    expect(paths.codexInstallDirectory).toBe(
-      "/tmp/home/.codex/skills/webpage-to-markdown"
-    );
+    expect(paths.claudeCodeInstallDirectory).toBe("/tmp/home/.claude/skills/skills-broker");
+    expect(paths.codexInstallDirectory).toBe("/tmp/home/.agents/skills/skills-broker");
   });
 
   it("treats a missing target directory with a writable parent as creatable", async () => {
@@ -71,9 +69,9 @@ describe("shared-home lifecycle paths", () => {
     );
     const codexShellDirectory = join(
       runtimeDirectory,
-      ".codex",
+      ".agents",
       "skills",
-      "webpage-to-markdown"
+      "skills-broker"
     );
     const brokerHomeDirectory = join(runtimeDirectory, ".skills-broker");
 
@@ -99,9 +97,9 @@ describe("shared-home lifecycle paths", () => {
     );
     const codexShellDirectory = join(
       runtimeDirectory,
-      ".codex",
+      ".agents",
       "skills",
-      "webpage-to-markdown"
+      "skills-broker"
     );
     const brokerHomeDirectory = join(runtimeDirectory, ".skills-broker");
 
@@ -130,9 +128,9 @@ describe("shared-home lifecycle paths", () => {
     );
     const codexShellDirectory = join(
       runtimeDirectory,
-      ".codex",
+      ".agents",
       "skills",
-      "webpage-to-markdown"
+      "skills-broker"
     );
 
     try {
@@ -159,9 +157,9 @@ describe("shared-home lifecycle paths", () => {
     );
     const codexShellDirectory = join(
       runtimeDirectory,
-      ".codex",
+      ".agents",
       "skills",
-      "webpage-to-markdown"
+      "skills-broker"
     );
 
     try {
@@ -184,15 +182,16 @@ describe("shared-home lifecycle paths", () => {
     const brokerHomeDirectory = join(runtimeDirectory, ".skills-broker");
     const codexInstallDirectory = join(
       runtimeDirectory,
-      ".codex",
+      ".agents",
       "skills",
-      "webpage-to-markdown"
+      "skills-broker"
     );
 
     try {
       const result = await updateSharedBrokerHome({
         brokerHomeDirectory,
         codexInstallDirectory,
+        homeDirectory: runtimeDirectory,
         dryRun: true
       });
 
@@ -209,7 +208,8 @@ describe("shared-home lifecycle paths", () => {
       });
       expect(result.hosts).toContainEqual({
         name: "claude-code",
-        status: "skipped_not_detected"
+        status: "skipped_not_detected",
+        reason: expect.stringContaining("--claude-dir")
       });
       await expect(access(join(codexInstallDirectory, "SKILL.md"))).rejects.toThrow();
       await expect(access(join(brokerHomeDirectory, "package.json"))).rejects.toThrow();
@@ -218,22 +218,26 @@ describe("shared-home lifecycle paths", () => {
     }
   });
 
-  it("skips hosts that are not explicitly detected", async () => {
+  it("auto-detects official Claude Code and Codex roots for zero-arg updates", async () => {
     const runtimeDirectory = await mkdtemp(
-      join(tmpdir(), "skills-broker-update-not-detected-")
+      join(tmpdir(), "skills-broker-update-auto-detect-")
     );
     const brokerHomeDirectory = join(runtimeDirectory, ".skills-broker");
 
     try {
+      await mkdir(join(runtimeDirectory, ".claude"), { recursive: true });
+      await mkdir(join(runtimeDirectory, ".codex"), { recursive: true });
+
       const result = await updateSharedBrokerHome({
         brokerHomeDirectory,
+        homeDirectory: runtimeDirectory,
         dryRun: true
       });
 
       expect(result.status).toBe("success");
       expect(result.hosts).toEqual([
-        { name: "claude-code", status: "skipped_not_detected" },
-        { name: "codex", status: "skipped_not_detected" }
+        { name: "claude-code", status: "planned_install" },
+        { name: "codex", status: "planned_install" }
       ]);
     } finally {
       await rm(runtimeDirectory, { recursive: true, force: true });
@@ -245,12 +249,17 @@ describe("shared-home lifecycle paths", () => {
       join(tmpdir(), "skills-broker-update-partial-success-")
     );
     const brokerHomeDirectory = join(runtimeDirectory, ".skills-broker");
-    const claudeCodeInstallDirectory = join(runtimeDirectory, ".claude-code-plugin");
+    const claudeCodeInstallDirectory = join(
+      runtimeDirectory,
+      ".claude",
+      "skills",
+      "skills-broker"
+    );
     const codexInstallDirectory = join(
       runtimeDirectory,
-      ".codex",
+      ".agents",
       "skills",
-      "webpage-to-markdown"
+      "skills-broker"
     );
 
     try {
@@ -281,9 +290,7 @@ describe("shared-home lifecycle paths", () => {
         status: "skipped_conflict",
         reason: "foreign ownership manifest"
       });
-      await expect(
-        access(join(claudeCodeInstallDirectory, "skills", "webpage-to-markdown", "SKILL.md"))
-      ).resolves.toBeUndefined();
+      await expect(access(join(claudeCodeInstallDirectory, "SKILL.md"))).resolves.toBeUndefined();
     } finally {
       await rm(runtimeDirectory, { recursive: true, force: true });
     }
@@ -296,9 +303,9 @@ describe("shared-home lifecycle paths", () => {
     const brokerHomeDirectory = join(runtimeDirectory, ".skills-broker");
     const codexInstallDirectory = join(
       runtimeDirectory,
-      ".codex",
+      ".agents",
       "skills",
-      "webpage-to-markdown"
+      "skills-broker"
     );
     const existingSkillPath = join(codexInstallDirectory, "SKILL.md");
 
@@ -328,12 +335,17 @@ describe("shared-home lifecycle paths", () => {
       join(tmpdir(), "skills-broker-update-all-hosts-conflict-")
     );
     const brokerHomeDirectory = join(runtimeDirectory, ".skills-broker");
-    const claudeCodeInstallDirectory = join(runtimeDirectory, ".claude-code-plugin");
+    const claudeCodeInstallDirectory = join(
+      runtimeDirectory,
+      ".claude",
+      "skills",
+      "skills-broker"
+    );
     const codexInstallDirectory = join(
       runtimeDirectory,
-      ".codex",
+      ".agents",
       "skills",
-      "webpage-to-markdown"
+      "skills-broker"
     );
 
     try {
@@ -384,16 +396,23 @@ describe("shared-home lifecycle paths", () => {
 
       const result = await updateSharedBrokerHome({
         brokerHomeDirectory,
-        projectRoot: process.cwd()
+        projectRoot: process.cwd(),
+        homeDirectory: runtimeDirectory
       });
 
       expect(result.status).toBe("failed");
       expect(result.sharedHome.status).toBe("failed");
       expect(result.sharedHome.reason).toContain("ENOTDIR");
-      expect(result.hosts).toEqual([
-        { name: "claude-code", status: "skipped_not_detected" },
-        { name: "codex", status: "skipped_not_detected" }
-      ]);
+      expect(result.hosts).toContainEqual({
+        name: "claude-code",
+        status: "skipped_not_detected",
+        reason: expect.stringContaining("--claude-dir")
+      });
+      expect(result.hosts).toContainEqual({
+        name: "codex",
+        status: "skipped_not_detected",
+        reason: expect.stringContaining("--codex-dir")
+      });
     } finally {
       await rm(runtimeDirectory, { recursive: true, force: true });
     }

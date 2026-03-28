@@ -15,7 +15,7 @@ export type InstallSharedBrokerHomeResult = {
   runnerPath: string;
 };
 
-const DEFAULT_VERSION = "0.1.0";
+const DEFAULT_VERSION = "0.1.1";
 const RUNTIME_PACKAGE_NAME = "skills-broker-home";
 
 function buildRuntimePackageJson(version: string) {

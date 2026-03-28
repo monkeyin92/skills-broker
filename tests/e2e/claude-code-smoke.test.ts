@@ -27,7 +27,7 @@ describe("Claude Code smoke", () => {
     const skillPath = join(
       installDirectory,
       "skills",
-      "webpage-to-markdown",
+      "skills-broker",
       "SKILL.md"
     );
 
@@ -47,11 +47,11 @@ describe("Claude Code smoke", () => {
       const manifest = JSON.parse(await readFile(manifestPath, "utf8"));
       expect(manifest).toMatchObject({
         name: "skills-broker-claude-code",
-        version: "0.1.0"
+        version: "0.1.1"
       });
 
       const skillContents = await readFile(skillPath, "utf8");
-      expect(skillContents).toContain("turn this webpage into markdown");
+      expect(skillContents).toContain("# Skills Broker");
 
       const relocatedInstallDirectory = join(
         runtimeDirectory,

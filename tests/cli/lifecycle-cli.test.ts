@@ -63,9 +63,9 @@ describe("lifecycle cli", () => {
     const brokerHomeDirectory = resolve(runtimeDirectory, ".skills-broker");
     const missingCodexDirectory = resolve(
       runtimeDirectory,
-      ".codex",
+      ".agents",
       "skills",
-      "webpage-to-markdown"
+      "skills-broker"
     );
 
     try {
@@ -80,7 +80,10 @@ describe("lifecycle cli", () => {
         "--codex-dir",
         missingCodexDirectory
       ], {
-        env: process.env,
+        env: {
+          ...process.env,
+          HOME: runtimeDirectory
+        },
         encoding: "utf8"
       });
 
@@ -108,9 +111,9 @@ describe("lifecycle cli", () => {
     const brokerHomeDirectory = resolve(runtimeDirectory, ".skills-broker");
     const codexInstallDirectory = resolve(
       runtimeDirectory,
-      ".codex",
+      ".agents",
       "skills",
-      "webpage-to-markdown"
+      "skills-broker"
     );
 
     try {
@@ -124,7 +127,7 @@ describe("lifecycle cli", () => {
         `${JSON.stringify({
           managedBy: "skills-broker",
           host: "codex",
-          version: "0.1.0",
+          version: "0.1.1",
           brokerHome: brokerHomeDirectory
         }, null, 2)}\n`,
         "utf8"
@@ -141,7 +144,10 @@ describe("lifecycle cli", () => {
         "--codex-dir",
         codexInstallDirectory
       ], {
-        env: process.env,
+        env: {
+          ...process.env,
+          HOME: runtimeDirectory
+        },
         encoding: "utf8"
       });
 
@@ -181,7 +187,10 @@ describe("lifecycle cli", () => {
         "--broker-home",
         brokerHomeDirectory
       ], {
-        env: process.env,
+        env: {
+          ...process.env,
+          HOME: runtimeDirectory
+        },
         encoding: "utf8"
       });
 
@@ -197,23 +206,19 @@ describe("lifecycle cli", () => {
     }
   });
 
-  it("uses default host directories for doctor when no overrides are passed", async () => {
+  it("uses official default host directories for doctor when no overrides are passed", async () => {
     const scriptPath = resolve("src/bin/skills-broker.ts");
     const runtimeDirectory = await mkdtemp(resolve(tmpdir(), "skills-broker-cli-doctor-defaults-"));
     const brokerHomeDirectory = resolve(runtimeDirectory, ".skills-broker");
-    const codexInstallDirectory = resolve(
-      runtimeDirectory,
-      ".codex",
-      "skills",
-      "webpage-to-markdown"
-    );
+    const codexInstallDirectory = resolve(runtimeDirectory, ".agents", "skills", "skills-broker");
 
     try {
+      await mkdir(resolve(runtimeDirectory, ".codex"), { recursive: true });
       await mkdir(codexInstallDirectory, { recursive: true });
       await writeManagedShellManifest(codexInstallDirectory, {
         managedBy: "skills-broker",
         host: "codex",
-        version: "0.1.0",
+        version: "0.1.1",
         brokerHome: brokerHomeDirectory
       });
 
@@ -263,9 +268,9 @@ describe("lifecycle cli", () => {
     const brokerHomeDirectory = resolve(runtimeDirectory, ".skills-broker");
     const codexInstallDirectory = resolve(
       runtimeDirectory,
-      ".codex",
+      ".agents",
       "skills",
-      "webpage-to-markdown"
+      "skills-broker"
     );
 
     try {
@@ -281,7 +286,10 @@ describe("lifecycle cli", () => {
         "--codex-dir",
         codexInstallDirectory
       ], {
-        env: process.env,
+        env: {
+          ...process.env,
+          HOME: runtimeDirectory
+        },
         encoding: "utf8"
       });
 
@@ -312,7 +320,10 @@ describe("lifecycle cli", () => {
         "--broker-home",
         brokerHomeDirectory
       ], {
-        env: process.env,
+        env: {
+          ...process.env,
+          HOME: runtimeDirectory
+        },
         encoding: "utf8"
       });
 
@@ -322,6 +333,47 @@ describe("lifecycle cli", () => {
       expect(output).toContain("Host claude-code: skipped_not_detected");
       expect(output).toContain("Host codex: skipped_not_detected");
       expect(output).not.toMatch(/^\s*\{/);
+    } finally {
+      await rm(runtimeDirectory, { recursive: true, force: true });
+    }
+  });
+
+  it("auto-detects official Claude Code and Codex roots for zero-arg update", async () => {
+    const scriptPath = resolve("src/bin/skills-broker.ts");
+    const runtimeDirectory = await mkdtemp(resolve(tmpdir(), "skills-broker-cli-update-defaults-"));
+    const brokerHomeDirectory = resolve(runtimeDirectory, ".skills-broker");
+
+    try {
+      await mkdir(resolve(runtimeDirectory, ".claude"), { recursive: true });
+      await mkdir(resolve(runtimeDirectory, ".codex"), { recursive: true });
+
+      const { stdout } = await execFileAsync("node", [
+        "--loader",
+        tsNodeLoaderPath,
+        scriptPath,
+        "update",
+        "--dry-run",
+        "--json",
+        "--broker-home",
+        brokerHomeDirectory
+      ], {
+        env: {
+          ...process.env,
+          HOME: runtimeDirectory
+        },
+        encoding: "utf8"
+      });
+
+      const result = JSON.parse(stdout.trim());
+      expect(result.command).toBe("update");
+      expect(result.hosts).toContainEqual({
+        name: "claude-code",
+        status: "planned_install"
+      });
+      expect(result.hosts).toContainEqual({
+        name: "codex",
+        status: "planned_install"
+      });
     } finally {
       await rm(runtimeDirectory, { recursive: true, force: true });
     }
@@ -339,9 +391,9 @@ describe("lifecycle cli", () => {
     const brokerHomeDirectory = resolve(runtimeDirectory, ".skills-broker");
     const codexInstallDirectory = resolve(
       runtimeDirectory,
-      ".codex",
+      ".agents",
       "skills",
-      "webpage-to-markdown"
+      "skills-broker"
     );
 
     try {
@@ -371,12 +423,17 @@ describe("lifecycle cli", () => {
     const scriptPath = resolve("src/bin/skills-broker.ts");
     const runtimeDirectory = await mkdtemp(resolve(tmpdir(), "skills-broker-cli-degraded-"));
     const brokerHomeDirectory = resolve(runtimeDirectory, ".skills-broker");
-    const claudeCodeInstallDirectory = resolve(runtimeDirectory, ".claude-code-plugin");
+    const claudeCodeInstallDirectory = resolve(
+      runtimeDirectory,
+      ".claude",
+      "skills",
+      "skills-broker"
+    );
     const codexInstallDirectory = resolve(
       runtimeDirectory,
-      ".codex",
+      ".agents",
       "skills",
-      "webpage-to-markdown"
+      "skills-broker"
     );
 
     try {
@@ -415,9 +472,7 @@ describe("lifecycle cli", () => {
         name: "claude-code",
         status: "installed"
       });
-      await expect(
-        access(resolve(claudeCodeInstallDirectory, "skills", "webpage-to-markdown", "SKILL.md"))
-      ).resolves.toBeUndefined();
+      await expect(access(resolve(claudeCodeInstallDirectory, "SKILL.md"))).resolves.toBeUndefined();
     } finally {
       await rm(runtimeDirectory, { recursive: true, force: true });
     }
@@ -504,7 +559,7 @@ describe("lifecycle cli", () => {
         "--broker-home",
         resolve(runtimeDirectory, ".skills-broker"),
         "--codex-dir",
-        resolve(runtimeDirectory, ".codex", "skills", "webpage-to-markdown")
+        resolve(runtimeDirectory, ".agents", "skills", "skills-broker")
       ], {
         cwd: runtimeDirectory,
         env: process.env,

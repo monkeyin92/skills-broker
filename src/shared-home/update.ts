@@ -13,6 +13,7 @@ import {
   resolveSharedBrokerHomeLayout,
   type InstallSharedBrokerHomeOptions
 } from "./install.js";
+import { detectLifecycleHostTargets } from "./paths.js";
 
 export type HostLifecycleStatus =
   | "installed"
@@ -41,6 +42,7 @@ export type UpdateLifecycleResult = {
 };
 
 export type UpdateSharedBrokerHomeOptions = InstallSharedBrokerHomeOptions & {
+  homeDirectory?: string;
   claudeCodeInstallDirectory?: string;
   codexInstallDirectory?: string;
   dryRun?: boolean;
@@ -172,13 +174,15 @@ async function detectUnmanagedHostConflict(
 async function updateHost(
   name: "claude-code" | "codex",
   installDirectory: string | undefined,
+  notDetectedReason: string | undefined,
   options: UpdateSharedBrokerHomeOptions,
   warnings: string[]
 ): Promise<HostLifecycleEntry> {
   if (installDirectory === undefined) {
     return {
       name,
-      status: "skipped_not_detected"
+      status: "skipped_not_detected",
+      reason: notDetectedReason
     };
   }
 
@@ -253,6 +257,12 @@ async function updateHost(
 export async function updateSharedBrokerHome(
   options: UpdateSharedBrokerHomeOptions
 ): Promise<UpdateLifecycleResult> {
+  const hostTargets = await detectLifecycleHostTargets({
+    homeDirectory: options.homeDirectory,
+    brokerHomeOverride: options.brokerHomeDirectory,
+    claudeDirOverride: options.claudeCodeInstallDirectory,
+    codexDirOverride: options.codexInstallDirectory
+  });
   const sharedHomeLayout = resolveSharedBrokerHomeLayout(options.brokerHomeDirectory);
   const sharedHomeExists = await pathExists(sharedHomeLayout.packageJsonPath);
   const warnings: string[] = [];
@@ -284,25 +294,41 @@ export async function updateSharedBrokerHome(
           {
             name: "claude-code" as const,
             status:
-              options.claudeCodeInstallDirectory === undefined
+              hostTargets.claudeCode.installDirectory === undefined
                 ? ("skipped_not_detected" as const)
                 : ("failed" as const),
             reason:
-              options.claudeCodeInstallDirectory === undefined ? undefined : sharedHome.reason
+              hostTargets.claudeCode.installDirectory === undefined
+                ? hostTargets.claudeCode.reason
+                : sharedHome.reason
           },
           {
             name: "codex" as const,
             status:
-              options.codexInstallDirectory === undefined
+              hostTargets.codex.installDirectory === undefined
                 ? ("skipped_not_detected" as const)
                 : ("failed" as const),
             reason:
-              options.codexInstallDirectory === undefined ? undefined : sharedHome.reason
+              hostTargets.codex.installDirectory === undefined
+                ? hostTargets.codex.reason
+                : sharedHome.reason
           }
         ]
       : await Promise.all([
-          updateHost("claude-code", options.claudeCodeInstallDirectory, options, warnings),
-          updateHost("codex", options.codexInstallDirectory, options, warnings)
+          updateHost(
+            "claude-code",
+            hostTargets.claudeCode.installDirectory,
+            hostTargets.claudeCode.reason,
+            options,
+            warnings
+          ),
+          updateHost(
+            "codex",
+            hostTargets.codex.installDirectory,
+            hostTargets.codex.reason,
+            options,
+            warnings
+          )
         ]);
 
   return {

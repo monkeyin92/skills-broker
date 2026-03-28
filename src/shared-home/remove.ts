@@ -1,5 +1,6 @@
 import { access, readdir, rm, stat } from "node:fs/promises";
 import { readManagedShellManifest } from "./ownership.js";
+import { detectLifecycleHostTargets } from "./paths.js";
 
 export type RemoveLifecycleResult = {
   command: "remove";
@@ -17,6 +18,7 @@ export type RemoveLifecycleResult = {
 
 export type RemoveSharedBrokerHomeOptions = {
   brokerHomeDirectory: string;
+  homeDirectory?: string;
   claudeCodeInstallDirectory?: string;
   codexInstallDirectory?: string;
   purgeSharedHome?: boolean;
@@ -149,10 +151,16 @@ async function removeHost(
 export async function removeSharedBrokerHome(
   options: RemoveSharedBrokerHomeOptions
 ): Promise<RemoveLifecycleResult> {
+  const hostTargets = await detectLifecycleHostTargets({
+    homeDirectory: options.homeDirectory,
+    brokerHomeOverride: options.brokerHomeDirectory,
+    claudeDirOverride: options.claudeCodeInstallDirectory,
+    codexDirOverride: options.codexInstallDirectory
+  });
   const warnings: string[] = [];
   const hosts: RemoveLifecycleResult["hosts"] = [
-    await removeHost("claude-code", options.claudeCodeInstallDirectory, warnings),
-    await removeHost("codex", options.codexInstallDirectory, warnings)
+    await removeHost("claude-code", hostTargets.claudeCode.installDirectory, warnings),
+    await removeHost("codex", hostTargets.codex.installDirectory, warnings)
   ];
 
   if (options.purgeSharedHome) {

@@ -11,14 +11,15 @@ describe("doctor shared broker home", () => {
     const brokerHomeDirectory = join(runtimeDirectory, ".skills-broker");
     const missingCodexDirectory = join(
       runtimeDirectory,
-      ".codex",
+      ".agents",
       "skills",
-      "webpage-to-markdown"
+      "skills-broker"
     );
 
     try {
       const result = await doctorSharedBrokerHome({
         brokerHomeDirectory,
+        homeDirectory: runtimeDirectory,
         codexInstallDirectory: missingCodexDirectory
       });
 
@@ -37,7 +38,7 @@ describe("doctor shared broker home", () => {
       expect(result.hosts).toContainEqual({
         name: "claude-code",
         status: "not_detected",
-        reason: "not explicitly requested"
+        reason: expect.stringContaining("--claude-dir")
       });
     } finally {
       await rm(runtimeDirectory, { recursive: true, force: true });
@@ -56,6 +57,7 @@ describe("doctor shared broker home", () => {
 
       const result = await doctorSharedBrokerHome({
         brokerHomeDirectory,
+        homeDirectory: runtimeDirectory,
         codexInstallDirectory
       });
 
@@ -78,7 +80,8 @@ describe("doctor shared broker home", () => {
 
     try {
       const result = await doctorSharedBrokerHome({
-        brokerHomeDirectory
+        brokerHomeDirectory,
+        homeDirectory: runtimeDirectory
       });
 
       const rendered = formatLifecycleResult(result, "json");
@@ -90,12 +93,12 @@ describe("doctor shared broker home", () => {
         {
           name: "claude-code",
           status: "not_detected",
-          reason: "not explicitly requested"
+          reason: expect.stringContaining("--claude-dir")
         },
         {
           name: "codex",
           status: "not_detected",
-          reason: "not explicitly requested"
+          reason: expect.stringContaining("--codex-dir")
         }
       ]);
     } finally {
