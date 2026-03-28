@@ -179,7 +179,8 @@ it("prefers overrides but falls back to ~/.skills-broker and default host dirs",
   });
 
   expect(paths.brokerHomeDirectory).toBe("/tmp/home/.skills-broker");
-  expect(paths.codexInstallDirectory).toBe("/tmp/home/.codex/skills/webpage-to-markdown");
+  expect(paths.claudeCodeInstallDirectory).toBe("/tmp/home/.claude/skills/skills-broker");
+  expect(paths.codexInstallDirectory).toBe("/tmp/home/.agents/skills/skills-broker");
 });
 
 it("writes an ownership manifest for managed host shells", async () => {
@@ -225,7 +226,7 @@ export function resolveLifecyclePaths(input: {
   claudeDirOverride?: string;
   codexDirOverride?: string;
 }) {
-  // resolve ~/.skills-broker, ~/.codex/skills/webpage-to-markdown, and Claude default dir
+  // resolve ~/.skills-broker, ~/.claude/skills/skills-broker, and ~/.agents/skills/skills-broker
 }
 ```
 

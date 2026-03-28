@@ -15,16 +15,16 @@ const CURRENT_HOST = "claude-code";
 
 async function assertInstalledPlugin(installDirectory: string): Promise<void> {
   const manifestPath = join(installDirectory, ".claude-plugin", "plugin.json");
-  const skillPath = join(
-    installDirectory,
-    "skills",
-    "webpage-to-markdown",
-    "SKILL.md"
-  );
+  const skillPath = join(installDirectory, "SKILL.md");
+  const nestedSkillPath = join(installDirectory, "skills", "skills-broker", "SKILL.md");
   const runnerPath = join(installDirectory, "bin", "run-broker");
 
   await access(manifestPath);
-  await access(skillPath);
+  try {
+    await access(skillPath);
+  } catch {
+    await access(nestedSkillPath);
+  }
   await access(runnerPath);
 }
 

@@ -2,6 +2,7 @@ import { access, readdir, stat } from "node:fs/promises";
 import { resolveSharedBrokerHomeLayout } from "./install.js";
 import { readManagedShellManifest } from "./ownership.js";
 import { detectWritableDirectory } from "./detect.js";
+import { detectLifecycleHostTargets } from "./paths.js";
 
 export type DoctorLifecycleResult = {
   command: "doctor";
@@ -19,6 +20,7 @@ export type DoctorLifecycleResult = {
 
 export type DoctorSharedBrokerHomeOptions = {
   brokerHomeDirectory: string;
+  homeDirectory?: string;
   claudeCodeInstallDirectory?: string;
   codexInstallDirectory?: string;
 };
@@ -91,13 +93,14 @@ async function detectUnmanagedHostConflict(
 async function doctorHost(
   name: "claude-code" | "codex",
   installDirectory: string | undefined,
+  notDetectedReason: string | undefined,
   warnings: string[]
 ): Promise<DoctorHostEntry> {
   if (installDirectory === undefined) {
     return {
       name,
       status: "not_detected",
-      reason: "not explicitly requested"
+      reason: notDetectedReason
     };
   }
 
@@ -164,6 +167,12 @@ export async function doctorSharedBrokerHome(
   options: DoctorSharedBrokerHomeOptions
 ): Promise<DoctorLifecycleResult> {
   const sharedHomeLayout = resolveSharedBrokerHomeLayout(options.brokerHomeDirectory);
+  const hostTargets = await detectLifecycleHostTargets({
+    homeDirectory: options.homeDirectory,
+    brokerHomeOverride: options.brokerHomeDirectory,
+    claudeDirOverride: options.claudeCodeInstallDirectory,
+    codexDirOverride: options.codexInstallDirectory
+  });
   const warnings: string[] = [];
 
   return {
@@ -173,8 +182,18 @@ export async function doctorSharedBrokerHome(
       exists: await pathExists(sharedHomeLayout.packageJsonPath)
     },
     hosts: [
-      await doctorHost("claude-code", options.claudeCodeInstallDirectory, warnings),
-      await doctorHost("codex", options.codexInstallDirectory, warnings)
+      await doctorHost(
+        "claude-code",
+        hostTargets.claudeCode.installDirectory,
+        hostTargets.claudeCode.reason,
+        warnings
+      ),
+      await doctorHost(
+        "codex",
+        hostTargets.codex.installDirectory,
+        hostTargets.codex.reason,
+        warnings
+      )
     ],
     warnings
   };

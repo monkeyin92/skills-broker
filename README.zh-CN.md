@@ -178,13 +178,20 @@ npx skills-broker update
 
 使用 `npx skills-broker update` 可以初始化或刷新共享 broker home，接上薄宿主壳，并让 Claude Code 和 Codex 复用同一份路由缓存。`npx skills-broker doctor` 用来只读诊断环境，`npx skills-broker remove` 默认只拆卸受管宿主壳而不删除共享历史，`npx skills-broker remove --purge` 会把共享 broker home 一起清掉。
 
+默认情况下，`update` 会先按官方根目录检测宿主，再决定是否写入：
+
+- Claude Code：先看 `~/.claude`，检测到后把薄壳写到 `~/.claude/skills/skills-broker`
+- Codex：先看 `~/.codex`，检测到后把薄壳写到 `~/.agents/skills/skills-broker`
+
+如果没有检测到官方根目录，CLI 会明确提示，并告诉你用 `--claude-dir` 或 `--codex-dir` 指定自定义目录。
+
 ### 2. 用显式目录试跑共享 home
 
 ```bash
 npx skills-broker update \
   --broker-home /tmp/.skills-broker \
-  --claude-dir /tmp/claude-code-plugin \
-  --codex-dir /tmp/.codex/skills/webpage-to-markdown
+  --claude-dir /tmp/.claude/skills/skills-broker \
+  --codex-dir /tmp/.agents/skills/skills-broker
 ```
 
 它会：
@@ -220,7 +227,7 @@ npx vitest run
 这个命令会生成一个自包含的本地插件目录，里面包括：
 
 - `.claude-plugin/plugin.json`
-- `skills/webpage-to-markdown/SKILL.md`
+- `skills/skills-broker/SKILL.md`
 - `config/*.json`
 - `dist/*.js`
 - `package.json`

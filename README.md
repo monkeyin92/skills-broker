@@ -171,13 +171,20 @@ npx skills-broker update
 
 Use `npx skills-broker update` to initialize or refresh the shared broker home, attach thin host shells, and reuse the same routing cache across Claude Code and Codex. `npx skills-broker doctor` inspects the environment without writing, `npx skills-broker remove` detaches only the managed host shells by default, and `npx skills-broker remove --purge` fully removes the shared broker home.
 
+By default, `update` detects official host roots before it writes anything:
+
+- Claude Code: `~/.claude`, then installs the thin shell at `~/.claude/skills/skills-broker`
+- Codex: `~/.codex`, then installs the thin shell at `~/.agents/skills/skills-broker`
+
+If a host root is not found, the CLI will explain that and tell you to use `--claude-dir` or `--codex-dir` for custom layouts.
+
 ### 2. Try explicit shared-home directories
 
 ```bash
 npx skills-broker update \
   --broker-home /tmp/.skills-broker \
-  --claude-dir /tmp/claude-code-plugin \
-  --codex-dir /tmp/.codex/skills/webpage-to-markdown
+  --claude-dir /tmp/.claude/skills/skills-broker \
+  --codex-dir /tmp/.agents/skills/skills-broker
 ```
 
 This will:
@@ -213,7 +220,7 @@ npx vitest run
 This creates a self-contained local package containing:
 
 - `.claude-plugin/plugin.json`
-- `skills/webpage-to-markdown/SKILL.md`
+- `skills/skills-broker/SKILL.md`
 - `config/*.json`
 - `dist/*.js`
 - `package.json`

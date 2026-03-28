@@ -26,14 +26,14 @@ export type InstallClaudeCodePluginResult = {
 
 const DEFAULT_VERSION = "0.1.1";
 const PLUGIN_NAME = "skills-broker-claude-code";
-const SKILL_DIRECTORY = "webpage-to-markdown";
+const SKILL_DIRECTORY = "skills-broker";
 const RUNNER_FILE_NAME = "run-broker";
 
 function buildManifest(version: string) {
   return {
     name: PLUGIN_NAME,
     version,
-    description: "Minimal local Claude Code host package for skills-broker smoke tests."
+    description: "Minimal local Claude Code host package for skills-broker."
   };
 }
 
@@ -47,9 +47,9 @@ function buildRuntimePackageJson(version: string) {
 }
 
 function buildSkillMarkdown() {
-  return `# Webpage To Markdown
+  return `# Skills Broker
 
-Use this skill when the request is: turn this webpage into markdown
+Use this skill when you want skills-broker to choose the best downstream skill or MCP for the task.
 `;
 }
 
@@ -198,12 +198,7 @@ export async function installClaudeCodeHostShell(
     ".claude-plugin",
     "plugin.json"
   );
-  const skillPath = join(
-    options.installDirectory,
-    "skills",
-    SKILL_DIRECTORY,
-    "SKILL.md"
-  );
+  const skillPath = join(options.installDirectory, "SKILL.md");
   const runnerPath = join(options.installDirectory, "bin", RUNNER_FILE_NAME);
 
   await mkdir(dirname(manifestPath), { recursive: true });

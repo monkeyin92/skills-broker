@@ -15,21 +15,22 @@ export type InstallCodexHostShellResult = {
 
 const RUNNER_FILE_NAME = "run-broker";
 const DEFAULT_VERSION = "0.1.1";
+const HOST_SHELL_NAME = "skills-broker";
 
 function buildSkillMarkdown(installDirectory: string): string {
   return `---
-name: "webpage-to-markdown"
-description: "Use this skill when the user asks to turn a webpage into markdown."
+name: "${HOST_SHELL_NAME}"
+description: "Route user requests through skills-broker so the best skill or MCP can be selected."
 ---
 
-# Webpage To Markdown
+# Skills Broker
 
-Use this skill when the request is: turn this webpage into markdown.
+Use this skill when you want skills-broker to pick the best downstream skill or MCP for the task.
 
 ## Quick Command
 
 \`\`\`bash
-${join(installDirectory, "bin", RUNNER_FILE_NAME)} '{"task":"turn this webpage into markdown","url":"https://example.com/article"}'
+${join(installDirectory, "bin", RUNNER_FILE_NAME)} '{"task":"fetch this URL as markdown","url":"https://example.com/article"}'
 \`\`\`
 `;
 }

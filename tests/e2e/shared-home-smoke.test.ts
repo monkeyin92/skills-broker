@@ -13,13 +13,8 @@ describe("shared broker home smoke", () => {
   it("lets Claude Code and Codex reuse the same shared broker home", async () => {
     const runtimeDirectory = await mkdtemp(join(tmpdir(), "skills-broker-shared-home-"));
     const brokerHomeDirectory = join(runtimeDirectory, ".skills-broker");
-    const claudeShellDirectory = join(runtimeDirectory, "claude-code-plugin");
-    const codexShellDirectory = join(
-      runtimeDirectory,
-      ".codex",
-      "skills",
-      "webpage-to-markdown"
-    );
+    const claudeShellDirectory = join(runtimeDirectory, ".claude", "skills", "skills-broker");
+    const codexShellDirectory = join(runtimeDirectory, ".agents", "skills", "skills-broker");
     const buildScriptPath = join(process.cwd(), "dist", "bin", "skills-broker.js");
     const sharedRunnerPath = join(brokerHomeDirectory, "bin", "run-broker");
     const sharedDistCliPath = join(brokerHomeDirectory, "dist", "cli.js");
@@ -49,7 +44,7 @@ describe("shared broker home smoke", () => {
       await expect(access(codexSkillPath)).resolves.toBeUndefined();
 
       const codexSkillContents = await readFile(codexSkillPath, "utf8");
-      expect(codexSkillContents).toContain("turn this webpage into markdown");
+      expect(codexSkillContents).toContain("# Skills Broker");
 
       const claudeResult = await runClaudeCodeAdapter(
         {

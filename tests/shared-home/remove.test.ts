@@ -12,9 +12,9 @@ describe("remove shared broker home", () => {
     const brokerHomeDirectory = join(runtimeDirectory, ".skills-broker");
     const codexInstallDirectory = join(
       runtimeDirectory,
-      ".codex",
+      ".agents",
       "skills",
-      "webpage-to-markdown"
+      "skills-broker"
     );
 
     try {
@@ -56,9 +56,9 @@ describe("remove shared broker home", () => {
     const brokerHomeDirectory = join(runtimeDirectory, ".skills-broker");
     const codexInstallDirectory = join(
       runtimeDirectory,
-      ".codex",
+      ".agents",
       "skills",
-      "webpage-to-markdown"
+      "skills-broker"
     );
 
     try {
@@ -85,9 +85,9 @@ describe("remove shared broker home", () => {
     const brokerHomeDirectory = join(runtimeDirectory, ".skills-broker");
     const codexInstallDirectory = join(
       runtimeDirectory,
-      ".codex",
+      ".agents",
       "skills",
-      "webpage-to-markdown"
+      "skills-broker"
     );
 
     try {
