@@ -20,7 +20,7 @@ describe("shared broker home smoke", () => {
       "skills",
       "webpage-to-markdown"
     );
-    const updateScriptPath = join(process.cwd(), "scripts", "update-shared-home.sh");
+    const buildScriptPath = join(process.cwd(), "dist", "bin", "skills-broker.js");
     const sharedRunnerPath = join(brokerHomeDirectory, "bin", "run-broker");
     const sharedDistCliPath = join(brokerHomeDirectory, "dist", "cli.js");
     const claudeManifestPath = join(
@@ -31,13 +31,19 @@ describe("shared broker home smoke", () => {
     const codexSkillPath = join(codexShellDirectory, "SKILL.md");
 
     try {
-      await execFileAsync(
-        updateScriptPath,
-        [brokerHomeDirectory, claudeShellDirectory, codexShellDirectory],
-        {
-          cwd: process.cwd()
-        }
-      );
+      await execFileAsync("npm", ["run", "build"], {
+        cwd: process.cwd()
+      });
+      await execFileAsync("node", [
+        buildScriptPath,
+        "update",
+        "--broker-home",
+        brokerHomeDirectory,
+        "--claude-dir",
+        claudeShellDirectory,
+        "--codex-dir",
+        codexShellDirectory
+      ]);
 
       await expect(access(sharedRunnerPath)).resolves.toBeUndefined();
       await expect(access(sharedDistCliPath)).resolves.toBeUndefined();

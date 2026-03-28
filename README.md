@@ -195,13 +195,13 @@ This creates a self-contained local package containing:
 
 This is the **current Claude Code-first install path**.
 
-This repository also ships an experimental shared-home update flow:
+This repository also ships the shared-home lifecycle CLI:
 
 ```bash
-./scripts/update-shared-home.sh <broker-home> [claude-shell-dir] [codex-shell-dir]
+npx skills-broker update
 ```
 
-That script is the repo-local precursor to the eventual user-facing `skills-broker update` command.
+Use `npx skills-broker update` to initialize or refresh the shared broker home, attach thin host shells, and reuse the same routing cache across Claude Code and Codex. `npx skills-broker doctor` inspects the environment without writing, and `npx skills-broker remove` detaches only the managed host shells by default.
 
 ### 4. Try the installed runner
 
@@ -212,13 +212,13 @@ That script is the repo-local precursor to the eventual user-facing `skills-brok
 
 Expected output: a JSON payload containing the selected winner, handoff envelope, and debug information.
 
-### 5. Try the experimental shared-home flow
+### 5. Try the shared-home flow
 
 ```bash
-./scripts/update-shared-home.sh \
-  /tmp/.skills-broker \
-  /tmp/claude-code-plugin \
-  /tmp/.codex/skills/webpage-to-markdown
+npx skills-broker update \
+  --broker-home /tmp/.skills-broker \
+  --claude-dir /tmp/claude-code-plugin \
+  --codex-dir /tmp/.codex/skills/webpage-to-markdown
 ```
 
 This will:

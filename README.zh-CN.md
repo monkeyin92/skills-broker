@@ -202,13 +202,13 @@ npx vitest run
 
 这条链路是 **当前 Claude Code-first 的安装方式**。
 
-这个仓库现在也提供了一条实验性的共享 home 更新脚本：
+这个仓库现在也提供了共享 home 生命周期 CLI：
 
 ```bash
-./scripts/update-shared-home.sh <broker-home> [claude-shell-dir] [codex-shell-dir]
+npx skills-broker update
 ```
 
-它是未来正式 `skills-broker update` 命令的仓库内前身。
+使用 `npx skills-broker update` 可以初始化或刷新共享 broker home，接上薄宿主壳，并让 Claude Code 和 Codex 复用同一份路由缓存。`npx skills-broker doctor` 用来只读诊断环境，`npx skills-broker remove` 默认只拆卸受管宿主壳，不会删除共享历史。
 
 ### 4. 直接试跑安装后的 runner
 
@@ -223,13 +223,13 @@ npx vitest run
 - handoff envelope
 - 调试信息
 
-### 5. 试一下实验性的共享 home 流程
+### 5. 试一下共享 home 流程
 
 ```bash
-./scripts/update-shared-home.sh \
-  /tmp/.skills-broker \
-  /tmp/claude-code-plugin \
-  /tmp/.codex/skills/webpage-to-markdown
+npx skills-broker update \
+  --broker-home /tmp/.skills-broker \
+  --claude-dir /tmp/claude-code-plugin \
+  --codex-dir /tmp/.codex/skills/webpage-to-markdown
 ```
 
 它会：
