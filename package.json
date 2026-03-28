@@ -1,6 +1,6 @@
 {
   "name": "skills-broker",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Install-once shared broker runtime for routing skills and MCP capabilities across Claude Code and Codex.",
   "type": "module",
   "license": "MIT",
@@ -21,9 +21,10 @@
     "router"
   ],
   "bin": {
-    "skills-broker": "./dist/bin/skills-broker.js"
+    "skills-broker": "dist/bin/skills-broker.js"
   },
   "files": [
+    "config",
     "dist",
     "README.md",
     "README.zh-CN.md",

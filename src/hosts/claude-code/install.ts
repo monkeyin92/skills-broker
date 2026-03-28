@@ -24,7 +24,7 @@ export type InstallClaudeCodePluginResult = {
   runnerPath: string;
 };
 
-const DEFAULT_VERSION = "0.1.0";
+const DEFAULT_VERSION = "0.1.1";
 const PLUGIN_NAME = "skills-broker-claude-code";
 const SKILL_DIRECTORY = "webpage-to-markdown";
 const RUNNER_FILE_NAME = "run-broker";
