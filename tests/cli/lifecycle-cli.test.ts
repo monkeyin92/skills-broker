@@ -5,6 +5,7 @@ import { promisify } from "node:util";
 import { resolve } from "node:path";
 import { access, chmod, mkdtemp, mkdir, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
+import { writeManagedShellManifest } from "../../src/shared-home/ownership";
 
 const execFileAsync = promisify(execFile);
 const tsNodeLoaderPath = resolve("node_modules/ts-node/esm.mjs");
@@ -87,6 +88,56 @@ describe("lifecycle cli", () => {
           reason: expect.stringContaining("missing")
         })
       );
+    } finally {
+      await rm(runtimeDirectory, { recursive: true, force: true });
+    }
+  });
+
+  it("uses default host directories for doctor when no overrides are passed", async () => {
+    const scriptPath = resolve("src/bin/skills-broker.ts");
+    const runtimeDirectory = await mkdtemp(resolve(tmpdir(), "skills-broker-cli-doctor-defaults-"));
+    const brokerHomeDirectory = resolve(runtimeDirectory, ".skills-broker");
+    const codexInstallDirectory = resolve(
+      runtimeDirectory,
+      ".codex",
+      "skills",
+      "webpage-to-markdown"
+    );
+
+    try {
+      await mkdir(codexInstallDirectory, { recursive: true });
+      await writeManagedShellManifest(codexInstallDirectory, {
+        managedBy: "skills-broker",
+        host: "codex",
+        version: "0.1.0",
+        brokerHome: brokerHomeDirectory
+      });
+
+      const { stdout } = await execFileAsync("node", [
+        "--loader",
+        tsNodeLoaderPath,
+        scriptPath,
+        "doctor",
+        "--json"
+      ], {
+        env: {
+          ...process.env,
+          HOME: runtimeDirectory
+        },
+        encoding: "utf8"
+      });
+
+      const result = JSON.parse(stdout.trim());
+      expect(result.command).toBe("doctor");
+      expect(result.sharedHome).toEqual({
+        path: brokerHomeDirectory,
+        exists: false
+      });
+      expect(result.hosts).toContainEqual({
+        name: "codex",
+        status: "detected",
+        reason: "managed by skills-broker"
+      });
     } finally {
       await rm(runtimeDirectory, { recursive: true, force: true });
     }

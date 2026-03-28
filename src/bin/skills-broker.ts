@@ -126,14 +126,8 @@ async function main(argv = process.argv.slice(2)) {
   if (result.command === "doctor") {
     const lifecycleResult = await doctorSharedBrokerHome({
       brokerHomeDirectory: paths.brokerHomeDirectory,
-      claudeCodeInstallDirectory:
-        result.claudeDirOverride === undefined
-          ? undefined
-          : paths.claudeCodeInstallDirectory,
-      codexInstallDirectory:
-        result.codexDirOverride === undefined
-          ? undefined
-          : paths.codexInstallDirectory
+      claudeCodeInstallDirectory: paths.claudeCodeInstallDirectory,
+      codexInstallDirectory: paths.codexInstallDirectory
     });
 
     process.stdout.write(`${formatLifecycleResult(lifecycleResult, result.outputMode)}\n`);
