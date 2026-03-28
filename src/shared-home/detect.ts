@@ -20,12 +20,14 @@ export type WritableDirectoryState =
       checkedDirectory: string;
       targetExists: boolean;
       reason: "permission-denied" | "not-a-directory";
+      blockingPath: string;
     };
 
 async function findNearestExistingDirectory(targetDirectory: string): Promise<{
   nearestExistingDirectory: string;
   targetExists: boolean;
   targetIsDirectory: boolean;
+  blockingPath?: string;
 }> {
   const resolvedTargetDirectory = resolve(targetDirectory);
   let candidateDirectory = resolvedTargetDirectory;
@@ -42,19 +44,12 @@ async function findNearestExistingDirectory(targetDirectory: string): Promise<{
         };
       }
 
-      if (candidateDirectory === resolvedTargetDirectory) {
+      if (!candidateStat.isDirectory()) {
         return {
           nearestExistingDirectory: dirname(candidateDirectory),
-          targetExists: true,
-          targetIsDirectory: false
-        };
-      }
-
-      if (candidateDirectory === dirname(candidateDirectory)) {
-        return {
-          nearestExistingDirectory: candidateDirectory,
-          targetExists: false,
-          targetIsDirectory: false
+          targetExists: candidateDirectory === resolvedTargetDirectory,
+          targetIsDirectory: false,
+          blockingPath: candidateDirectory
         };
       }
 
@@ -62,7 +57,7 @@ async function findNearestExistingDirectory(targetDirectory: string): Promise<{
     } catch (error) {
       const nodeError = error as NodeJS.ErrnoException;
 
-      if (nodeError.code !== "ENOENT") {
+      if (nodeError.code !== "ENOENT" && nodeError.code !== "ENOTDIR") {
         throw error;
       }
 
@@ -97,17 +92,23 @@ export async function detectWritableDirectory(
   directory: string
 ): Promise<WritableDirectoryState> {
   const resolvedDirectory = resolve(directory);
-  const { nearestExistingDirectory, targetExists, targetIsDirectory } =
+  const {
+    nearestExistingDirectory,
+    targetExists,
+    targetIsDirectory,
+    blockingPath
+  } =
     await findNearestExistingDirectory(resolvedDirectory);
 
-  if (targetExists && !targetIsDirectory) {
+  if (blockingPath !== undefined) {
     return {
       status: "not-writable",
       targetDirectory: resolvedDirectory,
       nearestExistingDirectory,
       checkedDirectory: nearestExistingDirectory,
       targetExists,
-      reason: "not-a-directory"
+      reason: "not-a-directory",
+      blockingPath
     };
   }
 
@@ -127,7 +128,8 @@ export async function detectWritableDirectory(
       nearestExistingDirectory,
       checkedDirectory: nearestExistingDirectory,
       targetExists,
-      reason: "permission-denied"
+      reason: "permission-denied",
+      blockingPath: nearestExistingDirectory
     };
   }
 }

@@ -44,6 +44,26 @@ describe("shared-home lifecycle paths", () => {
     }
   });
 
+  it("returns not-writable when an ancestor component is a file", async () => {
+    const runtimeDirectory = await mkdtemp(
+      join(tmpdir(), "skills-broker-detect-blocked-")
+    );
+    const blockedDirectory = join(runtimeDirectory, "blocked");
+    const targetDirectory = join(blockedDirectory, "child");
+
+    try {
+      await writeFile(blockedDirectory, "blocked", "utf8");
+
+      const state = await detectWritableDirectory(targetDirectory);
+
+      expect(state.status).toBe("not-writable");
+      expect(state.reason).toBe("not-a-directory");
+      expect(state.blockingPath).toBe(blockedDirectory);
+    } finally {
+      await rm(runtimeDirectory, { recursive: true, force: true });
+    }
+  });
+
   it("writes an ownership manifest for managed host shells", async () => {
     const runtimeDirectory = await mkdtemp(
       join(tmpdir(), "skills-broker-owned-shell-")
