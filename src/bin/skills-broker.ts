@@ -2,6 +2,7 @@
 
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { doctorSharedBrokerHome } from "../shared-home/doctor.js";
 import { formatLifecycleResult } from "../shared-home/format.js";
 import { resolveLifecyclePaths } from "../shared-home/paths.js";
 import { updateSharedBrokerHome } from "../shared-home/update.js";
@@ -94,16 +95,16 @@ export async function runLifecycleCli(argv: string[]): Promise<LifecycleCliResul
   };
 }
 
-async function main(argv = process.argv.slice(2)): Promise<LifecycleCliResult> {
+async function main(argv = process.argv.slice(2)) {
   const result = await runLifecycleCli(argv);
 
-  if (result.command === "update") {
-    const paths = resolveLifecyclePaths({
-      brokerHomeOverride: result.brokerHomeOverride,
-      claudeDirOverride: result.claudeDirOverride,
-      codexDirOverride: result.codexDirOverride
-    });
+  const paths = resolveLifecyclePaths({
+    brokerHomeOverride: result.brokerHomeOverride,
+    claudeDirOverride: result.claudeDirOverride,
+    codexDirOverride: result.codexDirOverride
+  });
 
+  if (result.command === "update") {
     const lifecycleResult = await updateSharedBrokerHome({
       brokerHomeDirectory: paths.brokerHomeDirectory,
       claudeCodeInstallDirectory:
@@ -118,8 +119,25 @@ async function main(argv = process.argv.slice(2)): Promise<LifecycleCliResult> {
       projectRoot: resolvePackageRoot()
     });
 
-    console.log(formatLifecycleResult(lifecycleResult, result.outputMode));
-    return result;
+    process.stdout.write(`${formatLifecycleResult(lifecycleResult, result.outputMode)}\n`);
+    return lifecycleResult;
+  }
+
+  if (result.command === "doctor") {
+    const lifecycleResult = await doctorSharedBrokerHome({
+      brokerHomeDirectory: paths.brokerHomeDirectory,
+      claudeCodeInstallDirectory:
+        result.claudeDirOverride === undefined
+          ? undefined
+          : paths.claudeCodeInstallDirectory,
+      codexInstallDirectory:
+        result.codexDirOverride === undefined
+          ? undefined
+          : paths.codexInstallDirectory
+    });
+
+    process.stdout.write(`${formatLifecycleResult(lifecycleResult, result.outputMode)}\n`);
+    return lifecycleResult;
   }
 
   if (result.outputMode === "json") {

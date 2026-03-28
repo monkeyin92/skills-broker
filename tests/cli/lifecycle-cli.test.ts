@@ -47,6 +47,51 @@ describe("lifecycle cli", () => {
     expect(result.outputMode).toBe("json");
   });
 
+  it("prints doctor result as JSON when --json is passed", async () => {
+    const scriptPath = resolve("src/bin/skills-broker.ts");
+    const runtimeDirectory = await mkdtemp(resolve(tmpdir(), "skills-broker-cli-doctor-json-"));
+    const brokerHomeDirectory = resolve(runtimeDirectory, ".skills-broker");
+    const missingCodexDirectory = resolve(
+      runtimeDirectory,
+      ".codex",
+      "skills",
+      "webpage-to-markdown"
+    );
+
+    try {
+      const { stdout } = await execFileAsync("node", [
+        "--loader",
+        tsNodeLoaderPath,
+        scriptPath,
+        "doctor",
+        "--json",
+        "--broker-home",
+        brokerHomeDirectory,
+        "--codex-dir",
+        missingCodexDirectory
+      ], {
+        env: process.env,
+        encoding: "utf8"
+      });
+
+      const result = JSON.parse(stdout.trim());
+      expect(result.command).toBe("doctor");
+      expect(result.sharedHome).toEqual({
+        path: brokerHomeDirectory,
+        exists: false
+      });
+      expect(result.hosts).toContainEqual(
+        expect.objectContaining({
+          name: "codex",
+          status: "not_detected",
+          reason: expect.stringContaining("missing")
+        })
+      );
+    } finally {
+      await rm(runtimeDirectory, { recursive: true, force: true });
+    }
+  });
+
   it("rejects unknown commands", async () => {
     await expect(runLifecycleCli(["bogus"])).rejects.toThrow("Unknown command");
   });

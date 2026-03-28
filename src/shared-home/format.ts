@@ -1,11 +1,32 @@
+import type { DoctorLifecycleResult } from "./doctor.js";
 import type { UpdateLifecycleResult } from "./update.js";
 
 export function formatLifecycleResult(
-  result: UpdateLifecycleResult,
+  result: UpdateLifecycleResult | DoctorLifecycleResult,
   outputMode: "text" | "json"
 ): string {
   if (outputMode === "json") {
     return JSON.stringify(result);
+  }
+
+  if (result.command === "doctor") {
+    const lines = [
+      "skills-broker doctor",
+      "",
+      `Shared home: ${result.sharedHome.path}`,
+      `Shared home exists: ${result.sharedHome.exists ? "yes" : "no"}`
+    ];
+
+    for (const host of result.hosts) {
+      const suffix = host.reason ? ` (${host.reason})` : "";
+      lines.push(`Host ${host.name}: ${host.status}${suffix}`);
+    }
+
+    for (const warning of result.warnings) {
+      lines.push(`Warning: ${warning}`);
+    }
+
+    return lines.join("\n");
   }
 
   const lines = [
