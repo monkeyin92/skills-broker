@@ -46,10 +46,32 @@ function buildRuntimePackageJson(version: string) {
   };
 }
 
-function buildSkillMarkdown() {
-  return `# Skills Broker
+function buildSkillMarkdown(runnerCommand: string) {
+  return `---
+name: "skills-broker"
+description: "Route external capability requests through skills-broker. Use for web content to markdown, social post to markdown, and explicit skill or MCP discovery/install requests. Do not use for ordinary chat, coding, or summarization."
+---
 
-Use this skill when you want skills-broker to choose the best downstream skill or MCP for the task.
+# Skills Broker
+
+Use this skill only for external capability requests, such as:
+
+- converting web content to markdown
+- converting a social post to markdown
+- explicitly finding or installing a skill or MCP
+
+When this skill is loaded:
+
+1. preserve the user's original wording
+2. build a broker envelope with raw request text plus safe hints
+3. forward that envelope to the local broker runner
+4. do not independently substitute WebFetch or host-native fetch/install behavior when broker routing should decide
+
+## Runner Contract
+
+\`\`\`bash
+${runnerCommand} '{"requestText":"turn this webpage into markdown: https://example.com/article","host":"claude-code","invocationMode":"auto","urls":["https://example.com/article"]}'
+\`\`\`
 `;
 }
 
@@ -60,7 +82,7 @@ set -euo pipefail
 BROKER_INPUT="\${1:-}"
 
 if [[ -z "\${BROKER_INPUT}" ]]; then
-  echo "usage: $0 '<broker-request-json>'" >&2
+  echo "usage: $0 '<broker-envelope-json>'" >&2
   exit 1
 fi
 
@@ -75,7 +97,7 @@ set -euo pipefail
 BROKER_INPUT="\${1:-}"
 
 if [[ -z "\${BROKER_INPUT}" ]]; then
-  echo "usage: $0 '<broker-request-json>'" >&2
+  echo "usage: $0 '<broker-envelope-json>'" >&2
   exit 1
 fi
 
@@ -168,7 +190,11 @@ export async function installClaudeCodePlugin(
     `${JSON.stringify(buildManifest(version), null, 2)}\n`,
     "utf8"
   );
-  await writeFile(skillPath, buildSkillMarkdown(), "utf8");
+  await writeFile(
+    skillPath,
+    buildSkillMarkdown("../../bin/run-broker"),
+    "utf8"
+  );
   await copyFile(join(sourceRoot, "config", "host-skills.seed.json"), hostCatalogPath);
   await copyFile(join(sourceRoot, "config", "mcp-registry.seed.json"), mcpRegistryPath);
   await cp(join(sourceRoot, "dist"), distPath, { recursive: true, force: true });
@@ -214,7 +240,7 @@ export async function installClaudeCodeHostShell(
     `${JSON.stringify(buildManifest(version), null, 2)}\n`,
     "utf8"
   );
-  await writeFile(skillPath, buildSkillMarkdown(), "utf8");
+  await writeFile(skillPath, buildSkillMarkdown("./bin/run-broker"), "utf8");
   await writeFile(
     runnerPath,
     buildHostShellRunnerScript(brokerHomeDirectory),

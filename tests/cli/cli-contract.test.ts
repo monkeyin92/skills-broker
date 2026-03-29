@@ -37,10 +37,10 @@ test("cli accepts a raw envelope for the current webpage flow", async () => {
       JSON.stringify({
         skills: [
           {
-            id: "skill-webpage-to-markdown",
+            id: "skill-web-content-to-markdown",
             kind: "skill",
-            label: "Webpage to Markdown",
-            intent: "webpage_to_markdown"
+            label: "Web Content to Markdown",
+            intent: "web_content_to_markdown"
           }
         ]
       }),

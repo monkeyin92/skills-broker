@@ -12,8 +12,17 @@ import {
   shouldRefreshToday
 } from "../core/cache/policy.js";
 import { FileBackedCacheStore } from "../core/cache/store.js";
-import { normalizeRequest, type NormalizeRequestInput } from "../core/request.js";
-import type { BrokerIntent, BrokerOutcomeCode } from "../core/types.js";
+import {
+  AmbiguousBrokerRequestError,
+  normalizeRequest,
+  type NormalizeRequestInput,
+  UnsupportedBrokerRequestError
+} from "../core/request.js";
+import type {
+  BrokerHostAction,
+  BrokerIntent,
+  BrokerOutcomeCode
+} from "../core/types.js";
 import { loadHostSkillCandidates } from "../sources/host-skill-catalog.js";
 import { searchMcpRegistry } from "../sources/mcp-registry.js";
 
@@ -51,6 +60,7 @@ type BrokerFailureResult = {
   outcome: {
     code: Exclude<BrokerOutcomeCode, "HANDOFF_READY">;
     message: string;
+    hostAction: BrokerHostAction;
   };
   error: {
     code: Exclude<BrokerOutcomeCode, "HANDOFF_READY">;
@@ -90,10 +100,32 @@ function createNoCandidateResult(debug: BrokerDebug): BrokerFailureResult {
     ok: false,
     outcome: {
       code: "NO_CANDIDATE",
-      message
+      message,
+      hostAction: "offer_capability_discovery"
     },
     error: {
       code: "NO_CANDIDATE",
+      message
+    },
+    debug
+  };
+}
+
+function createFailureResult(
+  code: Exclude<BrokerOutcomeCode, "HANDOFF_READY" | "NO_CANDIDATE">,
+  message: string,
+  hostAction: BrokerHostAction,
+  debug: BrokerDebug
+): BrokerFailureResult {
+  return {
+    ok: false,
+    outcome: {
+      code,
+      message,
+      hostAction
+    },
+    error: {
+      code,
       message
     },
     debug
@@ -129,7 +161,6 @@ export async function runBroker(
   input: NormalizeRequestInput,
   options: RunBrokerOptions = {}
 ): Promise<RunBrokerResult> {
-  const request = normalizeRequest(input);
   const currentHost = options.currentHost ?? DEFAULT_CURRENT_HOST;
   const now = options.now ?? new Date();
   const cacheStore = new FileBackedCacheStore<BrokerCacheRecord>(
@@ -139,6 +170,37 @@ export async function runBroker(
     options.hostCatalogFilePath ?? defaultHostCatalogFilePath();
   const mcpRegistryFilePath =
     options.mcpRegistryFilePath ?? defaultMcpRegistryFilePath();
+  let request;
+
+  try {
+    request = normalizeRequest(input);
+  } catch (error) {
+    if (error instanceof UnsupportedBrokerRequestError) {
+      return createFailureResult(
+        "UNSUPPORTED_REQUEST",
+        error.message,
+        "continue_normally",
+        {
+          cacheHit: false,
+          candidateCount: 0
+        }
+      );
+    }
+
+    if (error instanceof AmbiguousBrokerRequestError) {
+      return createFailureResult(
+        "AMBIGUOUS_REQUEST",
+        error.message,
+        "ask_clarifying_question",
+        {
+          cacheHit: false,
+          candidateCount: 0
+        }
+      );
+    }
+
+    throw error;
+  }
 
   const cachedRecord = await cacheStore.read();
   const cachedCard =

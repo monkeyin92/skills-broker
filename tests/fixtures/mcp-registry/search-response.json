@@ -27,6 +27,34 @@
           }
         ]
       }
+    },
+    {
+      "server": {
+        "name": "io.example/social-post-to-markdown",
+        "title": "Social Post to Markdown",
+        "description": "Fetch a tweet, X post, thread, or other social post and convert it into markdown.",
+        "version": "1.0.0",
+        "remotes": [
+          {
+            "type": "streamable-http",
+            "url": "https://example.com/social-mcp"
+          }
+        ]
+      }
+    },
+    {
+      "server": {
+        "name": "io.example/capability-discovery",
+        "title": "Capability Discovery",
+        "description": "Find, discover, and install skills, MCP servers, plugins, and tools for a task.",
+        "version": "1.0.0",
+        "remotes": [
+          {
+            "type": "streamable-http",
+            "url": "https://example.com/discovery-mcp"
+          }
+        ]
+      }
     }
   ]
 }

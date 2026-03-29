@@ -24,14 +24,22 @@ describe("host shell installers", () => {
 
       const claudeRunner = await readFile(claudeResult.runnerPath, "utf8");
       const codexRunner = await readFile(codexResult.runnerPath, "utf8");
+      const claudeSkill = await readFile(claudeResult.skillPath, "utf8");
+      const codexSkill = await readFile(codexResult.skillPath, "utf8");
       const claudeManifest = JSON.parse(
         await readFile(join(claudeResult.installDirectory, ".skills-broker.json"), "utf8")
       ) as { managedBy?: string };
 
       expect(claudeRunner).toContain(resolve(relativeBrokerHomeDirectory));
       expect(codexRunner).toContain(resolve(relativeBrokerHomeDirectory));
-      expect(await readFile(claudeResult.skillPath, "utf8")).toContain("# Skills Broker");
-      expect(await readFile(codexResult.skillPath, "utf8")).toContain("# Skills Broker");
+      expect(claudeRunner).toContain("<broker-envelope-json>");
+      expect(codexRunner).toContain("<broker-envelope-json>");
+      expect(claudeSkill).toContain("external capability requests");
+      expect(claudeSkill).toContain("do not independently substitute WebFetch");
+      expect(claudeSkill).toContain('"requestText":"turn this webpage into markdown: https://example.com/article"');
+      expect(codexSkill).toContain("external capability requests");
+      expect(codexSkill).toContain("do not fall back to host-native fetch/install behavior");
+      expect(codexSkill).toContain('"host":"codex"');
       expect(claudeManifest.managedBy).toBe("skills-broker");
 
       const codexManifest = JSON.parse(

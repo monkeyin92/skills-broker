@@ -52,6 +52,9 @@ describe("Claude Code smoke", () => {
 
       const skillContents = await readFile(skillPath, "utf8");
       expect(skillContents).toContain("# Skills Broker");
+      expect(skillContents).toContain("external capability requests");
+      expect(skillContents).toContain("do not independently substitute WebFetch");
+      expect(skillContents).toContain("../../bin/run-broker");
 
       const relocatedInstallDirectory = join(
         runtimeDirectory,
@@ -61,8 +64,10 @@ describe("Claude Code smoke", () => {
 
       const result = await runClaudeCodeAdapter(
         {
-          task: "turn this webpage into markdown",
-          url: "https://example.com/article"
+          requestText: "turn this webpage into markdown: https://example.com/article",
+          host: "claude-code",
+          invocationMode: "explicit",
+          urls: ["https://example.com/article"]
         },
         {
           installDirectory: relocatedInstallDirectory,

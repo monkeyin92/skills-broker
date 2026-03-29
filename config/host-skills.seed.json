@@ -1,16 +1,22 @@
 {
   "skills": [
     {
-      "id": "skill-webpage-to-markdown",
+      "id": "skill-web-content-to-markdown",
       "kind": "skill",
-      "label": "Webpage to Markdown",
-      "intent": "webpage_to_markdown"
+      "label": "Web Content to Markdown",
+      "intent": "web_content_to_markdown"
     },
     {
-      "id": "skill-notes-to-summary",
+      "id": "skill-social-post-to-markdown",
       "kind": "skill",
-      "label": "Notes to Summary",
-      "intent": "notes_to_summary"
+      "label": "Social Post to Markdown",
+      "intent": "social_post_to_markdown"
+    },
+    {
+      "id": "skill-capability-discovery",
+      "kind": "skill",
+      "label": "Capability Discovery",
+      "intent": "capability_discovery_or_install"
     }
   ]
 }

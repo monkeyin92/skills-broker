@@ -35,17 +35,18 @@ function resolveCurrentHost(
 function toTemporaryWebpageMarkdownInput(
   input: BrokerEnvelope
 ): NormalizeRequestInput {
-  const url = input.urls?.[0];
+  const urls = input.urls;
+  const url = urls?.[0];
   const requestText = input.requestText;
   const currentWebpageTask = "turn this webpage into markdown";
 
-  if (url === undefined) {
+  if (urls === undefined || url === undefined) {
     throw new Error(
       "Temporary CLI compatibility only supports webpage markdown envelopes with urls[0]."
     );
   }
 
-  if (input.urls.length !== 1) {
+  if (urls.length !== 1) {
     throw new Error(
       "Temporary CLI compatibility only supports webpage markdown envelopes with exactly one URL."
     );

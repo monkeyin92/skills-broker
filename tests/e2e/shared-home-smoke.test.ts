@@ -48,8 +48,10 @@ describe("shared broker home smoke", () => {
 
       const claudeResult = await runClaudeCodeAdapter(
         {
-          task: "turn this webpage into markdown",
-          url: "https://example.com/article"
+          requestText: "turn this webpage into markdown: https://example.com/article",
+          host: "claude-code",
+          invocationMode: "explicit",
+          urls: ["https://example.com/article"]
         },
         {
           installDirectory: claudeShellDirectory,
@@ -59,8 +61,11 @@ describe("shared broker home smoke", () => {
 
       const codexResult = await runCodexAdapter(
         {
-          task: "turn this webpage into markdown",
-          url: "https://example.com/article?host=codex"
+          requestText:
+            "turn this webpage into markdown: https://example.com/article?host=codex",
+          host: "codex",
+          invocationMode: "explicit",
+          urls: ["https://example.com/article?host=codex"]
         },
         {
           installDirectory: codexShellDirectory,
