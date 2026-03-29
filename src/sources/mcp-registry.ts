@@ -60,10 +60,26 @@ function matchesIntent(server: McpRegistryServer, intent: BrokerIntent): boolean
     .toLowerCase();
 
   switch (intent) {
-    case "webpage_to_markdown":
+    case "web_content_to_markdown":
       return (
         /markdown/.test(searchableText) &&
-        /(url|webpage|web page|web|page|crawl|scrape|fetch)/.test(searchableText)
+        /(url|webpage|web page|web|page|crawl|scrape|fetch)/.test(searchableText) &&
+        !/(tweet|twitter|x post|x\.com|thread|bluesky|social post)/.test(
+          searchableText
+        )
       );
+    case "social_post_to_markdown":
+      return (
+        /markdown/.test(searchableText) &&
+        /(tweet|twitter|x post|x\.com|thread|bluesky|social|post)/.test(
+          searchableText
+        )
+      );
+    case "capability_discovery_or_install":
+      return /(skill|mcp|plugin|tool|discover|find|install)/.test(
+        searchableText
+      );
+    default:
+      return false;
   }
 }

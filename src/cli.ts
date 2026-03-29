@@ -5,20 +5,35 @@ import {
 } from "./broker/run.js";
 import { fileURLToPath } from "node:url";
 import { resolve } from "node:path";
-import type { NormalizeRequestInput } from "./core/request.js";
+import { parseBrokerEnvelope, type BrokerEnvelope } from "./core/envelope.js";
 
-export type RunBrokerCliInput = {
-  task: NormalizeRequestInput["task"];
-  url: NormalizeRequestInput["url"];
-};
+export type RunBrokerCliInput = BrokerEnvelope;
 
 export type RunBrokerCliOutput = RunBrokerResult;
+
+function resolveCurrentHost(
+  input: BrokerEnvelope,
+  options: RunBrokerOptions
+): RunBrokerOptions["currentHost"] {
+  if (options.currentHost !== undefined && options.currentHost !== input.host) {
+    throw new Error(
+      `Broker host conflict: envelope host "${input.host}" does not match currentHost "${options.currentHost}".`
+    );
+  }
+
+  return options.currentHost ?? input.host;
+}
 
 export async function runBrokerCli(
   input: RunBrokerCliInput,
   options: RunBrokerOptions = {}
 ): Promise<RunBrokerCliOutput> {
-  const response = await runBroker(input, options);
+  const envelope = parseBrokerEnvelope(input);
+  const currentHost = resolveCurrentHost(envelope, options);
+  const response = await runBroker(envelope, {
+    ...options,
+    currentHost
+  });
 
   process.stdout.write(JSON.stringify(response));
   return response;
@@ -38,11 +53,28 @@ async function runFromCommandLine(): Promise<void> {
   const rawInput = process.argv[2];
 
   if (rawInput === undefined) {
-    throw new Error("Expected broker request JSON as the first argument.");
+    throw new Error("Expected broker envelope JSON as the first argument.");
   }
 
-  const input = JSON.parse(rawInput) as RunBrokerCliInput;
+  const input = parseBrokerEnvelopeFromCommandLine(rawInput);
   await runBrokerCli(input, directRunOptions());
+}
+
+export function parseBrokerEnvelopeFromCommandLine(
+  rawInput: string
+): BrokerEnvelope {
+  let parsed: unknown;
+
+  try {
+    parsed = JSON.parse(rawInput);
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Unexpected JSON parse failure.";
+
+    throw new Error(`Invalid broker envelope JSON: ${message}`);
+  }
+
+  return parseBrokerEnvelope(parsed);
 }
 
 function isDirectExecution(): boolean {
@@ -56,5 +88,13 @@ function isDirectExecution(): boolean {
 }
 
 if (isDirectExecution()) {
-  await runFromCommandLine();
+  try {
+    await runFromCommandLine();
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Unexpected CLI failure.";
+
+    process.stderr.write(`${message}\n`);
+    process.exitCode = 1;
+  }
 }

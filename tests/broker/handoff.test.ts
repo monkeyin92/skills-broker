@@ -8,7 +8,7 @@ function createWinner(): CapabilityCard {
     id: "winner",
     kind: "skill",
     label: "Winner",
-    intent: "webpage_to_markdown",
+    intent: "web_content_to_markdown",
     hosts: {
       currentHostSupported: true,
       portabilityScore: 1
@@ -28,7 +28,7 @@ function createWinner(): CapabilityCard {
 describe("buildHandoffEnvelope", () => {
   it("includes the normalized request when handoff is built", () => {
     const request: BrokerRequest = {
-      intent: "webpage_to_markdown",
+      intent: "web_content_to_markdown",
       outputMode: "markdown_only",
       url: "https://example.com/article"
     };

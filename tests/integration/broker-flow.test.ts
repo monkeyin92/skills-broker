@@ -30,11 +30,11 @@ describe("runBroker", () => {
 
       expect(result.ok).toBe(true);
       expect(result.outcome.code).toBe("HANDOFF_READY");
-      expect(result.winner.id).toBe("skill-webpage-to-markdown");
+      expect(result.winner.id).toBe("skill-web-content-to-markdown");
       expect(result.handoff.brokerDone).toBe(true);
       expect(result.handoff.candidate.id).toBe(result.winner.id);
       expect(result.handoff.request).toEqual({
-        intent: "webpage_to_markdown",
+        intent: "web_content_to_markdown",
         outputMode: "markdown_only",
         url: validUrlRequest.url
       });
@@ -122,6 +122,7 @@ describe("runBroker", () => {
 
       expect(result.ok).toBe(false);
       expect(result.outcome.code).toBe("NO_CANDIDATE");
+      expect(result.outcome.hostAction).toBe("offer_capability_discovery");
       expect(result.error.message).toContain("No candidate");
     } finally {
       await rm(runtime.directory, { recursive: true, force: true });
@@ -137,10 +138,10 @@ describe("runBroker", () => {
       JSON.stringify({
         skills: [
           {
-            id: "skill-webpage-to-markdown",
+            id: "skill-web-content-to-markdown",
             kind: "skill",
-            label: "Webpage to Markdown",
-            intent: "webpage_to_markdown"
+            label: "Web Content to Markdown",
+            intent: "web_content_to_markdown"
           }
         ]
       }),
@@ -157,7 +158,7 @@ describe("runBroker", () => {
 
       expect(result.ok).toBe(true);
       expect(result.outcome.code).toBe("HANDOFF_READY");
-      expect(result.winner.id).toBe("skill-webpage-to-markdown");
+      expect(result.winner.id).toBe("skill-web-content-to-markdown");
     } finally {
       await rm(runtime.directory, { recursive: true, force: true });
     }
@@ -195,6 +196,53 @@ describe("runBroker", () => {
       expect(result.ok).toBe(true);
       expect(result.outcome.code).toBe("HANDOFF_READY");
       expect(result.winner.id).toBe("io.example/url-to-markdown");
+    } finally {
+      await rm(runtime.directory, { recursive: true, force: true });
+    }
+  });
+
+  it("returns a structured unsupported outcome for a normal chat request", async () => {
+    const runtime = await createRuntimePaths();
+
+    try {
+      const result = await runBroker(
+        {
+          requestText: "explain this design tradeoff",
+          host: "claude-code"
+        },
+        {
+          ...runtime,
+          now: new Date("2026-03-27T08:00:00.000Z")
+        }
+      );
+
+      expect(result.ok).toBe(false);
+      expect(result.outcome.code).toBe("UNSUPPORTED_REQUEST");
+      expect(result.outcome.hostAction).toBe("continue_normally");
+    } finally {
+      await rm(runtime.directory, { recursive: true, force: true });
+    }
+  });
+
+  it("returns a structured ambiguous outcome for broker-like text without enough signal", async () => {
+    const runtime = await createRuntimePaths();
+
+    try {
+      const result = await runBroker(
+        {
+          requestText: "save this page",
+          host: "claude-code",
+          urls: ["https://example.com/article"]
+        },
+        {
+          ...runtime,
+          now: new Date("2026-03-27T08:00:00.000Z")
+        }
+      );
+
+      expect(result.ok).toBe(false);
+      expect(result.outcome.code).toBe("AMBIGUOUS_REQUEST");
+      expect(result.outcome.hostAction).toBe("ask_clarifying_question");
     } finally {
       await rm(runtime.directory, { recursive: true, force: true });
     }

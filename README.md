@@ -87,10 +87,15 @@ That keeps the user focused on the outcome, not on the catalog.
 
 Current scope is intentionally narrow:
 
-> **Claude Code-first broker for one workflow:** `webpage -> markdown`
+> **A small first lake for the broker auto-router:** `web content -> markdown`, `social post -> markdown`, and explicit capability discovery/install requests.
 
 v0 currently includes:
 
+- a shared broker envelope across hosts
+- broker-side normalization for:
+  - `web_content_to_markdown`
+  - `social_post_to_markdown`
+  - `capability_discovery_or_install`
 - dual-source discovery
   - host skill catalog
   - MCP-backed capability candidates
@@ -99,9 +104,11 @@ v0 currently includes:
 - daily first-use refresh plus hard TTL
 - deterministic ranking with explanations
 - prepare + handoff boundary
+- structured outcomes for unsupported, ambiguous, and no-candidate requests
 - relocatable Claude Code plugin package
-- experimental shared broker home install flow
-- Codex thin host shell support
+- published `npx skills-broker` lifecycle CLI
+- shared broker home install/update/remove/doctor flow
+- Claude Code and Codex thin host shell support
 - cross-host cache reuse between Claude Code and Codex
 - CI and live discovery smoke coverage
 
@@ -232,7 +239,7 @@ This is the **repo-local Claude Code development path**, not the primary publish
 
 ```bash
 /absolute/path/to/claude-code-plugin/bin/run-broker \
-  '{"task":"turn this webpage into markdown","url":"https://example.com/article"}'
+  '{"requestText":"turn this webpage into markdown: https://example.com/article","host":"claude-code","invocationMode":"explicit","urls":["https://example.com/article"]}'
 ```
 
 Expected output: a JSON payload containing the selected winner, handoff envelope, and debug information.
@@ -278,15 +285,16 @@ This project is especially relevant if you are:
 
 This repository currently optimizes for:
 
-- one host first: Claude Code
-- one task family first: `webpage -> markdown`
+- a small first routed lake instead of broad open-domain coverage
+- two attached hosts first: Claude Code and Codex
+- two primary routed lanes plus one explicit discovery lane
 - explicit fixture-backed local tests
 - small, inspectable routing logic
 
 It does **not** yet provide:
 
-- a published `npm` package for end users
-- an auto-detected multi-host install flow for real user environments
+- OpenCode host-shell support
+- broad auto-routing beyond clearly external capability requests
 - broad open-domain task coverage
 - live network discovery as the default runtime path
 
@@ -294,12 +302,11 @@ It does **not** yet provide:
 
 Likely next:
 
-- promote the repo-local shared-home flow into a real `skills-broker update` product command
-- add host auto-detection during update
 - broader host support such as OpenCode
-- more task families beyond `webpage -> markdown`
+- richer host-side observability around broker first-refusal decisions
+- more task families beyond the first markdown/discovery lake
 - stronger live registry integration
-- a simpler end-user install flow through `npm` or `npx`
+- richer attachment-aware normalization and clarifying-question flows
 
 ## Repository Structure
 

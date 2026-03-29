@@ -2,13 +2,13 @@ import { describe, expect, it } from "vitest";
 import { normalizeRequest } from "../../src/core/request";
 
 describe("normalizeRequest", () => {
-  it("normalizes webpage markdown requests to the webpage_to_markdown intent", () => {
+  it("normalizes webpage markdown requests to the web_content_to_markdown intent", () => {
     const normalized = normalizeRequest({
       task: "turn this webpage into markdown",
       url: "https://example.com"
     });
 
-    expect(normalized.intent).toBe("webpage_to_markdown");
+    expect(normalized.intent).toBe("web_content_to_markdown");
   });
 
   it("normalizes webpage markdown requests to markdown_only output mode", () => {
@@ -35,11 +35,11 @@ describe("normalizeRequest", () => {
       url: "https://example.com"
     });
 
-    expect(normalized.intent).toBe("webpage_to_markdown");
+    expect(normalized.intent).toBe("web_content_to_markdown");
     expect(normalized.outputMode).toBe("markdown_only");
   });
 
-  it("rejects tasks outside the v0 webpage_to_markdown family", () => {
+  it("rejects tasks outside the v0 web_content_to_markdown family", () => {
     expect(() =>
       normalizeRequest({
         task: "summarize this webpage",

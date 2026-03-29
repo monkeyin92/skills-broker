@@ -93,10 +93,15 @@ broker 决定：
 
 当前版本故意做得很窄：
 
-> **Claude Code-first 的 broker，只先打穿一个任务：** `webpage -> markdown`
+> **先打穿 broker auto-router 的一个小湖：** `web content -> markdown`、`social post -> markdown`，以及显式的能力发现/安装请求。
 
 v0 当前包含：
 
+- 一套跨宿主共享的 broker envelope
+- broker 侧的 3 类归一化能力：
+  - `web_content_to_markdown`
+  - `social_post_to_markdown`
+  - `capability_discovery_or_install`
 - 双来源发现
   - host skill catalog
   - MCP-backed capability candidates
@@ -105,9 +110,11 @@ v0 当前包含：
 - 每日首次使用刷新 + 硬 TTL
 - 可解释、可复现的确定性排序
 - prepare + handoff 边界
+- `unsupported` / `ambiguous` / `no-candidate` 的结构化 outcome
 - 可迁移的 Claude Code 插件安装产物
-- 实验性的共享 broker home 安装链路
-- Codex 薄宿主壳支持
+- 已发布的 `npx skills-broker` lifecycle CLI
+- 共享 broker home 的 install / update / remove / doctor 链路
+- Claude Code 和 Codex 薄宿主壳支持
 - Claude Code 和 Codex 之间的跨宿主 cache 复用
 - CI 和 live discovery smoke 覆盖
 
@@ -239,7 +246,7 @@ npx vitest run
 
 ```bash
 /absolute/path/to/claude-code-plugin/bin/run-broker \
-  '{"task":"turn this webpage into markdown","url":"https://example.com/article"}'
+  '{"requestText":"turn this webpage into markdown: https://example.com/article","host":"claude-code","invocationMode":"explicit","urls":["https://example.com/article"]}'
 ```
 
 预期输出是一段 JSON，里面包含：
@@ -289,15 +296,16 @@ npx vitest run
 
 这个仓库当前优先优化的是：
 
-- 先做一个宿主：Claude Code
-- 先打穿一个任务族：`webpage -> markdown`
+- 先打穿一个小而清楚的 routed lake，而不是一上来覆盖开放域
+- 先接两个宿主：Claude Code 和 Codex
+- 先支持两个主路由 lane 加一个显式 discovery lane
 - 默认依赖 fixture 做稳定本地测试
 - 路由逻辑尽量保持小、明确、易审计
 
 当前还**没有**提供：
 
-- 面向最终用户发布的 `npm` 包
-- 面向真实用户环境的自动宿主发现安装流程
+- OpenCode 宿主壳支持
+- 超出“明显外部能力请求”的宽泛 auto-routing
 - 广义开放域任务覆盖
 - 默认走实时联网 discovery 的运行时
 
@@ -305,12 +313,10 @@ npx vitest run
 
 接下来大概率会推进：
 
-- 把仓库内的共享 home 流程提升成正式的 `skills-broker update` 产品命令
-- 在 update 中加入宿主自动检测
 - 扩展到 OpenCode 等更多宿主
-- 增加更多任务族，而不只限于 `webpage -> markdown`
+- 增加更多任务族，而不只限于当前这组 markdown/discovery 小湖
 - 接入更强的 live registry 能力
-- 提供更简单的 `npm` / `npx` 安装体验
+- 增加更强的附件感知归一化和澄清式 follow-up
 
 ## 仓库结构
 

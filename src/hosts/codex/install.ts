@@ -20,17 +20,28 @@ const HOST_SHELL_NAME = "skills-broker";
 function buildSkillMarkdown(installDirectory: string): string {
   return `---
 name: "${HOST_SHELL_NAME}"
-description: "Route user requests through skills-broker so the best skill or MCP can be selected."
+description: "Route external capability requests through skills-broker. Use for web content to markdown, social post to markdown, and explicit skill or MCP discovery/install requests. Do not use for ordinary chat, coding, or summarization."
 ---
 
 # Skills Broker
 
-Use this skill when you want skills-broker to pick the best downstream skill or MCP for the task.
+Use this skill only for external capability requests, such as:
+
+- converting web content to markdown
+- converting a social post to markdown
+- explicitly finding or installing a skill or MCP
+
+When this skill is loaded:
+
+1. preserve the user's original wording
+2. build a broker envelope with raw request text plus safe hints
+3. forward that envelope to the local broker runner
+4. do not fall back to host-native fetch/install behavior when broker routing should decide
 
 ## Quick Command
 
 \`\`\`bash
-${join(installDirectory, "bin", RUNNER_FILE_NAME)} '{"task":"fetch this URL as markdown","url":"https://example.com/article"}'
+${join(installDirectory, "bin", RUNNER_FILE_NAME)} '{"requestText":"turn this webpage into markdown: https://example.com/article","host":"codex","invocationMode":"explicit","urls":["https://example.com/article"]}'
 \`\`\`
 `;
 }
@@ -42,7 +53,7 @@ set -euo pipefail
 BROKER_INPUT="\${1:-}"
 
 if [[ -z "\${BROKER_INPUT}" ]]; then
-  echo "usage: $0 '<broker-request-json>'" >&2
+  echo "usage: $0 '<broker-envelope-json>'" >&2
   exit 1
 fi
 
