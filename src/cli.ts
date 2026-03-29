@@ -6,7 +6,6 @@ import {
 import { fileURLToPath } from "node:url";
 import { resolve } from "node:path";
 import { parseBrokerEnvelope, type BrokerEnvelope } from "./core/envelope.js";
-import type { NormalizeRequestInput } from "./core/request.js";
 
 export type RunBrokerCliInput = BrokerEnvelope;
 
@@ -25,60 +24,16 @@ function resolveCurrentHost(
   return options.currentHost ?? input.host;
 }
 
-/**
- * Temporary adapter for the only CLI flow we still support in Task 1.
- * It converts a raw webpage-markdown envelope into the legacy broker input.
- * The only accepted shape is requestText === `turn this webpage into markdown: ${urls[0]}`.
- * Other validated envelope fields remain parsed at the contract layer but are
- * intentionally ignored by this temporary adapter until later tasks wire them through.
- */
-function toTemporaryWebpageMarkdownInput(
-  input: BrokerEnvelope
-): NormalizeRequestInput {
-  const urls = input.urls;
-  const url = urls?.[0];
-  const requestText = input.requestText;
-  const currentWebpageTask = "turn this webpage into markdown";
-
-  if (urls === undefined || url === undefined) {
-    throw new Error(
-      "Temporary CLI compatibility only supports webpage markdown envelopes with urls[0]."
-    );
-  }
-
-  if (urls.length !== 1) {
-    throw new Error(
-      "Temporary CLI compatibility only supports webpage markdown envelopes with exactly one URL."
-    );
-  }
-
-  const expectedRequestText = `${currentWebpageTask}: ${url}`;
-
-  if (requestText !== expectedRequestText) {
-    throw new Error(
-      `Temporary CLI compatibility only supports requestText exactly matching "${expectedRequestText}".`
-    );
-  }
-
-  return {
-    task: currentWebpageTask,
-    url
-  };
-}
-
 export async function runBrokerCli(
   input: RunBrokerCliInput,
   options: RunBrokerOptions = {}
 ): Promise<RunBrokerCliOutput> {
   const envelope = parseBrokerEnvelope(input);
   const currentHost = resolveCurrentHost(envelope, options);
-  const response = await runBroker(
-    toTemporaryWebpageMarkdownInput(envelope),
-    {
-      ...options,
-      currentHost
-    }
-  );
+  const response = await runBroker(envelope, {
+    ...options,
+    currentHost
+  });
 
   process.stdout.write(JSON.stringify(response));
   return response;

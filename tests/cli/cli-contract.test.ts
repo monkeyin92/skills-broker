@@ -92,6 +92,159 @@ test("cli accepts a raw envelope for the current webpage flow", async () => {
   });
 });
 
+test("cli accepts a social-post envelope and returns HANDOFF_READY", async () => {
+  const runtimeDirectory = await mkdtemp(join(tmpdir(), "skills-broker-cli-social-"));
+  const hostCatalogPath = join(runtimeDirectory, "host-skills.seed.json");
+  const mcpRegistryPath = join(runtimeDirectory, "mcp-registry.seed.json");
+  const writes: string[] = [];
+  const writeSpy = vi.spyOn(process.stdout, "write").mockImplementation(
+    (chunk: string) => {
+      writes.push(String(chunk));
+      return true;
+    }
+  );
+
+  try {
+    await writeFile(
+      hostCatalogPath,
+      JSON.stringify({
+        skills: [
+          {
+            id: "skill-social-post-to-markdown",
+            kind: "skill",
+            label: "Social Post to Markdown",
+            intent: "social_post_to_markdown"
+          }
+        ]
+      }),
+      "utf8"
+    );
+    await writeFile(
+      mcpRegistryPath,
+      JSON.stringify({ servers: [] }),
+      "utf8"
+    );
+
+    const result = await runBrokerCli(
+      {
+        requestText: "save this X post as markdown: https://x.com/example/status/1",
+        host: "claude-code",
+        invocationMode: "explicit",
+        urls: ["https://x.com/example/status/1"]
+      },
+      {
+        cacheFilePath: join(runtimeDirectory, "cache.json"),
+        hostCatalogFilePath: hostCatalogPath,
+        mcpRegistryFilePath: mcpRegistryPath
+      }
+    );
+
+    expect(result).toMatchObject({
+      ok: true,
+      outcome: {
+        code: "HANDOFF_READY"
+      },
+      handoff: {
+        request: {
+          intent: "social_post_to_markdown"
+        }
+      }
+    });
+  } finally {
+    writeSpy.mockRestore();
+    await rm(runtimeDirectory, { recursive: true, force: true });
+  }
+
+  expect(writes).toHaveLength(1);
+  expect(JSON.parse(writes[0])).toMatchObject({
+    ok: true,
+    outcome: {
+      code: "HANDOFF_READY"
+    },
+    handoff: {
+      request: {
+        intent: "social_post_to_markdown"
+      }
+    }
+  });
+});
+
+test("cli accepts an explicit capability discovery envelope and returns HANDOFF_READY", async () => {
+  const runtimeDirectory = await mkdtemp(join(tmpdir(), "skills-broker-cli-discovery-"));
+  const hostCatalogPath = join(runtimeDirectory, "host-skills.seed.json");
+  const mcpRegistryPath = join(runtimeDirectory, "mcp-registry.seed.json");
+  const writes: string[] = [];
+  const writeSpy = vi.spyOn(process.stdout, "write").mockImplementation(
+    (chunk: string) => {
+      writes.push(String(chunk));
+      return true;
+    }
+  );
+
+  try {
+    await writeFile(
+      hostCatalogPath,
+      JSON.stringify({
+        skills: [
+          {
+            id: "skill-capability-discovery",
+            kind: "skill",
+            label: "Capability Discovery",
+            intent: "capability_discovery_or_install"
+          }
+        ]
+      }),
+      "utf8"
+    );
+    await writeFile(
+      mcpRegistryPath,
+      JSON.stringify({ servers: [] }),
+      "utf8"
+    );
+
+    const result = await runBrokerCli(
+      {
+        requestText: "find a skill to save webpages as markdown",
+        host: "codex",
+        invocationMode: "explicit"
+      },
+      {
+        cacheFilePath: join(runtimeDirectory, "cache.json"),
+        hostCatalogFilePath: hostCatalogPath,
+        mcpRegistryFilePath: mcpRegistryPath
+      }
+    );
+
+    expect(result).toMatchObject({
+      ok: true,
+      outcome: {
+        code: "HANDOFF_READY"
+      },
+      handoff: {
+        request: {
+          intent: "capability_discovery_or_install"
+        }
+      }
+    });
+  } finally {
+    writeSpy.mockRestore();
+    await rm(runtimeDirectory, { recursive: true, force: true });
+  }
+
+  expect(writes).toHaveLength(1);
+  expect(JSON.parse(writes[0])).toMatchObject({
+    ok: true,
+    outcome: {
+      code: "HANDOFF_READY"
+    },
+    handoff: {
+      request: {
+        intent: "capability_discovery_or_install"
+      }
+    }
+  });
+});
+
 test("cli parser normalizes away unknown fields", () => {
   const parsedEnvelope = parseBrokerEnvelopeFromCommandLine(
     JSON.stringify({
@@ -108,20 +261,6 @@ test("cli parser normalizes away unknown fields", () => {
     host: "claude-code",
     urls: ["https://example.com/post"]
   });
-});
-
-test("cli rejects envelopes without urls[0]", async () => {
-  await expect(
-    runBrokerCli({
-      requestText: "turn this webpage into markdown: https://example.com/post",
-      host: "claude-code",
-      metadata: {
-        command: "/skills-broker"
-      }
-    })
-  ).rejects.toThrow(
-    /Temporary CLI compatibility only supports webpage markdown envelopes with urls\[0\]\./
-  );
 });
 
 test("cli rejects envelopes with blank urls", async () => {
@@ -162,34 +301,6 @@ test("cli rejects sparse string arrays", async () => {
   );
 });
 
-test("cli rejects envelopes with more than one URL", async () => {
-  await expect(
-    runBrokerCli({
-      requestText: "turn this webpage into markdown: https://example.com/post",
-      host: "claude-code",
-      urls: ["https://example.com/post", "https://example.com/other"]
-    })
-  ).rejects.toThrow(
-    /Temporary CLI compatibility only supports webpage markdown envelopes with exactly one URL\./
-  );
-});
-
-test("cli rejects envelope shapes outside the current webpage markdown scenario", async () => {
-  await expect(
-    runBrokerCli({
-      requestText:
-        "turn this webpage into markdown: https://example.com/post and summarize it",
-      host: "claude-code",
-      urls: ["https://example.com/post"],
-      metadata: {
-        command: "/skills-broker"
-      }
-    })
-  ).rejects.toThrow(
-    /Temporary CLI compatibility only supports requestText exactly matching "turn this webpage into markdown: https:\/\/example.com\/post"\./
-  );
-});
-
 test("cli rejects invalid JSON input with a stable error", () => {
   expect(() => parseBrokerEnvelopeFromCommandLine("{not-json")).toThrow(
     /Invalid broker envelope JSON:/
@@ -213,6 +324,43 @@ test("cli rejects invalid invocationMode values", async () => {
   ).rejects.toThrow(
     /Expected broker envelope.invocationMode to be auto or explicit\./
   );
+});
+
+test("cli returns a structured unsupported outcome instead of throwing for normal chat requests", async () => {
+  const writes: string[] = [];
+  const writeSpy = vi.spyOn(process.stdout, "write").mockImplementation(
+    (chunk: string) => {
+      writes.push(String(chunk));
+      return true;
+    }
+  );
+
+  try {
+    const result = await runBrokerCli({
+      requestText: "explain this design tradeoff",
+      host: "claude-code",
+      invocationMode: "auto"
+    });
+
+    expect(result).toMatchObject({
+      ok: false,
+      outcome: {
+        code: "UNSUPPORTED_REQUEST",
+        hostAction: "continue_normally"
+      }
+    });
+  } finally {
+    writeSpy.mockRestore();
+  }
+
+  expect(writes).toHaveLength(1);
+  expect(JSON.parse(writes[0])).toMatchObject({
+    ok: false,
+    outcome: {
+      code: "UNSUPPORTED_REQUEST",
+      hostAction: "continue_normally"
+    }
+  });
 });
 
 test("cli rejects invalid cwd field types", async () => {
