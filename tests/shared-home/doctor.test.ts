@@ -128,7 +128,7 @@ describe("doctor shared broker home", () => {
         JSON.stringify({
           managedBy: "skills-broker",
           host: "codex",
-          version: "0.1.3",
+          version: "0.1.4",
           brokerHome: brokerHomeDirectory
         }),
         "utf8"
