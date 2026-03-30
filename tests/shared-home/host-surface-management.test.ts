@@ -78,7 +78,18 @@ describe("host surface management", () => {
         name: "codex",
         status: "detected",
         reason: "managed by skills-broker",
-        competingPeerSkills: ["baoyu-danger-x-to-markdown"]
+        competingPeerSkills: ["baoyu-danger-x-to-markdown"],
+        remediation: {
+          action: "hide_competing_peer_skills",
+          targetDirectory: join(
+            brokerHomeDirectory,
+            "downstream",
+            "codex",
+            "skills"
+          ),
+          peerSkills: ["baoyu-danger-x-to-markdown"],
+          message: expect.stringContaining("Hide competing peer skills behind skills-broker")
+        }
       });
       expect(result.warnings).toContain(
         competingPeerSkillsWarning("codex", ["baoyu-danger-x-to-markdown"])

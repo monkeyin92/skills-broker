@@ -52,3 +52,30 @@ export function competingPeerSkillsWarning(
 ): string {
   return `${hostName}: competing peer skills detected (${skillNames.join(", ")}); broker-first hit rate may be reduced until these peer skills are hidden behind skills-broker`;
 }
+
+export type PeerSkillRemediation = {
+  action: "hide_competing_peer_skills";
+  targetDirectory: string;
+  peerSkills: string[];
+  message: string;
+};
+
+export function buildPeerSkillRemediation(
+  hostName: "claude-code" | "codex",
+  brokerHomeDirectory: string,
+  peerSkills: string[]
+): PeerSkillRemediation {
+  const targetDirectory = join(
+    brokerHomeDirectory,
+    "downstream",
+    hostName,
+    "skills"
+  );
+
+  return {
+    action: "hide_competing_peer_skills",
+    targetDirectory,
+    peerSkills,
+    message: `Hide competing peer skills behind skills-broker by moving ${peerSkills.join(", ")} out of the host-visible skills surface and into ${targetDirectory}`
+  };
+}

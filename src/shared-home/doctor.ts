@@ -3,6 +3,7 @@ import { resolveSharedBrokerHomeLayout } from "./install.js";
 import { readManagedShellManifest } from "./ownership.js";
 import { detectWritableDirectory } from "./detect.js";
 import {
+  buildPeerSkillRemediation,
   competingPeerSkillsWarning,
   detectCompetingPeerSkills
 } from "./host-surface.js";
@@ -19,6 +20,12 @@ export type DoctorLifecycleResult = {
     status: "detected" | "not_detected" | "not_writable" | "conflict";
     reason?: string;
     competingPeerSkills?: string[];
+    remediation?: {
+      action: "hide_competing_peer_skills";
+      targetDirectory: string;
+      peerSkills: string[];
+      message: string;
+    };
   }>;
   warnings: string[];
 };
@@ -99,6 +106,7 @@ async function doctorHost(
   name: "claude-code" | "codex",
   installDirectory: string | undefined,
   notDetectedReason: string | undefined,
+  brokerHomeDirectory: string,
   warnings: string[]
 ): Promise<DoctorHostEntry> {
   if (installDirectory === undefined) {
@@ -135,7 +143,16 @@ async function doctorHost(
       name,
       status: "detected",
       reason: "managed by skills-broker",
-      ...(competingPeerSkills.length > 0 ? { competingPeerSkills } : {})
+      ...(competingPeerSkills.length > 0
+        ? {
+            competingPeerSkills,
+            remediation: buildPeerSkillRemediation(
+              name,
+              brokerHomeDirectory,
+              competingPeerSkills
+            )
+          }
+        : {})
     };
   }
 
@@ -198,12 +215,14 @@ export async function doctorSharedBrokerHome(
         "claude-code",
         hostTargets.claudeCode.installDirectory,
         hostTargets.claudeCode.reason,
+        options.brokerHomeDirectory,
         warnings
       ),
       await doctorHost(
         "codex",
         hostTargets.codex.installDirectory,
         hostTargets.codex.reason,
+        options.brokerHomeDirectory,
         warnings
       )
     ],

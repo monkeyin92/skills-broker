@@ -323,7 +323,18 @@ describe("shared-home lifecycle paths", () => {
       expect(result.hosts).toContainEqual({
         name: "claude-code",
         status: "installed",
-        competingPeerSkills: ["baoyu-url-to-markdown"]
+        competingPeerSkills: ["baoyu-url-to-markdown"],
+        remediation: {
+          action: "hide_competing_peer_skills",
+          targetDirectory: join(
+            brokerHomeDirectory,
+            "downstream",
+            "claude-code",
+            "skills"
+          ),
+          peerSkills: ["baoyu-url-to-markdown"],
+          message: expect.stringContaining("Hide competing peer skills behind skills-broker")
+        }
       });
       expect(result.warnings).toContain(
         "claude-code: competing peer skills detected (baoyu-url-to-markdown); broker-first hit rate may be reduced until these peer skills are hidden behind skills-broker"

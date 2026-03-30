@@ -9,6 +9,7 @@ import {
 } from "../hosts/codex/install.js";
 import { readManagedShellManifest } from "./ownership.js";
 import {
+  buildPeerSkillRemediation,
   competingPeerSkillsWarning,
   detectCompetingPeerSkills
 } from "./host-surface.js";
@@ -42,6 +43,12 @@ export type UpdateLifecycleResult = {
     status: HostLifecycleStatus;
     reason?: string;
     competingPeerSkills?: string[];
+    remediation?: {
+      action: "hide_competing_peer_skills";
+      targetDirectory: string;
+      peerSkills: string[];
+      message: string;
+    };
   }>;
   warnings: string[];
 };
@@ -241,7 +248,16 @@ async function updateHost(
     return {
       name,
       status: wasManaged ? "up_to_date" : "planned_install",
-      ...(competingPeerSkills.length > 0 ? { competingPeerSkills } : {})
+      ...(competingPeerSkills.length > 0
+        ? {
+            competingPeerSkills,
+            remediation: buildPeerSkillRemediation(
+              name,
+              options.brokerHomeDirectory,
+              competingPeerSkills
+            )
+          }
+        : {})
     };
   }
 
@@ -261,7 +277,16 @@ async function updateHost(
     return {
       name,
       status: wasManaged ? "updated" : "installed",
-      ...(competingPeerSkills.length > 0 ? { competingPeerSkills } : {})
+      ...(competingPeerSkills.length > 0
+        ? {
+            competingPeerSkills,
+            remediation: buildPeerSkillRemediation(
+              name,
+              options.brokerHomeDirectory,
+              competingPeerSkills
+            )
+          }
+        : {})
     };
   } catch (error) {
     const reason = error instanceof Error ? error.message : String(error);

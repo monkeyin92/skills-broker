@@ -338,6 +338,46 @@ describe("lifecycle cli", () => {
     }
   });
 
+  it("prints competing peer remediation in doctor text output", async () => {
+    const scriptPath = resolve("src/bin/skills-broker.ts");
+    const runtimeDirectory = await mkdtemp(resolve(tmpdir(), "skills-broker-cli-doctor-peers-"));
+    const brokerHomeDirectory = resolve(runtimeDirectory, ".skills-broker");
+    const codexInstallDirectory = resolve(runtimeDirectory, ".agents", "skills", "skills-broker");
+
+    try {
+      await mkdir(resolve(runtimeDirectory, ".codex"), { recursive: true });
+      await mkdir(codexInstallDirectory, { recursive: true });
+      await mkdir(resolve(runtimeDirectory, ".agents", "skills", "baoyu-danger-x-to-markdown"), {
+        recursive: true
+      });
+      await writeManagedShellManifest(codexInstallDirectory, {
+        managedBy: "skills-broker",
+        host: "codex",
+        version: "0.1.3",
+        brokerHome: brokerHomeDirectory
+      });
+
+      const { stdout } = await execFileAsync("node", [
+        "--loader",
+        tsNodeLoaderPath,
+        scriptPath,
+        "doctor"
+      ], {
+        env: {
+          ...process.env,
+          HOME: runtimeDirectory
+        },
+        encoding: "utf8"
+      });
+
+      const output = stdout.trim();
+      expect(output).toContain("Host codex competing peers: baoyu-danger-x-to-markdown");
+      expect(output).toContain("Host codex remediation: Hide competing peer skills behind skills-broker");
+    } finally {
+      await rm(runtimeDirectory, { recursive: true, force: true });
+    }
+  });
+
   it("auto-detects official Claude Code and Codex roots for zero-arg update", async () => {
     const scriptPath = resolve("src/bin/skills-broker.ts");
     const runtimeDirectory = await mkdtemp(resolve(tmpdir(), "skills-broker-cli-update-defaults-"));

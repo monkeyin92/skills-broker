@@ -25,6 +25,9 @@ export function formatLifecycleResult(
         lines.push(
           `Host ${host.name} competing peers: ${host.competingPeerSkills?.join(", ")}`
         );
+        if (host.remediation) {
+          lines.push(`Host ${host.name} remediation: ${host.remediation.message}`);
+        }
       }
     }
 
@@ -77,6 +80,9 @@ export function formatLifecycleResult(
       lines.push(
         `Host ${host.name} competing peers: ${host.competingPeerSkills?.join(", ")}`
       );
+      if (host.remediation) {
+        lines.push(`Host ${host.name} remediation: ${host.remediation.message}`);
+      }
     }
   }
 
