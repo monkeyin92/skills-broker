@@ -15,16 +15,23 @@ describe("broker-owned downstream capabilities", () => {
       type: "local_skill",
       ownerSurface: "broker_owned_downstream"
     });
-    expect(toCapabilityCard(candidates[0]).package).toEqual({
+    expect(toCapabilityCard(candidates[0]).package).toMatchObject({
       packageId: "baoyu",
       label: "baoyu",
       installState: "installed",
-      acquisition: "local_skill_bundle"
+      acquisition: "local_skill_bundle",
+      probe: {
+        layouts: ["single_skill_directory"]
+      }
     });
-    expect(toCapabilityCard(candidates[0]).leaf).toEqual({
+    expect(toCapabilityCard(candidates[0]).leaf).toMatchObject({
       capabilityId: "baoyu.url-to-markdown",
       packageId: "baoyu",
-      subskillId: "url-to-markdown"
+      subskillId: "url-to-markdown",
+      probe: {
+        manifestNames: ["baoyu-url-to-markdown"],
+        aliases: ["url-to-markdown"]
+      }
     });
     expect(toCapabilityCard(candidates[0]).query).toMatchObject({
       jobFamilies: ["content_acquisition", "web_content_conversion"],
@@ -44,16 +51,23 @@ describe("broker-owned downstream capabilities", () => {
       type: "local_skill",
       ownerSurface: "broker_owned_downstream"
     });
-    expect(toCapabilityCard(candidates[0]).package).toEqual({
+    expect(toCapabilityCard(candidates[0]).package).toMatchObject({
       packageId: "baoyu",
       label: "baoyu",
       installState: "installed",
-      acquisition: "local_skill_bundle"
+      acquisition: "local_skill_bundle",
+      probe: {
+        layouts: ["single_skill_directory"]
+      }
     });
-    expect(toCapabilityCard(candidates[0]).leaf).toEqual({
+    expect(toCapabilityCard(candidates[0]).leaf).toMatchObject({
       capabilityId: "baoyu.x-post-to-markdown",
       packageId: "baoyu",
-      subskillId: "x-post-to-markdown"
+      subskillId: "x-post-to-markdown",
+      probe: {
+        manifestNames: ["baoyu-danger-x-to-markdown"],
+        aliases: ["x-post-to-markdown"]
+      }
     });
     expect(toCapabilityCard(candidates[0]).query).toMatchObject({
       jobFamilies: ["content_acquisition", "social_content_conversion"],

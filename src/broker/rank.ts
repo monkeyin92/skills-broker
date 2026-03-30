@@ -65,18 +65,16 @@ function preferredCapabilityScore(
     return 0;
   }
 
-  const skillName =
-    typeof card.sourceMetadata.skillName === "string"
-      ? card.sourceMetadata.skillName
-      : undefined;
+  const preferredNames = new Set([
+    card.id,
+    card.leaf.capabilityId,
+    card.leaf.subskillId,
+    card.implementation.id,
+    ...(card.leaf.probe?.manifestNames ?? []),
+    ...(card.leaf.probe?.aliases ?? [])
+  ]);
 
-  return preferredCapability === card.id ||
-    preferredCapability === card.leaf.capabilityId ||
-    preferredCapability === card.leaf.subskillId ||
-    preferredCapability === card.implementation.id ||
-    preferredCapability === skillName
-    ? 1
-    : 0;
+  return preferredNames.has(preferredCapability) ? 1 : 0;
 }
 
 function capabilityQueryScore(

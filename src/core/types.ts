@@ -78,17 +78,41 @@ export type CapabilityPackageAcquisition =
   | "broker_native"
   | "mcp_bundle";
 
+export const CAPABILITY_PACKAGE_LAYOUTS = [
+  "single_skill_directory",
+  "bundle_root_children",
+  "nested_agent_skills"
+] as const;
+
+export type CapabilityPackageLayout =
+  (typeof CAPABILITY_PACKAGE_LAYOUTS)[number];
+
+export type CapabilityPackageProbe = {
+  layouts: CapabilityPackageLayout[];
+  manifestFiles?: string[];
+  manifestNames?: string[];
+  aliases?: string[];
+};
+
+export type LeafCapabilityProbe = {
+  manifestFiles?: string[];
+  manifestNames?: string[];
+  aliases?: string[];
+};
+
 export type CapabilityPackageRef = {
   packageId: string;
   label: string;
   installState: CapabilityPackageInstallState;
   acquisition: CapabilityPackageAcquisition;
+  probe?: CapabilityPackageProbe;
 };
 
 export type LeafCapabilityRef = {
   capabilityId: string;
   packageId: string;
   subskillId: string;
+  probe?: LeafCapabilityProbe;
 };
 
 export type PackageAcquisitionHint = {

@@ -4,13 +4,20 @@
       "packageId": "baoyu",
       "label": "baoyu",
       "installState": "installed",
-      "acquisition": "local_skill_bundle"
+      "acquisition": "local_skill_bundle",
+      "probe": {
+        "layouts": ["single_skill_directory"]
+      }
     },
     {
       "packageId": "skills_broker",
       "label": "skills_broker",
       "installState": "installed",
-      "acquisition": "broker_native"
+      "acquisition": "broker_native",
+      "probe": {
+        "layouts": ["single_skill_directory"],
+        "manifestNames": ["skills-broker", "skills_broker"]
+      }
     }
   ],
   "skills": [
@@ -25,7 +32,11 @@
       "leaf": {
         "capabilityId": "baoyu.url-to-markdown",
         "packageId": "baoyu",
-        "subskillId": "url-to-markdown"
+        "subskillId": "url-to-markdown",
+        "probe": {
+          "manifestNames": ["baoyu-url-to-markdown"],
+          "aliases": ["url-to-markdown"]
+        }
       },
       "implementation": {
         "id": "baoyu.url_to_markdown",
@@ -44,7 +55,11 @@
       "leaf": {
         "capabilityId": "skills_broker.capability-discovery",
         "packageId": "skills_broker",
-        "subskillId": "capability-discovery"
+        "subskillId": "capability-discovery",
+        "probe": {
+          "manifestNames": ["skills-broker"],
+          "aliases": ["capability-discovery"]
+        }
       },
       "implementation": {
         "id": "skills_broker.capability_discovery",

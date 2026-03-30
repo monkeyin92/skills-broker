@@ -5,7 +5,9 @@ import type {
   CapabilityOwnershipSurface,
   CapabilityPackageRef,
   LeafCapabilityRef,
-  CapabilityPackageAcquisition
+  CapabilityPackageAcquisition,
+  CapabilityPackageProbe,
+  LeafCapabilityProbe
 } from "./types.js";
 
 export type CapabilityCardKind = "skill" | "mcp";
@@ -119,6 +121,17 @@ function mergeUniqueStrings(
   });
 }
 
+function mergeOptionalUniqueStrings(
+  preferred: string[] | undefined,
+  fallback: string[] | undefined
+): string[] | undefined {
+  if (preferred === undefined && fallback === undefined) {
+    return undefined;
+  }
+
+  return mergeUniqueStrings(preferred, fallback ?? []);
+}
+
 function normalizeIdentifier(value: string): string {
   const normalized = value
     .trim()
@@ -194,11 +207,48 @@ function defaultPackageAcquisition(
   return kind === "mcp" ? "mcp_bundle" : "local_skill_bundle";
 }
 
+function defaultPackageProbe(
+  candidate: CapabilityCandidate,
+  kind: CapabilityCardKind,
+  packageId: string
+): CapabilityPackageProbe | undefined {
+  if (kind !== "skill") {
+    return undefined;
+  }
+
+  const sourcePackageName =
+    typeof candidate.sourceMetadata?.packageName === "string"
+      ? candidate.sourceMetadata.packageName
+      : undefined;
+  const packageProbe = candidate.package?.probe;
+
+  return {
+    layouts: packageProbe?.layouts ?? ["single_skill_directory"],
+    manifestFiles:
+      packageProbe?.manifestFiles ?? [
+        "package.json",
+        "SKILL.md",
+        ".skills-broker.json",
+        "conductor.json"
+      ],
+    manifestNames: mergeOptionalUniqueStrings(packageProbe?.manifestNames, [
+      packageId,
+      sourcePackageName
+    ].filter((value): value is string => value !== undefined)),
+    aliases: packageProbe?.aliases
+  };
+}
+
 function defaultLeafRef(
   candidate: CapabilityCandidate,
   packageRef: CapabilityPackageRef,
   implementationId: string
 ): LeafCapabilityRef {
+  const leafProbe = candidate.leaf?.probe;
+  const sourceSkillName =
+    typeof candidate.sourceMetadata?.skillName === "string"
+      ? candidate.sourceMetadata.skillName
+      : undefined;
   const subskillId = normalizeIdentifier(
     candidate.leaf?.subskillId ??
       (typeof candidate.sourceMetadata?.subskillId === "string"
@@ -208,11 +258,32 @@ function defaultLeafRef(
       candidate.id
   );
 
+  const defaultLeafProbe: LeafCapabilityProbe | undefined =
+    candidate.kind === "skill"
+      ? {
+          manifestFiles: leafProbe?.manifestFiles ?? [
+            "SKILL.md",
+            ".skills-broker.json"
+          ],
+          manifestNames: mergeOptionalUniqueStrings(leafProbe?.manifestNames, [
+            subskillId,
+            sourceSkillName
+          ].filter((value): value is string => value !== undefined)),
+          aliases: mergeOptionalUniqueStrings(leafProbe?.aliases, [
+            `${packageRef.packageId}-${subskillId}`,
+            sourceSkillName === undefined
+              ? undefined
+              : `${packageRef.packageId}-${sourceSkillName}`
+          ].filter((value): value is string => value !== undefined))
+        }
+      : undefined;
+
   return {
     capabilityId:
       candidate.leaf?.capabilityId ?? `${packageRef.packageId}.${subskillId}`,
     packageId: candidate.leaf?.packageId ?? packageRef.packageId,
-    subskillId
+    subskillId,
+    probe: defaultLeafProbe
   };
 }
 
@@ -234,7 +305,10 @@ export function toCapabilityCard(candidate: CapabilityCandidate): CapabilityCard
     kind,
     label: candidate.label,
     intent: candidate.intent,
-    package: packageRef,
+    package: {
+      ...packageRef,
+      probe: defaultPackageProbe(candidate, kind, packageRef.packageId)
+    },
     leaf: leafRef,
     query: {
       jobFamilies: mergeUniqueStrings(candidate.query?.jobFamilies, defaults.jobFamilies),

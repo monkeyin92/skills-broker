@@ -24,16 +24,31 @@ describe("toCapabilityCard", () => {
       targetTypes: ["url", "website", "repo"],
       artifacts: ["markdown"]
     });
-    expect(card.package).toEqual({
+    expect(card.package).toMatchObject({
       packageId: "baoyu",
       label: "baoyu",
       installState: "installed",
-      acquisition: "local_skill_bundle"
+      acquisition: "local_skill_bundle",
+      probe: {
+        layouts: ["single_skill_directory"],
+        manifestNames: ["baoyu"],
+        manifestFiles: [
+          "package.json",
+          "SKILL.md",
+          ".skills-broker.json",
+          "conductor.json"
+        ]
+      }
     });
-    expect(card.leaf).toEqual({
+    expect(card.leaf).toMatchObject({
       capabilityId: "baoyu.url-to-markdown",
       packageId: "baoyu",
-      subskillId: "url-to-markdown"
+      subskillId: "url-to-markdown",
+      probe: {
+        manifestNames: ["url-to-markdown"],
+        aliases: ["baoyu-url-to-markdown"],
+        manifestFiles: ["SKILL.md", ".skills-broker.json"]
+      }
     });
     expect(card.implementation).toEqual({
       id: "baoyu.url_to_markdown",
@@ -58,13 +73,13 @@ describe("toCapabilityCard", () => {
       jobFamilies: ["content_acquisition", "web_content_conversion"],
       artifacts: ["markdown"]
     });
-    expect(card.package).toEqual({
+    expect(card.package).toMatchObject({
       packageId: "mcp",
       label: "mcp",
       installState: "installed",
       acquisition: "mcp_bundle"
     });
-    expect(card.leaf).toEqual({
+    expect(card.leaf).toMatchObject({
       capabilityId: "mcp.mcp-url-to-markdown",
       packageId: "mcp",
       subskillId: "mcp-url-to-markdown"
@@ -96,16 +111,24 @@ describe("toCapabilityCard", () => {
       artifacts: ["design_doc"],
       examples: ["帮我分析这个需求"]
     });
-    expect(card.package).toEqual({
+    expect(card.package).toMatchObject({
       packageId: "requirements-analysis",
       label: "requirements-analysis",
       installState: "installed",
-      acquisition: "local_skill_bundle"
+      acquisition: "local_skill_bundle",
+      probe: {
+        layouts: ["single_skill_directory"],
+        manifestNames: ["requirements-analysis"]
+      }
     });
-    expect(card.leaf).toEqual({
+    expect(card.leaf).toMatchObject({
       capabilityId: "requirements-analysis.requirements-analysis",
       packageId: "requirements-analysis",
-      subskillId: "requirements-analysis"
+      subskillId: "requirements-analysis",
+      probe: {
+        manifestNames: ["requirements-analysis"],
+        aliases: ["requirements-analysis-requirements-analysis"]
+      }
     });
   });
 });

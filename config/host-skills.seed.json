@@ -4,19 +4,30 @@
       "packageId": "baoyu",
       "label": "baoyu",
       "installState": "installed",
-      "acquisition": "local_skill_bundle"
+      "acquisition": "local_skill_bundle",
+      "probe": {
+        "layouts": ["single_skill_directory"]
+      }
     },
     {
       "packageId": "skills_broker",
       "label": "skills_broker",
       "installState": "installed",
-      "acquisition": "broker_native"
+      "acquisition": "broker_native",
+      "probe": {
+        "layouts": ["single_skill_directory"],
+        "manifestNames": ["skills-broker", "skills_broker"]
+      }
     },
     {
       "packageId": "gstack",
       "label": "gstack",
       "installState": "installed",
-      "acquisition": "local_skill_bundle"
+      "acquisition": "local_skill_bundle",
+      "probe": {
+        "layouts": ["bundle_root_children", "nested_agent_skills"],
+        "manifestNames": ["gstack"]
+      }
     }
   ],
   "skills": [
@@ -31,7 +42,11 @@
       "leaf": {
         "capabilityId": "baoyu.url-to-markdown",
         "packageId": "baoyu",
-        "subskillId": "url-to-markdown"
+        "subskillId": "url-to-markdown",
+        "probe": {
+          "manifestNames": ["baoyu-url-to-markdown"],
+          "aliases": ["url-to-markdown"]
+        }
       },
       "query": {
         "jobFamilies": ["content_acquisition", "web_content_conversion"],
@@ -62,7 +77,11 @@
       "leaf": {
         "capabilityId": "baoyu.x-post-to-markdown",
         "packageId": "baoyu",
-        "subskillId": "x-post-to-markdown"
+        "subskillId": "x-post-to-markdown",
+        "probe": {
+          "manifestNames": ["baoyu-danger-x-to-markdown"],
+          "aliases": ["x-post-to-markdown"]
+        }
       },
       "query": {
         "jobFamilies": ["content_acquisition", "social_content_conversion"],
@@ -93,7 +112,11 @@
       "leaf": {
         "capabilityId": "skills_broker.capability-discovery",
         "packageId": "skills_broker",
-        "subskillId": "capability-discovery"
+        "subskillId": "capability-discovery",
+        "probe": {
+          "manifestNames": ["skills-broker"],
+          "aliases": ["capability-discovery"]
+        }
       },
       "query": {
         "jobFamilies": ["capability_acquisition"],
@@ -121,7 +144,11 @@
       "leaf": {
         "capabilityId": "gstack.office-hours",
         "packageId": "gstack",
-        "subskillId": "office-hours"
+        "subskillId": "office-hours",
+        "probe": {
+          "manifestNames": ["office-hours"],
+          "aliases": ["gstack-office-hours"]
+        }
       },
       "query": {
         "jobFamilies": ["requirements_analysis", "idea_brainstorming"],
@@ -152,7 +179,11 @@
       "leaf": {
         "capabilityId": "gstack.qa",
         "packageId": "gstack",
-        "subskillId": "qa"
+        "subskillId": "qa",
+        "probe": {
+          "manifestNames": ["qa"],
+          "aliases": ["gstack-qa"]
+        }
       },
       "query": {
         "jobFamilies": ["quality_assurance"],

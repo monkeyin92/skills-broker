@@ -15,12 +15,20 @@ function createAvailableSkill(): CapabilityCard {
       packageId: "gstack",
       label: "gstack",
       installState: "available",
-      acquisition: "published_package"
+      acquisition: "published_package",
+      probe: {
+        layouts: ["bundle_root_children", "nested_agent_skills"],
+        manifestNames: ["gstack"]
+      }
     },
     leaf: {
       capabilityId: "gstack.office-hours",
       packageId: "gstack",
-      subskillId: "office-hours"
+      subskillId: "office-hours",
+      probe: {
+        manifestNames: ["office-hours"],
+        aliases: ["gstack-office-hours"]
+      }
     },
     query: {
       jobFamilies: ["requirements_analysis"],
@@ -75,12 +83,19 @@ describe("hydratePackageAvailability", () => {
               packageId: "baoyu",
               label: "baoyu",
               installState: "available",
-              acquisition: "published_package"
+              acquisition: "published_package",
+              probe: {
+                layouts: ["single_skill_directory"]
+              }
             },
             leaf: {
               capabilityId: "baoyu.url-to-markdown",
               packageId: "baoyu",
-              subskillId: "url-to-markdown"
+              subskillId: "url-to-markdown",
+              probe: {
+                manifestNames: ["baoyu-url-to-markdown"],
+                aliases: ["url-to-markdown"]
+              }
             },
             implementation: {
               id: "baoyu.url_to_markdown",
@@ -123,12 +138,19 @@ describe("hydratePackageAvailability", () => {
               packageId: "baoyu",
               label: "baoyu",
               installState: "available",
-              acquisition: "published_package"
+              acquisition: "published_package",
+              probe: {
+                layouts: ["single_skill_directory"]
+              }
             },
             leaf: {
               capabilityId: "baoyu.url-to-markdown",
               packageId: "baoyu",
-              subskillId: "url-to-markdown"
+              subskillId: "url-to-markdown",
+              probe: {
+                manifestNames: ["baoyu-url-to-markdown"],
+                aliases: ["url-to-markdown"]
+              }
             },
             implementation: {
               id: "baoyu.url_to_markdown",

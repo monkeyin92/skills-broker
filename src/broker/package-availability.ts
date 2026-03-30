@@ -2,6 +2,10 @@ import { readdir, readFile, stat } from "node:fs/promises";
 import { homedir } from "node:os";
 import { basename, join, resolve } from "node:path";
 import type { CapabilityCard } from "../core/capability-card.js";
+import type {
+  CapabilityPackageProbe,
+  LeafCapabilityProbe
+} from "../core/types.js";
 
 export type HydratePackageAvailabilityOptions = {
   currentHost: string;
@@ -149,44 +153,77 @@ function baseSearchRoots(
   return unique(roots.map((root) => resolve(root)));
 }
 
-function candidatePackageNames(card: CapabilityCard): string[] {
-  const sourcePackageName =
-    typeof card.sourceMetadata.packageName === "string"
-      ? card.sourceMetadata.packageName
-      : undefined;
+function packageProbe(card: CapabilityCard): CapabilityPackageProbe {
+  const probe = card.package.probe;
 
-  return normalizedValues([card.package.packageId, sourcePackageName]);
+  return {
+    ...(probe ?? {}),
+    layouts: probe?.layouts ?? ["single_skill_directory"],
+    manifestFiles: probe?.manifestFiles ?? [
+      "package.json",
+      "SKILL.md",
+      ".skills-broker.json",
+      "conductor.json"
+    ],
+    manifestNames: probe?.manifestNames ?? [card.package.packageId]
+  };
+}
+
+function leafProbe(card: CapabilityCard): LeafCapabilityProbe {
+  const probe = card.leaf.probe;
+
+  return {
+    ...(probe ?? {}),
+    manifestFiles: probe?.manifestFiles ?? ["SKILL.md", ".skills-broker.json"],
+    manifestNames: probe?.manifestNames ?? [card.leaf.subskillId],
+    aliases: probe?.aliases ?? [`${card.package.packageId}-${card.leaf.subskillId}`]
+  };
+}
+
+function candidatePackageNames(card: CapabilityCard): string[] {
+  const probe = packageProbe(card);
+
+  return normalizedValues([
+    card.package.packageId,
+    ...(probe.manifestNames ?? []),
+    ...(probe.aliases ?? [])
+  ]);
 }
 
 function candidateSkillNames(card: CapabilityCard): string[] {
-  const sourceSkillName =
-    typeof card.sourceMetadata.skillName === "string"
-      ? card.sourceMetadata.skillName
-      : undefined;
+  const probe = leafProbe(card);
 
   return normalizedValues([
     card.leaf.subskillId,
-    sourceSkillName,
-    `${card.package.packageId}-${card.leaf.subskillId}`,
-    sourceSkillName === undefined
-      ? undefined
-      : `${card.package.packageId}-${sourceSkillName}`
+    ...(probe.manifestNames ?? []),
+    ...(probe.aliases ?? [])
   ]);
 }
 
 async function readPackageManifestNames(
-  packageRoot: string
+  packageRoot: string,
+  card: CapabilityCard
 ): Promise<string[] | undefined> {
+  const probe = packageProbe(card);
+  const manifestFiles = probe.manifestFiles ?? [];
   const packageJsonPath = join(packageRoot, "package.json");
-  const packageJsonExists = await fileExists(packageJsonPath);
-  const packageJson = await readJsonObject(packageJsonPath);
-  const rootSkillName = await readSkillFrontmatterName(join(packageRoot, "SKILL.md"));
-  const brokerMetadata = await readJsonObject(
-    join(packageRoot, ".skills-broker.json")
-  );
-  const conductorExists = await fileExists(join(packageRoot, "conductor.json"));
+  const packageJson =
+    manifestFiles.includes("package.json")
+      ? await readJsonObject(packageJsonPath)
+      : undefined;
+  const rootSkillName =
+    manifestFiles.includes("SKILL.md")
+      ? await readSkillFrontmatterName(join(packageRoot, "SKILL.md"))
+      : undefined;
+  const brokerMetadata =
+    manifestFiles.includes(".skills-broker.json")
+      ? await readJsonObject(join(packageRoot, ".skills-broker.json"))
+      : undefined;
+  const conductorExists =
+    manifestFiles.includes("conductor.json") &&
+    (await fileExists(join(packageRoot, "conductor.json")));
   const hasManifest =
-    packageJsonExists ||
+    packageJson !== undefined ||
     brokerMetadata !== undefined ||
     rootSkillName !== undefined ||
     conductorExists;
@@ -208,14 +245,20 @@ async function readPackageManifestNames(
 }
 
 async function readSkillManifestNames(
-  skillDirectory: string
+  skillDirectory: string,
+  card: CapabilityCard
 ): Promise<string[] | undefined> {
-  const skillFilePath = join(skillDirectory, "SKILL.md");
-  const brokerMetadataPath = join(skillDirectory, ".skills-broker.json");
-  const skillFileExists = await fileExists(skillFilePath);
-  const skillName = await readSkillFrontmatterName(skillFilePath);
-  const brokerMetadata = await readJsonObject(brokerMetadataPath);
-  const hasManifest = skillFileExists || brokerMetadata !== undefined;
+  const probe = leafProbe(card);
+  const manifestFiles = probe.manifestFiles ?? [];
+  const skillName =
+    manifestFiles.includes("SKILL.md")
+      ? await readSkillFrontmatterName(join(skillDirectory, "SKILL.md"))
+      : undefined;
+  const brokerMetadata =
+    manifestFiles.includes(".skills-broker.json")
+      ? await readJsonObject(join(skillDirectory, ".skills-broker.json"))
+      : undefined;
+  const hasManifest = skillName !== undefined || brokerMetadata !== undefined;
 
   if (!hasManifest) {
     return undefined;
@@ -249,27 +292,33 @@ async function packageContainsMatchingSkill(
   packageRoot: string,
   card: CapabilityCard
 ): Promise<boolean> {
-  const packageManifestNames = await readPackageManifestNames(packageRoot);
+  const probe = packageProbe(card);
+  const packageManifestNames = await readPackageManifestNames(packageRoot, card);
 
   if (!hasNameIntersection(packageManifestNames, candidatePackageNames(card))) {
     return false;
   }
 
-  const skillDirectories = unique(
-    (
-      await Promise.all([
-        childDirectories(packageRoot),
-        childDirectories(join(packageRoot, ".agents", "skills")),
-        childDirectories(join(packageRoot, ".agent", "skills")),
-        childDirectories(join(packageRoot, ".codex", "skills"))
-      ])
-    ).flat()
-  );
+  const skillDirectoryGroups: Promise<string[]>[] = [];
+
+  if (probe.layouts.includes("bundle_root_children")) {
+    skillDirectoryGroups.push(childDirectories(packageRoot));
+  }
+
+  if (probe.layouts.includes("nested_agent_skills")) {
+    skillDirectoryGroups.push(
+      childDirectories(join(packageRoot, ".agents", "skills")),
+      childDirectories(join(packageRoot, ".agent", "skills")),
+      childDirectories(join(packageRoot, ".codex", "skills"))
+    );
+  }
+
+  const skillDirectories = unique((await Promise.all(skillDirectoryGroups)).flat());
 
   for (const skillDirectory of skillDirectories) {
     if (
       hasNameIntersection(
-        await readSkillManifestNames(skillDirectory),
+        await readSkillManifestNames(skillDirectory, card),
         candidateSkillNames(card)
       )
     ) {
@@ -284,10 +333,17 @@ async function searchRootContainsInstalledLeaf(
   root: string,
   card: CapabilityCard
 ): Promise<boolean> {
-  if (
-    hasNameIntersection(await readSkillManifestNames(root), candidateSkillNames(card))
-  ) {
-    return true;
+  const probe = packageProbe(card);
+
+  if (probe.layouts.includes("single_skill_directory")) {
+    if (
+      hasNameIntersection(
+        await readSkillManifestNames(root, card),
+        candidateSkillNames(card)
+      )
+    ) {
+      return true;
+    }
   }
 
   if (await packageContainsMatchingSkill(root, card)) {
@@ -295,13 +351,15 @@ async function searchRootContainsInstalledLeaf(
   }
 
   for (const childDirectory of await childDirectories(root)) {
-    if (
-      hasNameIntersection(
-        await readSkillManifestNames(childDirectory),
-        candidateSkillNames(card)
-      )
-    ) {
-      return true;
+    if (probe.layouts.includes("single_skill_directory")) {
+      if (
+        hasNameIntersection(
+          await readSkillManifestNames(childDirectory, card),
+          candidateSkillNames(card)
+        )
+      ) {
+        return true;
+      }
     }
 
     if (await packageContainsMatchingSkill(childDirectory, card)) {

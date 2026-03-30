@@ -163,13 +163,14 @@ describe("rankCapabilities", () => {
         artifacts: ["design_doc"],
         examples: ["帮我分析这个需求"]
       },
-      sourceMetadata: {
-        skillName: "office-hours"
-      },
       leaf: {
         capabilityId: "gstack.office-hours",
         packageId: "gstack",
-        subskillId: "office-hours"
+        subskillId: "office-hours",
+        probe: {
+          manifestNames: ["office-hours"],
+          aliases: ["gstack-office-hours"]
+        }
       }
     });
     const qa = createCard({
@@ -200,7 +201,7 @@ describe("rankCapabilities", () => {
           }
         ],
         artifacts: ["qa_report"],
-        preferredCapability: "office-hours"
+        preferredCapability: "gstack-office-hours"
       },
       candidates: [qa, officeHours]
     });

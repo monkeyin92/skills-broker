@@ -234,7 +234,11 @@ describe("runBroker", () => {
             packageId: "gstack",
             label: "gstack",
             installState: "available",
-            acquisition: "published_package"
+            acquisition: "published_package",
+            probe: {
+              layouts: ["bundle_root_children", "nested_agent_skills"],
+              manifestNames: ["gstack"]
+            }
           }
         ],
         skills: [
@@ -249,7 +253,11 @@ describe("runBroker", () => {
             leaf: {
               capabilityId: "gstack.office-hours",
               packageId: "gstack",
-              subskillId: "office-hours"
+              subskillId: "office-hours",
+              probe: {
+                manifestNames: ["office-hours"],
+                aliases: ["gstack-office-hours"]
+              }
             },
             query: {
               jobFamilies: ["requirements_analysis"],
@@ -345,7 +353,11 @@ describe("runBroker", () => {
             packageId: "gstack",
             label: "gstack",
             installState: "available",
-            acquisition: "published_package"
+            acquisition: "published_package",
+            probe: {
+              layouts: ["bundle_root_children", "nested_agent_skills"],
+              manifestNames: ["gstack"]
+            }
           }
         ],
         skills: [
@@ -360,7 +372,11 @@ describe("runBroker", () => {
             leaf: {
               capabilityId: "gstack.office-hours",
               packageId: "gstack",
-              subskillId: "office-hours"
+              subskillId: "office-hours",
+              probe: {
+                manifestNames: ["office-hours"],
+                aliases: ["gstack-office-hours"]
+              }
             },
             query: {
               jobFamilies: ["requirements_analysis"],
@@ -436,7 +452,11 @@ describe("runBroker", () => {
             packageId: "gstack",
             label: "gstack",
             installState: "available",
-            acquisition: "published_package"
+            acquisition: "published_package",
+            probe: {
+              layouts: ["bundle_root_children", "nested_agent_skills"],
+              manifestNames: ["gstack"]
+            }
           }
         ],
         skills: [
@@ -451,7 +471,11 @@ describe("runBroker", () => {
             leaf: {
               capabilityId: "gstack.office-hours",
               packageId: "gstack",
-              subskillId: "office-hours"
+              subskillId: "office-hours",
+              probe: {
+                manifestNames: ["office-hours"],
+                aliases: ["gstack-office-hours"]
+              }
             },
             query: {
               jobFamilies: ["requirements_analysis"],
