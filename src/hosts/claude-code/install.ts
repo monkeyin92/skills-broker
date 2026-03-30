@@ -67,6 +67,13 @@ When this skill is loaded:
 3. forward that envelope to the local broker runner
 4. do not independently substitute WebFetch or host-native fetch/install behavior when broker routing should decide
 
+## Decline Contract
+
+- If the broker returns \`UNSUPPORTED_REQUEST\`, continue normally.
+- If the broker returns \`AMBIGUOUS_REQUEST\`, ask a clarifying question.
+- If the broker returns \`NO_CANDIDATE\`, offer capability discovery or install help.
+- If the broker returns \`PREPARE_FAILED\`, explain the failure clearly and do not silently substitute a native tool path.
+
 ## Runner Contract
 
 \`\`\`bash

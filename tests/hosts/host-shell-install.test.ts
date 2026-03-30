@@ -36,9 +36,17 @@ describe("host shell installers", () => {
       expect(codexRunner).toContain("<broker-envelope-json>");
       expect(claudeSkill).toContain("external capability requests");
       expect(claudeSkill).toContain("do not independently substitute WebFetch");
+      expect(claudeSkill).toContain("If the broker returns `UNSUPPORTED_REQUEST`, continue normally.");
+      expect(claudeSkill).toContain("If the broker returns `AMBIGUOUS_REQUEST`, ask a clarifying question.");
+      expect(claudeSkill).toContain("If the broker returns `NO_CANDIDATE`, offer capability discovery or install help.");
+      expect(claudeSkill).toContain("If the broker returns `PREPARE_FAILED`, explain the failure clearly");
       expect(claudeSkill).toContain('"requestText":"turn this webpage into markdown: https://example.com/article"');
       expect(codexSkill).toContain("external capability requests");
       expect(codexSkill).toContain("do not fall back to host-native fetch/install behavior");
+      expect(codexSkill).toContain("If the broker returns `UNSUPPORTED_REQUEST`, continue normally.");
+      expect(codexSkill).toContain("If the broker returns `AMBIGUOUS_REQUEST`, ask a clarifying question.");
+      expect(codexSkill).toContain("If the broker returns `NO_CANDIDATE`, offer capability discovery or install help.");
+      expect(codexSkill).toContain("If the broker returns `PREPARE_FAILED`, explain the failure clearly");
       expect(codexSkill).toContain('"host":"codex"');
       expect(claudeManifest.managedBy).toBe("skills-broker");
 
