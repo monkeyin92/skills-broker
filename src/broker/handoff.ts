@@ -8,6 +8,7 @@ export type HandoffContext = {
 export type HandoffEnvelope = {
   brokerDone: true;
   candidate: CapabilityCard;
+  chosenImplementation: CapabilityCard["implementation"];
   context: HandoffContext;
   request: BrokerRequest;
 };
@@ -20,6 +21,7 @@ export function buildHandoffEnvelope(
   return {
     brokerDone: true,
     candidate,
+    chosenImplementation: candidate.implementation,
     context,
     request
   };

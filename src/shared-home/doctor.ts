@@ -2,6 +2,10 @@ import { access, readdir, stat } from "node:fs/promises";
 import { resolveSharedBrokerHomeLayout } from "./install.js";
 import { readManagedShellManifest } from "./ownership.js";
 import { detectWritableDirectory } from "./detect.js";
+import {
+  competingPeerSkillsWarning,
+  detectCompetingPeerSkills
+} from "./host-surface.js";
 import { detectLifecycleHostTargets } from "./paths.js";
 
 export type DoctorLifecycleResult = {
@@ -120,6 +124,12 @@ async function doctorHost(
 
   const manifestState = await readManagedShellManifest(installDirectory);
   if (manifestState.status === "managed") {
+    const competingPeerSkills = await detectCompetingPeerSkills(installDirectory);
+
+    if (competingPeerSkills.length > 0) {
+      warnings.push(competingPeerSkillsWarning(name, competingPeerSkills));
+    }
+
     return {
       name,
       status: "detected",

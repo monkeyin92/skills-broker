@@ -9,6 +9,10 @@ import {
 } from "../hosts/codex/install.js";
 import { readManagedShellManifest } from "./ownership.js";
 import {
+  competingPeerSkillsWarning,
+  detectCompetingPeerSkills
+} from "./host-surface.js";
+import {
   installSharedBrokerHome,
   resolveSharedBrokerHomeLayout,
   type InstallSharedBrokerHomeOptions
@@ -225,6 +229,11 @@ async function updateHost(
   }
 
   if (options.dryRun) {
+    const competingPeerSkills = await detectCompetingPeerSkills(installDirectory);
+    if (competingPeerSkills.length > 0) {
+      warnings.push(competingPeerSkillsWarning(name, competingPeerSkills));
+    }
+
     return {
       name,
       status: wasManaged ? "up_to_date" : "planned_install"
@@ -238,6 +247,11 @@ async function updateHost(
       options.brokerHomeDirectory,
       options.projectRoot
     );
+
+    const competingPeerSkills = await detectCompetingPeerSkills(installDirectory);
+    if (competingPeerSkills.length > 0) {
+      warnings.push(competingPeerSkillsWarning(name, competingPeerSkills));
+    }
 
     return {
       name,

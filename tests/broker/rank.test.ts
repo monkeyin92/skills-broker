@@ -10,7 +10,12 @@ function createCard(
     id: overrides.id,
     kind: overrides.kind ?? "skill",
     label: overrides.label,
-    intent: overrides.intent ?? "webpage_to_markdown",
+    intent: overrides.intent ?? "web_content_to_markdown",
+    implementation: overrides.implementation ?? {
+      id: `${overrides.id}.impl`,
+      type: (overrides.kind ?? "skill") === "skill" ? "local_skill" : "mcp_server",
+      ownerSurface: "broker_owned_downstream"
+    },
     hosts: {
       currentHostSupported: true,
       portabilityScore: 1,
@@ -51,7 +56,7 @@ describe("rankCapabilities", () => {
 
     const ranked = rankCapabilities({
       currentHost: "codex",
-      requestIntent: "webpage_to_markdown",
+      requestIntent: "web_content_to_markdown",
       candidates: [unsupported, supported]
     });
 
@@ -70,7 +75,7 @@ describe("rankCapabilities", () => {
 
     const ranked = rankCapabilities({
       currentHost: "codex",
-      requestIntent: "webpage_to_markdown",
+      requestIntent: "web_content_to_markdown",
       candidates: [cold, warm],
       historyByCandidateId: {
         warm: {
@@ -93,7 +98,7 @@ describe("explainDecision", () => {
       }),
       {
         currentHost: "codex",
-        requestIntent: "webpage_to_markdown",
+        requestIntent: "web_content_to_markdown",
         history: {
           cacheHit: true,
           successfulRoutes: 3

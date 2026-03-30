@@ -26,6 +26,15 @@ export type BrokerHostAction =
   | "offer_capability_discovery"
   | "show_graceful_failure";
 
+export type CapabilityOwnershipSurface =
+  | "host_visible"
+  | "broker_owned_downstream";
+
+export type CapabilityImplementationType =
+  | "local_skill"
+  | "mcp_server"
+  | "broker_workflow";
+
 export type BrokerRequest = {
   intent: BrokerIntent;
   outputMode: BrokerOutputMode;

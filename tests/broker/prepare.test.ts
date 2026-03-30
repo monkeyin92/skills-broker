@@ -7,7 +7,12 @@ function createWinner(): CapabilityCard {
     id: "winner",
     kind: "skill",
     label: "Winner",
-    intent: "webpage_to_markdown",
+    intent: "web_content_to_markdown",
+    implementation: {
+      id: "baoyu.url_to_markdown",
+      type: "local_skill",
+      ownerSurface: "broker_owned_downstream"
+    },
     hosts: {
       currentHostSupported: true,
       portabilityScore: 1
@@ -31,5 +36,6 @@ describe("prepareCandidate", () => {
     });
 
     expect(result.ready).toBe(true);
+    expect(result.candidate.implementation.id).toBe("baoyu.url_to_markdown");
   });
 });

@@ -296,6 +296,42 @@ describe("shared-home lifecycle paths", () => {
     }
   });
 
+  it("warns when a managed broker shell still has competing peer skills beside it", async () => {
+    const runtimeDirectory = await mkdtemp(
+      join(tmpdir(), "skills-broker-update-peer-warning-")
+    );
+    const brokerHomeDirectory = join(runtimeDirectory, ".skills-broker");
+    const claudeCodeInstallDirectory = join(
+      runtimeDirectory,
+      ".claude",
+      "skills",
+      "skills-broker"
+    );
+
+    try {
+      await mkdir(join(runtimeDirectory, ".claude", "skills", "baoyu-url-to-markdown"), {
+        recursive: true
+      });
+
+      const result = await updateSharedBrokerHome({
+        brokerHomeDirectory,
+        claudeCodeInstallDirectory,
+        homeDirectory: runtimeDirectory
+      });
+
+      expect(result.status).toBe("success");
+      expect(result.hosts).toContainEqual({
+        name: "claude-code",
+        status: "installed"
+      });
+      expect(result.warnings).toContain(
+        "claude-code: competing peer skills detected (baoyu-url-to-markdown); broker-first hit rate may be reduced until these peer skills are hidden behind skills-broker"
+      );
+    } finally {
+      await rm(runtimeDirectory, { recursive: true, force: true });
+    }
+  });
+
   it("does not overwrite an existing unmanaged host directory", async () => {
     const runtimeDirectory = await mkdtemp(
       join(tmpdir(), "skills-broker-update-unmanaged-conflict-")

@@ -161,10 +161,15 @@ describe("runBroker decline contract", () => {
       JSON.stringify({
         skills: [
           {
-            id: "skill-web-content-to-markdown",
+            id: "web-content-to-markdown",
             kind: "skill",
             label: "Web Content to Markdown",
-            intent: "web_content_to_markdown"
+            intent: "web_content_to_markdown",
+            implementation: {
+              id: "baoyu.url_to_markdown",
+              type: "local_skill",
+              ownerSurface: "broker_owned_downstream"
+            }
           }
         ]
       }),
