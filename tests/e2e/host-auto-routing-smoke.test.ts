@@ -156,6 +156,9 @@ describe("host auto-routing smoke", () => {
           code: "HANDOFF_READY"
         },
         handoff: {
+          chosenImplementation: {
+            id: "gstack.office_hours"
+          },
           request: {
             intent: "capability_discovery_or_install",
             capabilityQuery: {
@@ -171,6 +174,9 @@ describe("host auto-routing smoke", () => {
           code: "HANDOFF_READY"
         },
         handoff: {
+          chosenImplementation: {
+            id: "gstack.qa"
+          },
           request: {
             intent: "capability_discovery_or_install",
             capabilityQuery: {

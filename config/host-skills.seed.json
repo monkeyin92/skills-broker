@@ -65,6 +65,52 @@
         "type": "broker_workflow",
         "ownerSurface": "broker_owned_downstream"
       }
+    },
+    {
+      "id": "requirements-analysis",
+      "kind": "skill",
+      "label": "Requirements Analysis",
+      "intent": "capability_discovery_or_install",
+      "query": {
+        "jobFamilies": ["requirements_analysis", "idea_brainstorming"],
+        "targetTypes": ["problem_statement", "text"],
+        "artifacts": ["design_doc", "analysis"],
+        "examples": [
+          "帮我分析这个需求",
+          "help me think through this product idea"
+        ]
+      },
+      "implementation": {
+        "id": "gstack.office_hours",
+        "type": "local_skill",
+        "ownerSurface": "broker_owned_downstream"
+      },
+      "sourceMetadata": {
+        "skillName": "office-hours"
+      }
+    },
+    {
+      "id": "website-qa",
+      "kind": "skill",
+      "label": "Website QA",
+      "intent": "capability_discovery_or_install",
+      "query": {
+        "jobFamilies": ["quality_assurance"],
+        "targetTypes": ["website", "url"],
+        "artifacts": ["qa_report"],
+        "examples": [
+          "QA 这个网站",
+          "check this website quality"
+        ]
+      },
+      "implementation": {
+        "id": "gstack.qa",
+        "type": "local_skill",
+        "ownerSurface": "broker_owned_downstream"
+      },
+      "sourceMetadata": {
+        "skillName": "qa"
+      }
     }
   ]
 }

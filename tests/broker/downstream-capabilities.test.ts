@@ -38,4 +38,21 @@ describe("broker-owned downstream capabilities", () => {
       artifacts: ["markdown"]
     });
   });
+
+  it("loads requirements-analysis and qa capabilities from the discovery lane catalog", async () => {
+    const candidates = await loadHostSkillCandidates(
+      "capability_discovery_or_install",
+      "config/host-skills.seed.json"
+    );
+    const cards = candidates.map((candidate) => toCapabilityCard(candidate));
+
+    expect(cards.map((card) => card.id)).toContain("requirements-analysis");
+    expect(cards.map((card) => card.id)).toContain("website-qa");
+    expect(
+      cards.find((card) => card.id === "requirements-analysis")?.implementation.id
+    ).toBe("gstack.office_hours");
+    expect(
+      cards.find((card) => card.id === "website-qa")?.implementation.id
+    ).toBe("gstack.qa");
+  });
 });

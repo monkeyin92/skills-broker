@@ -34,6 +34,7 @@ type BrokerCacheRecord = {
   card: CachedWinnerCard;
   lastHost: string;
   requestIntent: BrokerIntent;
+  requestCacheKey?: string;
   successfulRoutes: number;
 };
 
@@ -172,6 +173,36 @@ function prepareFailedMessage(): string {
   return "The broker selected a candidate but could not prepare a handoff. Explain the failure clearly and do not silently bypass the broker.";
 }
 
+function stableListKey(values: string[] | undefined): string {
+  return (values ?? []).slice().sort().join(",");
+}
+
+function buildRequestCacheKey(request: {
+  intent: BrokerIntent;
+  capabilityQuery?: {
+    jobFamilies?: string[];
+    artifacts?: string[];
+    preferredCapability?: string | null;
+    targets?: Array<{ type: string }>;
+  };
+}): string {
+  if (request.capabilityQuery === undefined) {
+    return `intent:${request.intent}`;
+  }
+
+  const targetTypes = stableListKey(
+    request.capabilityQuery.targets?.map((target) => target.type)
+  );
+
+  return [
+    `intent:${request.intent}`,
+    `families:${stableListKey(request.capabilityQuery.jobFamilies)}`,
+    `artifacts:${stableListKey(request.capabilityQuery.artifacts)}`,
+    `targetTypes:${targetTypes}`,
+    `preferred:${request.capabilityQuery.preferredCapability ?? ""}`
+  ].join("|");
+}
+
 export async function runBroker(
   input: NormalizeRequestInput,
   options: RunBrokerOptions = {}
@@ -219,10 +250,14 @@ export async function runBroker(
     throw error;
   }
 
+  const requestCacheKey = buildRequestCacheKey(request);
+
   const cachedRecord = await cacheStore.read();
   const cachedCard =
     cachedRecord !== null &&
     cachedRecord.requestIntent === request.intent &&
+    (cachedRecord.requestCacheKey ?? `intent:${cachedRecord.requestIntent}`) ===
+      requestCacheKey &&
     isWithinHardTtl(cachedRecord.card, now)
       ? cachedRecord
       : null;
@@ -331,6 +366,7 @@ export async function runBroker(
     },
     lastHost: currentHost,
     requestIntent: request.intent,
+    requestCacheKey,
     successfulRoutes:
       cachedCard?.card.id === winner.id ? cachedCard.successfulRoutes + 1 : 1
   });

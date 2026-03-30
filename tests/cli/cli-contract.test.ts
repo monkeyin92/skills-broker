@@ -298,13 +298,19 @@ test("cli accepts a structured capability query and routes it through discovery"
       JSON.stringify({
         skills: [
           {
-            id: "capability-discovery",
+            id: "requirements-analysis",
             kind: "skill",
-            label: "Capability Discovery",
+            label: "Requirements Analysis",
             intent: "capability_discovery_or_install",
+            query: {
+              jobFamilies: ["requirements_analysis"],
+              targetTypes: ["problem_statement", "text"],
+              artifacts: ["design_doc", "analysis"],
+              examples: ["帮我做需求分析并产出设计文档"]
+            },
             implementation: {
-              id: "skills_broker.capability_discovery",
-              type: "broker_workflow",
+              id: "gstack.office_hours",
+              type: "local_skill",
               ownerSurface: "broker_owned_downstream"
             }
           }
@@ -346,7 +352,7 @@ test("cli accepts a structured capability query and routes it through discovery"
       },
       handoff: {
         chosenImplementation: {
-          id: "skills_broker.capability_discovery"
+          id: "gstack.office_hours"
         },
         request: {
           intent: "capability_discovery_or_install",
@@ -366,7 +372,7 @@ test("cli accepts a structured capability query and routes it through discovery"
     ok: true,
     handoff: {
       chosenImplementation: {
-        id: "skills_broker.capability_discovery"
+        id: "gstack.office_hours"
       }
     }
   });

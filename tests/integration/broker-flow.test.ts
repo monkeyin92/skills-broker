@@ -256,4 +256,129 @@ describe("runBroker", () => {
       await rm(runtime.directory, { recursive: true, force: true });
     }
   });
+
+  it("routes requirements-analysis capability queries to office-hours", async () => {
+    const runtime = await createRuntimePaths();
+
+    try {
+      const result = await runBroker(
+        {
+          requestText: "帮我做需求分析并产出设计文档",
+          host: "claude-code",
+          capabilityQuery: {
+            kind: "capability_request",
+            goal: "analyze a product requirement and produce a design doc",
+            host: "claude-code",
+            requestText: "帮我做需求分析并产出设计文档",
+            jobFamilies: ["requirements_analysis"],
+            artifacts: ["design_doc"]
+          }
+        },
+        {
+          ...runtime,
+          now: new Date("2026-03-30T08:00:00.000Z")
+        }
+      );
+
+      expect(result.ok).toBe(true);
+      expect(result.outcome.code).toBe("HANDOFF_READY");
+      expect(result.winner.id).toBe("requirements-analysis");
+      expect(result.handoff.chosenImplementation.id).toBe("gstack.office_hours");
+      expect(result.handoff.request.capabilityQuery).toMatchObject({
+        jobFamilies: ["requirements_analysis"]
+      });
+    } finally {
+      await rm(runtime.directory, { recursive: true, force: true });
+    }
+  });
+
+  it("routes qa capability queries to the qa downstream skill", async () => {
+    const runtime = await createRuntimePaths();
+
+    try {
+      const result = await runBroker(
+        {
+          requestText: "QA 这个网站",
+          host: "codex",
+          capabilityQuery: {
+            kind: "capability_request",
+            goal: "qa a website",
+            host: "codex",
+            requestText: "QA 这个网站",
+            jobFamilies: ["quality_assurance"],
+            targets: [
+              {
+                type: "website",
+                value: "https://example.com"
+              }
+            ],
+            artifacts: ["qa_report"]
+          }
+        },
+        {
+          ...runtime,
+          currentHost: "codex",
+          now: new Date("2026-03-30T08:30:00.000Z")
+        }
+      );
+
+      expect(result.ok).toBe(true);
+      expect(result.outcome.code).toBe("HANDOFF_READY");
+      expect(result.winner.id).toBe("website-qa");
+      expect(result.handoff.chosenImplementation.id).toBe("gstack.qa");
+      expect(result.handoff.request.capabilityQuery).toMatchObject({
+        jobFamilies: ["quality_assurance"]
+      });
+    } finally {
+      await rm(runtime.directory, { recursive: true, force: true });
+    }
+  });
+
+  it("does not reuse a generic discovery cache entry for a different capability-query family", async () => {
+    const runtime = await createRuntimePaths();
+
+    try {
+      const firstResult = await runBroker(
+        {
+          requestText: "find a skill to save webpages as markdown",
+          host: "claude-code"
+        },
+        {
+          ...runtime,
+          now: new Date("2026-03-30T09:00:00.000Z")
+        }
+      );
+
+      const secondResult = await runBroker(
+        {
+          requestText: "帮我做需求分析并产出设计文档",
+          host: "claude-code",
+          capabilityQuery: {
+            kind: "capability_request",
+            goal: "analyze a product requirement and produce a design doc",
+            host: "claude-code",
+            requestText: "帮我做需求分析并产出设计文档",
+            jobFamilies: ["requirements_analysis"],
+            artifacts: ["design_doc"]
+          }
+        },
+        {
+          ...runtime,
+          now: new Date("2026-03-30T09:30:00.000Z")
+        }
+      );
+
+      expect(firstResult.ok).toBe(true);
+      expect(firstResult.handoff.chosenImplementation.id).toBe(
+        "skills_broker.capability_discovery"
+      );
+      expect(secondResult.ok).toBe(true);
+      expect(secondResult.handoff.chosenImplementation.id).toBe(
+        "gstack.office_hours"
+      );
+      expect(secondResult.debug.cacheHit).toBe(false);
+    } finally {
+      await rm(runtime.directory, { recursive: true, force: true });
+    }
+  });
 });
