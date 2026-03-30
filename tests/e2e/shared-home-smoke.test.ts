@@ -45,6 +45,10 @@ describe("shared broker home smoke", () => {
 
       const codexSkillContents = await readFile(codexSkillPath, "utf8");
       expect(codexSkillContents).toContain("# Skills Broker");
+      expect(codexSkillContents).toContain("If the broker returns `UNSUPPORTED_REQUEST`, continue normally.");
+      expect(codexSkillContents).toContain("If the broker returns `AMBIGUOUS_REQUEST`, ask a clarifying question.");
+      expect(codexSkillContents).toContain("If the broker returns `NO_CANDIDATE`, offer capability discovery or install help.");
+      expect(codexSkillContents).toContain("If the broker returns `PREPARE_FAILED`, explain the failure clearly");
 
       const claudeResult = await runClaudeCodeAdapter(
         {
