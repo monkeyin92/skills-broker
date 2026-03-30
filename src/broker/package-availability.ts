@@ -1,6 +1,6 @@
-import { readdir, stat } from "node:fs/promises";
+import { readdir, readFile, stat } from "node:fs/promises";
 import { homedir } from "node:os";
-import { join, resolve } from "node:path";
+import { basename, join, resolve } from "node:path";
 import type { CapabilityCard } from "../core/capability-card.js";
 
 export type HydratePackageAvailabilityOptions = {
@@ -25,6 +25,21 @@ async function directoryExists(pathname: string): Promise<boolean> {
   }
 }
 
+async function fileExists(pathname: string): Promise<boolean> {
+  try {
+    const pathnameStat = await stat(pathname);
+    return pathnameStat.isFile();
+  } catch (error) {
+    const nodeError = error as NodeJS.ErrnoException;
+
+    if (nodeError.code === "ENOENT" || nodeError.code === "ENOTDIR") {
+      return false;
+    }
+
+    throw error;
+  }
+}
+
 function unique(values: string[]): string[] {
   return Array.from(new Set(values.filter((value) => value.length > 0)));
 }
@@ -36,6 +51,75 @@ function normalizeDirectoryName(value: string): string {
     .replace(/[_\s]+/g, "-")
     .replace(/-+/g, "-")
     .replace(/^-|-$/g, "");
+}
+
+function normalizedValues(values: Array<string | undefined>): string[] {
+  return unique(
+    values
+      .filter((value): value is string => value !== undefined)
+      .map((value) => normalizeDirectoryName(value))
+      .filter((value) => value.length > 0)
+  );
+}
+
+function stripYamlQuotes(value: string): string {
+  if (
+    (value.startsWith('"') && value.endsWith('"')) ||
+    (value.startsWith("'") && value.endsWith("'"))
+  ) {
+    return value.slice(1, -1);
+  }
+
+  return value;
+}
+
+async function readSkillFrontmatterName(
+  skillFilePath: string
+): Promise<string | undefined> {
+  if (!(await fileExists(skillFilePath))) {
+    return undefined;
+  }
+
+  const raw = await readFile(skillFilePath, "utf8");
+  const frontmatterMatch = raw.match(/^---\s*\n([\s\S]*?)\n---/);
+
+  if (frontmatterMatch === null) {
+    return undefined;
+  }
+
+  for (const line of frontmatterMatch[1].split(/\r?\n/)) {
+    const nameMatch = line.match(/^name:\s*(.+?)\s*$/);
+
+    if (nameMatch !== null) {
+      return stripYamlQuotes(nameMatch[1].trim());
+    }
+  }
+
+  return undefined;
+}
+
+async function readJsonObject(
+  pathname: string
+): Promise<Record<string, unknown> | undefined> {
+  if (!(await fileExists(pathname))) {
+    return undefined;
+  }
+
+  const raw = await readFile(pathname, "utf8");
+
+  return JSON.parse(raw) as Record<string, unknown>;
+}
+
+async function childDirectories(pathname: string): Promise<string[]> {
+  if (!(await directoryExists(pathname))) {
+    return [];
+  }
+
+  const entries = await readdir(pathname, { withFileTypes: true });
+
+  return entries
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => join(pathname, entry.name));
 }
 
 function baseSearchRoots(
@@ -65,61 +149,167 @@ function baseSearchRoots(
   return unique(roots.map((root) => resolve(root)));
 }
 
-async function nestedSearchRoots(roots: string[]): Promise<string[]> {
-  const nested: string[] = [];
+function candidatePackageNames(card: CapabilityCard): string[] {
+  const sourcePackageName =
+    typeof card.sourceMetadata.packageName === "string"
+      ? card.sourceMetadata.packageName
+      : undefined;
 
-  for (const root of roots) {
-    if (!(await directoryExists(root))) {
-      continue;
-    }
-
-    const entries = await readdir(root, { withFileTypes: true });
-
-    for (const entry of entries) {
-      if (!entry.isDirectory()) {
-        continue;
-      }
-
-      const packageRoot = join(root, entry.name);
-      const candidates = [
-        join(packageRoot, ".agents", "skills"),
-        join(packageRoot, ".agent", "skills"),
-        join(packageRoot, ".codex", "skills")
-      ];
-
-      for (const candidate of candidates) {
-        if (await directoryExists(candidate)) {
-          nested.push(candidate);
-        }
-      }
-    }
-  }
-
-  return unique(nested);
+  return normalizedValues([card.package.packageId, sourcePackageName]);
 }
 
-function candidateDirectoryNames(card: CapabilityCard): string[] {
+function candidateSkillNames(card: CapabilityCard): string[] {
   const sourceSkillName =
     typeof card.sourceMetadata.skillName === "string"
       ? card.sourceMetadata.skillName
       : undefined;
 
-  const rawNames = [
-    card.package.packageId,
+  return normalizedValues([
     card.leaf.subskillId,
     sourceSkillName,
     `${card.package.packageId}-${card.leaf.subskillId}`,
     sourceSkillName === undefined
       ? undefined
       : `${card.package.packageId}-${sourceSkillName}`
-  ].filter((value): value is string => value !== undefined);
+  ]);
+}
 
-  return unique(
-    rawNames.flatMap((name) => {
-      const normalized = normalizeDirectoryName(name);
-      return normalized === name ? [name] : [name, normalized];
-    })
+async function readPackageManifestNames(
+  packageRoot: string
+): Promise<string[] | undefined> {
+  const packageJsonPath = join(packageRoot, "package.json");
+  const packageJsonExists = await fileExists(packageJsonPath);
+  const packageJson = await readJsonObject(packageJsonPath);
+  const rootSkillName = await readSkillFrontmatterName(join(packageRoot, "SKILL.md"));
+  const brokerMetadata = await readJsonObject(
+    join(packageRoot, ".skills-broker.json")
   );
+  const conductorExists = await fileExists(join(packageRoot, "conductor.json"));
+  const hasManifest =
+    packageJsonExists ||
+    brokerMetadata !== undefined ||
+    rootSkillName !== undefined ||
+    conductorExists;
+
+  if (!hasManifest) {
+    return undefined;
+  }
+
+  const manifestNames = normalizedValues([
+    basename(packageRoot),
+    typeof packageJson?.name === "string" ? packageJson.name : undefined,
+    rootSkillName,
+    typeof brokerMetadata?.managedBy === "string"
+      ? brokerMetadata.managedBy
+      : undefined
+  ]);
+
+  return manifestNames;
+}
+
+async function readSkillManifestNames(
+  skillDirectory: string
+): Promise<string[] | undefined> {
+  const skillFilePath = join(skillDirectory, "SKILL.md");
+  const brokerMetadataPath = join(skillDirectory, ".skills-broker.json");
+  const skillFileExists = await fileExists(skillFilePath);
+  const skillName = await readSkillFrontmatterName(skillFilePath);
+  const brokerMetadata = await readJsonObject(brokerMetadataPath);
+  const hasManifest = skillFileExists || brokerMetadata !== undefined;
+
+  if (!hasManifest) {
+    return undefined;
+  }
+
+  const manifestNames = normalizedValues([
+    basename(skillDirectory),
+    skillName,
+    typeof brokerMetadata?.skillName === "string"
+      ? brokerMetadata.skillName
+      : undefined
+  ]);
+
+  return manifestNames;
+}
+
+function hasNameIntersection(
+  actualNames: string[] | undefined,
+  expectedNames: string[]
+): boolean {
+  if (actualNames === undefined) {
+    return false;
+  }
+
+  const expected = new Set(expectedNames);
+
+  return actualNames.some((name) => expected.has(name));
+}
+
+async function packageContainsMatchingSkill(
+  packageRoot: string,
+  card: CapabilityCard
+): Promise<boolean> {
+  const packageManifestNames = await readPackageManifestNames(packageRoot);
+
+  if (!hasNameIntersection(packageManifestNames, candidatePackageNames(card))) {
+    return false;
+  }
+
+  const skillDirectories = unique(
+    (
+      await Promise.all([
+        childDirectories(packageRoot),
+        childDirectories(join(packageRoot, ".agents", "skills")),
+        childDirectories(join(packageRoot, ".agent", "skills")),
+        childDirectories(join(packageRoot, ".codex", "skills"))
+      ])
+    ).flat()
+  );
+
+  for (const skillDirectory of skillDirectories) {
+    if (
+      hasNameIntersection(
+        await readSkillManifestNames(skillDirectory),
+        candidateSkillNames(card)
+      )
+    ) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+async function searchRootContainsInstalledLeaf(
+  root: string,
+  card: CapabilityCard
+): Promise<boolean> {
+  if (
+    hasNameIntersection(await readSkillManifestNames(root), candidateSkillNames(card))
+  ) {
+    return true;
+  }
+
+  if (await packageContainsMatchingSkill(root, card)) {
+    return true;
+  }
+
+  for (const childDirectory of await childDirectories(root)) {
+    if (
+      hasNameIntersection(
+        await readSkillManifestNames(childDirectory),
+        candidateSkillNames(card)
+      )
+    ) {
+      return true;
+    }
+
+    if (await packageContainsMatchingSkill(childDirectory, card)) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 async function canUpgradeToInstalled(
@@ -130,15 +320,9 @@ async function canUpgradeToInstalled(
     return false;
   }
 
-  const roots = baseSearchRoots(input);
-  const searchRoots = roots.concat(await nestedSearchRoots(roots));
-  const directoryNames = candidateDirectoryNames(card);
-
-  for (const root of searchRoots) {
-    for (const directoryName of directoryNames) {
-      if (await directoryExists(join(root, directoryName))) {
-        return true;
-      }
+  for (const root of baseSearchRoots(input)) {
+    if (await searchRootContainsInstalledLeaf(root, card)) {
+      return true;
     }
   }
 

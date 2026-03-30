@@ -52,13 +52,18 @@ function createAvailableSkill(): CapabilityCard {
 }
 
 describe("hydratePackageAvailability", () => {
-  it("upgrades an available package when a matching direct skill directory exists", async () => {
+  it("upgrades an available package when a matching direct skill manifest exists", async () => {
     const runtimeDirectory = await mkdtemp(join(tmpdir(), "skills-broker-package-direct-"));
 
     try {
       const skillDirectory = join(runtimeDirectory, "baoyu-url-to-markdown");
 
       await mkdir(skillDirectory, { recursive: true });
+      await writeFile(
+        join(skillDirectory, "SKILL.md"),
+        "---\nname: baoyu-url-to-markdown\n---\n",
+        "utf8"
+      );
 
       const [card] = await hydratePackageAvailability(
         [
@@ -100,20 +105,72 @@ describe("hydratePackageAvailability", () => {
     }
   });
 
-  it("upgrades an available package when a nested bundle skill directory exists", async () => {
-    const runtimeDirectory = await mkdtemp(join(tmpdir(), "skills-broker-package-nested-"));
+  it("does not upgrade an available package when only a matching directory name exists", async () => {
+    const runtimeDirectory = await mkdtemp(join(tmpdir(), "skills-broker-package-directory-only-"));
 
     try {
-      const nestedSkillDirectory = join(
-        runtimeDirectory,
-        "gstack",
-        ".agents",
-        "skills",
-        "gstack-office-hours"
+      const skillDirectory = join(runtimeDirectory, "baoyu-url-to-markdown");
+
+      await mkdir(skillDirectory, { recursive: true });
+
+      const [card] = await hydratePackageAvailability(
+        [
+          {
+            ...createAvailableSkill(),
+            id: "web-content-to-markdown",
+            label: "Web Content to Markdown",
+            package: {
+              packageId: "baoyu",
+              label: "baoyu",
+              installState: "available",
+              acquisition: "published_package"
+            },
+            leaf: {
+              capabilityId: "baoyu.url-to-markdown",
+              packageId: "baoyu",
+              subskillId: "url-to-markdown"
+            },
+            implementation: {
+              id: "baoyu.url_to_markdown",
+              type: "local_skill",
+              ownerSurface: "broker_owned_downstream"
+            },
+            sourceMetadata: {
+              skillName: "baoyu-url-to-markdown"
+            }
+          }
+        ],
+        {
+          currentHost: "claude-code",
+          packageSearchRoots: [runtimeDirectory]
+        }
       );
 
-      await mkdir(nestedSkillDirectory, { recursive: true });
-      await writeFile(join(nestedSkillDirectory, "SKILL.md"), "# gstack office-hours\n", "utf8");
+      expect(card.package.installState).toBe("available");
+      expect(card.prepare.installRequired).toBe(true);
+    } finally {
+      await rm(runtimeDirectory, { recursive: true, force: true });
+    }
+  });
+
+  it("upgrades an available package when a bundle manifest and direct child skill manifest exist", async () => {
+    const runtimeDirectory = await mkdtemp(join(tmpdir(), "skills-broker-package-direct-child-"));
+
+    try {
+      const packageDirectory = join(runtimeDirectory, "gstack");
+      const skillDirectory = join(packageDirectory, "office-hours");
+
+      await mkdir(skillDirectory, { recursive: true });
+      await writeFile(
+        join(packageDirectory, "package.json"),
+        JSON.stringify({ name: "gstack", version: "0.13.8.0" }),
+        "utf8"
+      );
+      await writeFile(
+        join(skillDirectory, "SKILL.md"),
+        "---\nname: office-hours\nversion: 2.0.0\n---\n",
+        "utf8"
+      );
 
       const [card] = await hydratePackageAvailability(
         [createAvailableSkill()],
@@ -125,6 +182,73 @@ describe("hydratePackageAvailability", () => {
 
       expect(card.package.installState).toBe("installed");
       expect(card.prepare.installRequired).toBe(false);
+    } finally {
+      await rm(runtimeDirectory, { recursive: true, force: true });
+    }
+  });
+
+  it("upgrades an available package when a nested bundle skill manifest exists", async () => {
+    const runtimeDirectory = await mkdtemp(join(tmpdir(), "skills-broker-package-nested-"));
+
+    try {
+      const packageDirectory = join(runtimeDirectory, "gstack");
+      const nestedSkillDirectory = join(
+        packageDirectory,
+        ".agents",
+        "skills",
+        "gstack-office-hours"
+      );
+
+      await mkdir(nestedSkillDirectory, { recursive: true });
+      await writeFile(
+        join(packageDirectory, "package.json"),
+        JSON.stringify({ name: "gstack", version: "0.13.8.0" }),
+        "utf8"
+      );
+      await writeFile(
+        join(nestedSkillDirectory, "SKILL.md"),
+        "---\nname: office-hours\nversion: 2.0.0\n---\n",
+        "utf8"
+      );
+
+      const [card] = await hydratePackageAvailability(
+        [createAvailableSkill()],
+        {
+          currentHost: "codex",
+          packageSearchRoots: [runtimeDirectory]
+        }
+      );
+
+      expect(card.package.installState).toBe("installed");
+      expect(card.prepare.installRequired).toBe(false);
+    } finally {
+      await rm(runtimeDirectory, { recursive: true, force: true });
+    }
+  });
+
+  it("does not upgrade an available package when the package manifest exists without the leaf skill", async () => {
+    const runtimeDirectory = await mkdtemp(join(tmpdir(), "skills-broker-package-root-only-"));
+
+    try {
+      const packageDirectory = join(runtimeDirectory, "gstack");
+
+      await mkdir(packageDirectory, { recursive: true });
+      await writeFile(
+        join(packageDirectory, "package.json"),
+        JSON.stringify({ name: "gstack", version: "0.13.8.0" }),
+        "utf8"
+      );
+
+      const [card] = await hydratePackageAvailability(
+        [createAvailableSkill()],
+        {
+          currentHost: "codex",
+          packageSearchRoots: [runtimeDirectory]
+        }
+      );
+
+      expect(card.package.installState).toBe("available");
+      expect(card.prepare.installRequired).toBe(true);
     } finally {
       await rm(runtimeDirectory, { recursive: true, force: true });
     }

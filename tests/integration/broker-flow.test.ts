@@ -317,9 +317,9 @@ describe("runBroker", () => {
     const hostCatalogFilePath = join(runtime.directory, "host.json");
     const mcpRegistryFilePath = join(runtime.directory, "mcp.json");
     const searchRoot = join(runtime.directory, "package-search");
+    const packageDirectory = join(searchRoot, "gstack");
     const nestedSkillDirectory = join(
-      searchRoot,
-      "gstack",
+      packageDirectory,
       ".agents",
       "skills",
       "gstack-office-hours"
@@ -327,7 +327,16 @@ describe("runBroker", () => {
 
     await writeFile(mcpRegistryFilePath, JSON.stringify({ servers: [] }), "utf8");
     await mkdir(nestedSkillDirectory, { recursive: true });
-    await writeFile(join(nestedSkillDirectory, "SKILL.md"), "# office-hours\n", "utf8");
+    await writeFile(
+      join(packageDirectory, "package.json"),
+      JSON.stringify({ name: "gstack", version: "0.13.8.0" }),
+      "utf8"
+    );
+    await writeFile(
+      join(nestedSkillDirectory, "SKILL.md"),
+      "---\nname: office-hours\nversion: 2.0.0\n---\n",
+      "utf8"
+    );
     await writeFile(
       hostCatalogFilePath,
       JSON.stringify({
@@ -400,6 +409,105 @@ describe("runBroker", () => {
       expect(result.outcome.code).toBe("HANDOFF_READY");
       expect(result.handoff.chosenPackage.installState).toBe("installed");
       expect(result.handoff.chosenLeafCapability.subskillId).toBe("office-hours");
+    } finally {
+      await rm(runtime.directory, { recursive: true, force: true });
+    }
+  });
+
+  it("does not upgrade an available package when the runtime only sees the package manifest", async () => {
+    const runtime = await createRuntimePaths();
+    const hostCatalogFilePath = join(runtime.directory, "host.json");
+    const mcpRegistryFilePath = join(runtime.directory, "mcp.json");
+    const searchRoot = join(runtime.directory, "package-search");
+    const packageDirectory = join(searchRoot, "gstack");
+
+    await writeFile(mcpRegistryFilePath, JSON.stringify({ servers: [] }), "utf8");
+    await mkdir(packageDirectory, { recursive: true });
+    await writeFile(
+      join(packageDirectory, "package.json"),
+      JSON.stringify({ name: "gstack", version: "0.13.8.0" }),
+      "utf8"
+    );
+    await writeFile(
+      hostCatalogFilePath,
+      JSON.stringify({
+        packages: [
+          {
+            packageId: "gstack",
+            label: "gstack",
+            installState: "available",
+            acquisition: "published_package"
+          }
+        ],
+        skills: [
+          {
+            id: "requirements-analysis",
+            kind: "skill",
+            label: "Requirements Analysis",
+            intent: "capability_discovery_or_install",
+            package: {
+              packageId: "gstack"
+            },
+            leaf: {
+              capabilityId: "gstack.office-hours",
+              packageId: "gstack",
+              subskillId: "office-hours"
+            },
+            query: {
+              jobFamilies: ["requirements_analysis"],
+              targetTypes: ["problem_statement", "text"],
+              artifacts: ["design_doc"],
+              examples: ["帮我分析这个需求"]
+            },
+            implementation: {
+              id: "gstack.office_hours",
+              type: "local_skill",
+              ownerSurface: "broker_owned_downstream"
+            },
+            sourceMetadata: {
+              skillName: "office-hours"
+            }
+          }
+        ]
+      }),
+      "utf8"
+    );
+
+    try {
+      const result = await runBroker(
+        {
+          requestText: "帮我做需求分析并产出设计文档",
+          host: "claude-code",
+          capabilityQuery: {
+            kind: "capability_request",
+            goal: "analyze a product requirement and produce a design doc",
+            host: "claude-code",
+            requestText: "帮我做需求分析并产出设计文档",
+            jobFamilies: ["requirements_analysis"],
+            artifacts: ["design_doc"]
+          }
+        },
+        {
+          cacheFilePath: runtime.cacheFilePath,
+          hostCatalogFilePath,
+          mcpRegistryFilePath,
+          packageSearchRoots: [searchRoot],
+          now: new Date("2026-03-30T10:45:00.000Z")
+        }
+      );
+
+      expect(result.ok).toBe(false);
+      expect(result.outcome.code).toBe("NO_CANDIDATE");
+      expect(result.acquisition).toMatchObject({
+        reason: "package_not_installed",
+        package: {
+          packageId: "gstack",
+          installState: "available"
+        },
+        leafCapability: {
+          capabilityId: "gstack.office-hours"
+        }
+      });
     } finally {
       await rm(runtime.directory, { recursive: true, force: true });
     }
