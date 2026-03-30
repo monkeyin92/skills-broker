@@ -55,6 +55,52 @@ describe("host auto-routing smoke", () => {
         }
       );
 
+      const requirementsResult = await runClaudeCodeAdapter(
+        {
+          requestText: "帮我做需求分析并产出设计文档",
+          host: "claude-code",
+          invocationMode: "auto",
+          capabilityQuery: {
+            kind: "capability_request",
+            goal: "analyze a product requirement and produce a design doc",
+            host: "claude-code",
+            requestText: "帮我做需求分析并产出设计文档",
+            jobFamilies: ["requirements_analysis"],
+            artifacts: ["design_doc"]
+          }
+        },
+        {
+          installDirectory: claudeShellDirectory,
+          now: new Date("2026-03-30T02:30:00.000Z")
+        }
+      );
+
+      const qaResult = await runCodexAdapter(
+        {
+          requestText: "QA 这个网站",
+          host: "codex",
+          invocationMode: "explicit",
+          capabilityQuery: {
+            kind: "capability_request",
+            goal: "qa a website",
+            host: "codex",
+            requestText: "QA 这个网站",
+            jobFamilies: ["quality_assurance"],
+            targets: [
+              {
+                type: "website",
+                value: "https://example.com"
+              }
+            ],
+            artifacts: ["qa_report"]
+          }
+        },
+        {
+          installDirectory: codexShellDirectory,
+          now: new Date("2026-03-30T02:45:00.000Z")
+        }
+      );
+
       const unsupportedResult = await runClaudeCodeAdapter(
         {
           requestText: "explain this codebase layout",
@@ -100,6 +146,36 @@ describe("host auto-routing smoke", () => {
         handoff: {
           request: {
             intent: "capability_discovery_or_install"
+          }
+        }
+      });
+
+      expect(requirementsResult).toMatchObject({
+        ok: true,
+        outcome: {
+          code: "HANDOFF_READY"
+        },
+        handoff: {
+          request: {
+            intent: "capability_discovery_or_install",
+            capabilityQuery: {
+              jobFamilies: ["requirements_analysis"]
+            }
+          }
+        }
+      });
+
+      expect(qaResult).toMatchObject({
+        ok: true,
+        outcome: {
+          code: "HANDOFF_READY"
+        },
+        handoff: {
+          request: {
+            intent: "capability_discovery_or_install",
+            capabilityQuery: {
+              jobFamilies: ["quality_assurance"]
+            }
           }
         }
       });

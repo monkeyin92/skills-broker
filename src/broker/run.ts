@@ -264,6 +264,7 @@ export async function runBroker(
   const ranked = rankCapabilities({
     currentHost,
     requestIntent: request.intent,
+    requestCapabilityQuery: request.capabilityQuery,
     candidates,
     historyByCandidateId:
       cachedCard === null

@@ -5,6 +5,15 @@
       "kind": "skill",
       "label": "Web Content to Markdown",
       "intent": "web_content_to_markdown",
+      "query": {
+        "jobFamilies": ["content_acquisition", "web_content_conversion"],
+        "targetTypes": ["url", "website", "repo"],
+        "artifacts": ["markdown"],
+        "examples": [
+          "turn this webpage into markdown",
+          "将这个页面转为markdown文件"
+        ]
+      },
       "implementation": {
         "id": "baoyu.url_to_markdown",
         "type": "local_skill",
@@ -19,6 +28,15 @@
       "kind": "skill",
       "label": "Social Post to Markdown",
       "intent": "social_post_to_markdown",
+      "query": {
+        "jobFamilies": ["content_acquisition", "social_content_conversion"],
+        "targetTypes": ["url", "website"],
+        "artifacts": ["markdown"],
+        "examples": [
+          "save this X post as markdown",
+          "把这个帖子转成 markdown"
+        ]
+      },
       "implementation": {
         "id": "baoyu.x_post_to_markdown",
         "type": "local_skill",
@@ -33,6 +51,15 @@
       "kind": "skill",
       "label": "Capability Discovery",
       "intent": "capability_discovery_or_install",
+      "query": {
+        "jobFamilies": ["capability_acquisition"],
+        "targetTypes": ["text", "problem_statement"],
+        "artifacts": ["recommendation", "installation_plan"],
+        "examples": [
+          "find a skill to save webpages as markdown",
+          "帮我找一个能 QA 网站的 skill"
+        ]
+      },
       "implementation": {
         "id": "skills_broker.capability_discovery",
         "type": "broker_workflow",

@@ -195,4 +195,49 @@ describe("normalizeRequest", () => {
     expect(normalized.intent).toBe("social_post_to_markdown");
     expect(normalized.outputMode).toBe("markdown_only");
   });
+
+  it("normalizes a structured capability query for requirements analysis into the discovery lane", () => {
+    const normalized = normalizeRequest({
+      requestText: "帮我做需求分析并产出设计文档",
+      host: "claude-code",
+      capabilityQuery: {
+        kind: "capability_request",
+        goal: "analyze a product requirement and produce a design doc",
+        host: "claude-code",
+        requestText: "帮我做需求分析并产出设计文档",
+        jobFamilies: ["requirements_analysis"],
+        artifacts: ["design_doc"]
+      }
+    });
+
+    expect(normalized.intent).toBe("capability_discovery_or_install");
+    expect(normalized.capabilityQuery).toMatchObject({
+      jobFamilies: ["requirements_analysis"],
+      artifacts: ["design_doc"]
+    });
+  });
+
+  it("normalizes a structured capability query for webpage markdown into the web lane", () => {
+    const normalized = normalizeRequest({
+      requestText: "将这个页面转为markdown文件：https://example.com/post",
+      host: "claude-code",
+      capabilityQuery: {
+        kind: "capability_request",
+        goal: "convert web content to markdown",
+        host: "claude-code",
+        requestText: "将这个页面转为markdown文件：https://example.com/post",
+        jobFamilies: ["content_acquisition", "web_content_conversion"],
+        targets: [
+          {
+            type: "url",
+            value: "https://example.com/post"
+          }
+        ],
+        artifacts: ["markdown"]
+      }
+    });
+
+    expect(normalized.intent).toBe("web_content_to_markdown");
+    expect(normalized.url).toBe("https://example.com/post");
+  });
 });

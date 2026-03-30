@@ -1,5 +1,5 @@
 import type { BrokerEnvelope } from "./envelope.js";
-import type { BrokerRequest } from "./types.js";
+import type { BrokerRequest, CapabilityQuery } from "./types.js";
 
 type LegacyNormalizeRequestInput = {
   task: string;
@@ -40,6 +40,12 @@ function normalizeText(text: string): string {
 
 function firstUrl(urls: string[] | undefined): string | undefined {
   return urls?.[0];
+}
+
+function firstQueryUrl(query: CapabilityQuery): string | undefined {
+  const target = query.targets?.find((candidate) => candidate.type === "url");
+
+  return target?.value;
 }
 
 function isSocialUrl(url: string | undefined): boolean {
@@ -145,11 +151,13 @@ function looksAmbiguous(requestText: string): boolean {
 
 function buildBrokerRequest(
   intent: BrokerRequest["intent"],
-  url?: string
+  url?: string,
+  capabilityQuery?: CapabilityQuery
 ): BrokerRequest {
   const request: BrokerRequest = {
     intent,
-    outputMode: "markdown_only"
+    outputMode: "markdown_only",
+    capabilityQuery
   };
 
   if (url !== undefined) {
@@ -159,7 +167,64 @@ function buildBrokerRequest(
   return request;
 }
 
+function hasQueryFamily(query: CapabilityQuery, family: string): boolean {
+  return query.jobFamilies?.includes(family) ?? false;
+}
+
+function hasQueryArtifact(query: CapabilityQuery, artifact: string): boolean {
+  return query.artifacts?.includes(artifact) ?? false;
+}
+
+function normalizeCapabilityQueryRequest(
+  query: CapabilityQuery
+): BrokerRequest {
+  const url = firstQueryUrl(query);
+  const capabilityWorkflowFamilies = [
+    "capability_acquisition",
+    "requirements_analysis",
+    "idea_brainstorming",
+    "quality_assurance",
+    "investigation"
+  ];
+
+  if (
+    hasQueryArtifact(query, "markdown") &&
+    (hasQueryFamily(query, "social_content_conversion") || isSocialUrl(url))
+  ) {
+    return buildBrokerRequest("social_post_to_markdown", url, query);
+  }
+
+  if (
+    hasQueryArtifact(query, "markdown") &&
+    (hasQueryFamily(query, "web_content_conversion") ||
+      hasQueryFamily(query, "content_acquisition") ||
+      url !== undefined)
+  ) {
+    return buildBrokerRequest("web_content_to_markdown", url, query);
+  }
+
+  if (
+    query.preferredCapability !== undefined ||
+    capabilityWorkflowFamilies.some((family) => hasQueryFamily(query, family)) ||
+    hasQueryArtifact(query, "design_doc") ||
+    hasQueryArtifact(query, "analysis") ||
+    hasQueryArtifact(query, "qa_report") ||
+    hasQueryArtifact(query, "recommendation") ||
+    hasQueryArtifact(query, "installation_plan")
+  ) {
+    return buildBrokerRequest("capability_discovery_or_install", undefined, query);
+  }
+
+  throw new UnsupportedBrokerRequestError(
+    `Unsupported broker capability query: ${query.requestText}`
+  );
+}
+
 function normalizeEnvelopeRequest(input: BrokerEnvelope): BrokerRequest {
+  if (input.capabilityQuery !== undefined) {
+    return normalizeCapabilityQueryRequest(input.capabilityQuery);
+  }
+
   const requestText = normalizeText(input.requestText);
   const url = firstUrl(input.urls);
 

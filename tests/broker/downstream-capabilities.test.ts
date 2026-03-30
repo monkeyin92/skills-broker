@@ -15,6 +15,10 @@ describe("broker-owned downstream capabilities", () => {
       type: "local_skill",
       ownerSurface: "broker_owned_downstream"
     });
+    expect(toCapabilityCard(candidates[0]).query).toMatchObject({
+      jobFamilies: ["content_acquisition", "web_content_conversion"],
+      artifacts: ["markdown"]
+    });
   });
 
   it("loads a social-post implementation id from the host skill catalog", async () => {
@@ -28,6 +32,10 @@ describe("broker-owned downstream capabilities", () => {
       id: "baoyu.x_post_to_markdown",
       type: "local_skill",
       ownerSurface: "broker_owned_downstream"
+    });
+    expect(toCapabilityCard(candidates[0]).query).toMatchObject({
+      jobFamilies: ["content_acquisition", "social_content_conversion"],
+      artifacts: ["markdown"]
     });
   });
 });

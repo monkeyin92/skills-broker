@@ -11,6 +11,12 @@ function createCard(
     kind: overrides.kind ?? "skill",
     label: overrides.label,
     intent: overrides.intent ?? "web_content_to_markdown",
+    query: overrides.query ?? {
+      jobFamilies: ["content_acquisition"],
+      targetTypes: ["url"],
+      artifacts: ["markdown"],
+      examples: ["turn this webpage into markdown"]
+    },
     implementation: overrides.implementation ?? {
       id: `${overrides.id}.impl`,
       type: (overrides.kind ?? "skill") === "skill" ? "local_skill" : "mcp_server",
@@ -86,6 +92,104 @@ describe("rankCapabilities", () => {
     });
 
     expect(ranked.map((card) => card.id)[0]).toBe("warm");
+  });
+
+  it("prefers candidates whose metadata matches the structured capability query", () => {
+    const analysis = createCard({
+      id: "analysis",
+      label: "Requirements Analysis",
+      intent: "capability_discovery_or_install",
+      query: {
+        jobFamilies: ["requirements_analysis"],
+        targetTypes: ["problem_statement", "text"],
+        artifacts: ["design_doc"],
+        examples: ["帮我分析这个需求"]
+      }
+    });
+    const qa = createCard({
+      id: "qa",
+      label: "Website QA",
+      intent: "capability_discovery_or_install",
+      query: {
+        jobFamilies: ["quality_assurance"],
+        targetTypes: ["website", "url"],
+        artifacts: ["qa_report"],
+        examples: ["QA 这个网站"]
+      }
+    });
+
+    const ranked = rankCapabilities({
+      currentHost: "claude-code",
+      requestIntent: "capability_discovery_or_install",
+      requestCapabilityQuery: {
+        kind: "capability_request",
+        goal: "analyze a product requirement and produce a design doc",
+        host: "claude-code",
+        requestText: "帮我做需求分析并产出设计文档",
+        jobFamilies: ["requirements_analysis"],
+        targets: [
+          {
+            type: "problem_statement",
+            value: "skills-broker capability routing"
+          }
+        ],
+        artifacts: ["design_doc"]
+      },
+      candidates: [qa, analysis]
+    });
+
+    expect(ranked.map((card) => card.id)[0]).toBe("analysis");
+  });
+
+  it("honors an explicit preferred capability over weaker metadata matches", () => {
+    const officeHours = createCard({
+      id: "office-hours",
+      label: "Office Hours",
+      intent: "capability_discovery_or_install",
+      query: {
+        jobFamilies: ["requirements_analysis"],
+        targetTypes: ["problem_statement", "text"],
+        artifacts: ["design_doc"],
+        examples: ["帮我分析这个需求"]
+      },
+      sourceMetadata: {
+        skillName: "office-hours"
+      }
+    });
+    const qa = createCard({
+      id: "qa",
+      label: "Website QA",
+      intent: "capability_discovery_or_install",
+      query: {
+        jobFamilies: ["quality_assurance"],
+        targetTypes: ["website", "url"],
+        artifacts: ["qa_report"],
+        examples: ["QA 这个网站"]
+      }
+    });
+
+    const ranked = rankCapabilities({
+      currentHost: "codex",
+      requestIntent: "capability_discovery_or_install",
+      requestCapabilityQuery: {
+        kind: "capability_request",
+        goal: "qa a website",
+        host: "codex",
+        requestText: "检查这个网站质量",
+        jobFamilies: ["quality_assurance"],
+        targets: [
+          {
+            type: "website",
+            value: "https://example.com"
+          }
+        ],
+        artifacts: ["qa_report"],
+        preferredCapability: "office-hours"
+      },
+      candidates: [qa, officeHours]
+    });
+
+    expect(ranked.map((card) => card.id)[0]).toBe("office-hours");
   });
 });
 

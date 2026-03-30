@@ -31,6 +31,18 @@
 
 ## Next
 
+### Replace fixed-intent routing with capability-query routing
+
+**What:** Move broker request understanding from a hardcoded intent enum toward structured capability queries produced by the host model and matched against richer capability metadata.
+
+**Why:** The current three-intent router proved the first lake, but it will not scale to cross-language requests or broader reusable workflows like requirements analysis, QA, and investigation.
+
+**Context:** Today `/Users/monkeyin/projects/skills-broker/src/core/request.ts` and `/Users/monkeyin/projects/skills-broker/src/core/types.ts` still assume a small fixed `intent` list. The next product step is to let users describe the job they want done, then have the broker find the best skill, MCP, or workflow even when the user does not know the skill name.
+
+**Effort:** L
+**Priority:** P0
+**Depends on:** host-model normalization contract, richer capability-card metadata, and an incremental migration path from the current intent-based router
+
 ### Improve real host auto-routing hit rate
 
 **What:** Make Claude Code and Codex more reliably route obvious external-capability requests through `skills-broker` before they fall back to native tools.

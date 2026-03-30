@@ -278,6 +278,100 @@ test("cli accepts an explicit capability discovery envelope and returns HANDOFF_
   });
 });
 
+test("cli accepts a structured capability query and routes it through discovery", async () => {
+  const runtimeDirectory = await mkdtemp(
+    join(tmpdir(), "skills-broker-cli-query-")
+  );
+  const hostCatalogPath = join(runtimeDirectory, "host-skills.seed.json");
+  const mcpRegistryPath = join(runtimeDirectory, "mcp-registry.seed.json");
+  const writes: string[] = [];
+  const writeSpy = vi.spyOn(process.stdout, "write").mockImplementation(
+    (chunk: string) => {
+      writes.push(String(chunk));
+      return true;
+    }
+  );
+
+  try {
+    await writeFile(
+      hostCatalogPath,
+      JSON.stringify({
+        skills: [
+          {
+            id: "capability-discovery",
+            kind: "skill",
+            label: "Capability Discovery",
+            intent: "capability_discovery_or_install",
+            implementation: {
+              id: "skills_broker.capability_discovery",
+              type: "broker_workflow",
+              ownerSurface: "broker_owned_downstream"
+            }
+          }
+        ]
+      }),
+      "utf8"
+    );
+    await writeFile(
+      mcpRegistryPath,
+      JSON.stringify({ servers: [] }),
+      "utf8"
+    );
+
+    const result = await runBrokerCli(
+      {
+        requestText: "帮我做需求分析并产出设计文档",
+        host: "claude-code",
+        invocationMode: "explicit",
+        capabilityQuery: {
+          kind: "capability_request",
+          goal: "analyze a product requirement and produce a design doc",
+          host: "claude-code",
+          requestText: "帮我做需求分析并产出设计文档",
+          jobFamilies: ["requirements_analysis"],
+          artifacts: ["design_doc"]
+        }
+      },
+      {
+        cacheFilePath: join(runtimeDirectory, "cache.json"),
+        hostCatalogFilePath: hostCatalogPath,
+        mcpRegistryFilePath: mcpRegistryPath
+      }
+    );
+
+    expect(result).toMatchObject({
+      ok: true,
+      outcome: {
+        code: "HANDOFF_READY"
+      },
+      handoff: {
+        chosenImplementation: {
+          id: "skills_broker.capability_discovery"
+        },
+        request: {
+          intent: "capability_discovery_or_install",
+          capabilityQuery: {
+            jobFamilies: ["requirements_analysis"]
+          }
+        }
+      }
+    });
+  } finally {
+    writeSpy.mockRestore();
+    await rm(runtimeDirectory, { recursive: true, force: true });
+  }
+
+  expect(writes).toHaveLength(1);
+  expect(JSON.parse(writes[0])).toMatchObject({
+    ok: true,
+    handoff: {
+      chosenImplementation: {
+        id: "skills_broker.capability_discovery"
+      }
+    }
+  });
+});
+
 test("cli parser normalizes away unknown fields", () => {
   const parsedEnvelope = parseBrokerEnvelopeFromCommandLine(
     JSON.stringify({

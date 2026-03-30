@@ -20,23 +20,49 @@ const HOST_SHELL_NAME = "skills-broker";
 function buildSkillMarkdown(installDirectory: string): string {
   return `---
 name: "${HOST_SHELL_NAME}"
-description: "Route external capability requests through skills-broker. Use for web content to markdown, social post to markdown, and explicit skill or MCP discovery/install requests. Do not use for ordinary chat, coding, or summarization."
+description: "Route capability requests through skills-broker. Use when the user wants a reusable skill, MCP, or workflow such as webpage-to-markdown, social-post-to-markdown, requirements analysis, QA, investigation, or explicit capability discovery/install. Do not use for ordinary chat, coding, or summarization."
 ---
 
 # Skills Broker
 
-Use this skill only for external capability requests, such as:
+Use this skill only for capability requests, such as:
 
 - converting web content to markdown
 - converting a social post to markdown
+- analyzing a requirement and producing a design doc
+- QA or quality-checking a website
 - explicitly finding or installing a skill or MCP
 
 When this skill is loaded:
 
 1. preserve the user's original wording
-2. build a broker envelope with raw request text plus safe hints
-3. forward that envelope to the local broker runner
-4. do not fall back to host-native fetch/install behavior when broker routing should decide
+2. decide whether the user is asking for a reusable capability instead of ordinary chat
+3. build a broker envelope with raw request text plus safe hints
+4. when confident, include a structured \`capabilityQuery\` describing the job, targets, and output artifacts
+5. forward that envelope to the local broker runner
+6. do not fall back to host-native fetch/install behavior when broker routing should decide
+
+## Capability Query Contract
+
+When you can confidently normalize the request, include a structured \`capabilityQuery\`.
+
+Use this shape:
+
+\`\`\`json
+{
+  "kind": "capability_request",
+  "goal": "qa a website",
+  "host": "codex",
+  "requestText": "QA 这个网站",
+  "jobFamilies": ["quality_assurance"],
+  "targets": [
+    { "type": "website", "value": "https://example.com" }
+  ],
+  "artifacts": ["qa_report"]
+}
+\`\`\`
+
+If you are not confident, omit \`capabilityQuery\` and still send the raw envelope.
 
 ## Decline Contract
 
@@ -49,6 +75,10 @@ When this skill is loaded:
 
 \`\`\`bash
 ${join(installDirectory, "bin", RUNNER_FILE_NAME)} '{"requestText":"turn this webpage into markdown: https://example.com/article","host":"codex","invocationMode":"explicit","urls":["https://example.com/article"]}'
+\`\`\`
+
+\`\`\`bash
+${join(installDirectory, "bin", RUNNER_FILE_NAME)} '{"requestText":"QA 这个网站","host":"codex","invocationMode":"explicit","capabilityQuery":{"kind":"capability_request","goal":"qa a website","host":"codex","requestText":"QA 这个网站","jobFamilies":["quality_assurance"],"targets":[{"type":"website","value":"https://example.com"}],"artifacts":["qa_report"]}}'
 \`\`\`
 `;
 }

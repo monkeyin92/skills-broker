@@ -49,23 +49,49 @@ function buildRuntimePackageJson(version: string) {
 function buildSkillMarkdown(runnerCommand: string) {
   return `---
 name: "skills-broker"
-description: "Route external capability requests through skills-broker. Use for web content to markdown, social post to markdown, and explicit skill or MCP discovery/install requests. Do not use for ordinary chat, coding, or summarization."
+description: "Route capability requests through skills-broker. Use when the user wants a reusable skill, MCP, or workflow such as webpage-to-markdown, social-post-to-markdown, requirements analysis, QA, investigation, or explicit capability discovery/install. Do not use for ordinary chat, coding, or summarization."
 ---
 
 # Skills Broker
 
-Use this skill only for external capability requests, such as:
+Use this skill only for capability requests, such as:
 
 - converting web content to markdown
 - converting a social post to markdown
+- analyzing a requirement and producing a design doc
+- QA or quality-checking a website
 - explicitly finding or installing a skill or MCP
 
 When this skill is loaded:
 
 1. preserve the user's original wording
-2. build a broker envelope with raw request text plus safe hints
-3. forward that envelope to the local broker runner
-4. do not independently substitute WebFetch or host-native fetch/install behavior when broker routing should decide
+2. decide whether the user is asking for a reusable capability instead of ordinary chat
+3. build a broker envelope that includes raw request text plus safe hints
+4. when confident, also include a structured \`capabilityQuery\` describing the job, targets, and output artifacts
+5. forward that envelope to the local broker runner
+6. do not independently substitute WebFetch or host-native fetch/install behavior when broker routing should decide
+
+## Capability Query Contract
+
+When you can confidently normalize the request, include a structured \`capabilityQuery\`.
+
+Use this shape:
+
+\`\`\`json
+{
+  "kind": "capability_request",
+  "goal": "analyze a product requirement and produce a design doc",
+  "host": "claude-code",
+  "requestText": "帮我做需求分析并产出设计文档",
+  "jobFamilies": ["requirements_analysis"],
+  "targets": [
+    { "type": "problem_statement", "value": "..." }
+  ],
+  "artifacts": ["design_doc"]
+}
+\`\`\`
+
+If you are not confident, omit \`capabilityQuery\` and still send the raw envelope.
 
 ## Decline Contract
 
@@ -78,6 +104,10 @@ When this skill is loaded:
 
 \`\`\`bash
 ${runnerCommand} '{"requestText":"turn this webpage into markdown: https://example.com/article","host":"claude-code","invocationMode":"auto","urls":["https://example.com/article"]}'
+\`\`\`
+
+\`\`\`bash
+${runnerCommand} '{"requestText":"帮我做需求分析并产出设计文档","host":"claude-code","invocationMode":"auto","capabilityQuery":{"kind":"capability_request","goal":"analyze a product requirement and produce a design doc","host":"claude-code","requestText":"帮我做需求分析并产出设计文档","jobFamilies":["requirements_analysis"],"artifacts":["design_doc"]}}'
 \`\`\`
 `;
 }

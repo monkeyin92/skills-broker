@@ -19,6 +19,11 @@ describe("toCapabilityCard", () => {
 
     expect(card.kind).toBe("skill");
     expect(card.hosts.currentHostSupported).toBe(true);
+    expect(card.query).toMatchObject({
+      jobFamilies: ["content_acquisition", "web_content_conversion"],
+      targetTypes: ["url", "website", "repo"],
+      artifacts: ["markdown"]
+    });
     expect(card.implementation).toEqual({
       id: "baoyu.url_to_markdown",
       type: "local_skill",
@@ -38,10 +43,36 @@ describe("toCapabilityCard", () => {
 
     expect(card.kind).toBe("mcp");
     expect(card.hosts.currentHostSupported).toBe(true);
+    expect(card.query).toMatchObject({
+      jobFamilies: ["content_acquisition", "web_content_conversion"],
+      artifacts: ["markdown"]
+    });
     expect(card.implementation).toEqual({
       id: "mcp-url-to-markdown",
       type: "mcp_server",
       ownerSurface: "broker_owned_downstream"
+    });
+  });
+
+  it("merges explicit candidate query metadata over defaults", () => {
+    const card = toCapabilityCard({
+      kind: "skill",
+      id: "requirements-analysis",
+      label: "Requirements Analysis",
+      intent: "capability_discovery_or_install",
+      query: {
+        jobFamilies: ["requirements_analysis"],
+        targetTypes: ["problem_statement", "text"],
+        artifacts: ["design_doc"],
+        examples: ["帮我分析这个需求"]
+      }
+    });
+
+    expect(card.query).toMatchObject({
+      jobFamilies: ["requirements_analysis"],
+      targetTypes: ["problem_statement", "text"],
+      artifacts: ["design_doc"],
+      examples: ["帮我分析这个需求"]
     });
   });
 });

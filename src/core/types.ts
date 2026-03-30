@@ -13,6 +13,41 @@ export type BrokerIntent =
 
 export type BrokerOutputMode = "markdown_only";
 
+export const CAPABILITY_QUERY_KINDS = ["capability_request"] as const;
+
+export type CapabilityQueryKind = (typeof CAPABILITY_QUERY_KINDS)[number];
+
+export const CAPABILITY_QUERY_TARGET_TYPES = [
+  "url",
+  "website",
+  "repo",
+  "file",
+  "text",
+  "codebase",
+  "problem_statement"
+] as const;
+
+export type CapabilityQueryTargetType =
+  (typeof CAPABILITY_QUERY_TARGET_TYPES)[number];
+
+export type CapabilityQueryTarget = {
+  type: CapabilityQueryTargetType;
+  value: string;
+};
+
+export type CapabilityQuery = {
+  kind: CapabilityQueryKind;
+  goal: string;
+  host: BrokerHost;
+  requestText: string;
+  jobFamilies?: string[];
+  targets?: CapabilityQueryTarget[];
+  artifacts?: string[];
+  constraints?: string[];
+  preferredCapability?: string | null;
+  metadata?: Record<string, string>;
+};
+
 export type BrokerOutcomeCode =
   | "NO_CANDIDATE"
   | "HANDOFF_READY"
@@ -39,4 +74,5 @@ export type BrokerRequest = {
   intent: BrokerIntent;
   outputMode: BrokerOutputMode;
   url?: string;
+  capabilityQuery?: CapabilityQuery;
 };

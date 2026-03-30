@@ -1,4 +1,9 @@
-import { BROKER_HOSTS, type BrokerHost } from "./types.js";
+import { parseCapabilityQuery } from "./capability-query.js";
+import {
+  BROKER_HOSTS,
+  type BrokerHost,
+  type CapabilityQuery
+} from "./types.js";
 
 export type BrokerInvocationMode = "auto" | "explicit";
 
@@ -10,6 +15,7 @@ export type BrokerEnvelope = {
   urls?: string[];
   attachments?: string[];
   metadata?: Record<string, string>;
+  capabilityQuery?: CapabilityQuery;
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -91,6 +97,26 @@ export function parseBrokerEnvelope(value: unknown): BrokerEnvelope {
     );
   }
 
+  const capabilityQuery =
+    value.capabilityQuery !== undefined
+      ? parseCapabilityQuery(value.capabilityQuery)
+      : undefined;
+
+  if (
+    capabilityQuery !== undefined &&
+    capabilityQuery.requestText !== value.requestText
+  ) {
+    throw new Error(
+      "Expected broker envelope.capabilityQuery.requestText to match broker envelope.requestText."
+    );
+  }
+
+  if (capabilityQuery !== undefined && capabilityQuery.host !== value.host) {
+    throw new Error(
+      "Expected broker envelope.capabilityQuery.host to match broker envelope.host."
+    );
+  }
+
   return {
     requestText: value.requestText,
     host: value.host as BrokerHost,
@@ -98,6 +124,7 @@ export function parseBrokerEnvelope(value: unknown): BrokerEnvelope {
     cwd: value.cwd,
     urls: value.urls,
     attachments: value.attachments,
-    metadata: value.metadata
+    metadata: value.metadata,
+    capabilityQuery
   };
 }

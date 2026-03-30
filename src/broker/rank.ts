@@ -1,5 +1,9 @@
 import type { CapabilityCard } from "../core/capability-card.js";
-import type { BrokerIntent } from "../core/types.js";
+import type {
+  BrokerIntent,
+  CapabilityQuery,
+  CapabilityQueryTargetType
+} from "../core/types.js";
 
 export type RoutingHistory = {
   cacheHit?: boolean;
@@ -10,6 +14,7 @@ export type RankCapabilitiesInput = {
   currentHost: string;
   requestIntent: BrokerIntent;
   candidates: CapabilityCard[];
+  requestCapabilityQuery?: CapabilityQuery;
   historyByCandidateId?: Record<string, RoutingHistory>;
 };
 
@@ -27,6 +32,67 @@ function historyScore(history: RoutingHistory | undefined): {
   };
 }
 
+function overlapScore(left: string[], right: string[]): number {
+  if (left.length === 0 || right.length === 0) {
+    return 0;
+  }
+
+  const rightSet = new Set(right);
+  let score = 0;
+
+  for (let index = 0; index < left.length; index += 1) {
+    if (rightSet.has(left[index])) {
+      score += 1;
+    }
+  }
+
+  return score;
+}
+
+function queryTargetTypes(query: CapabilityQuery): CapabilityQueryTargetType[] {
+  if (query.targets === undefined) {
+    return [];
+  }
+
+  return Array.from(new Set(query.targets.map((target) => target.type)));
+}
+
+function preferredCapabilityScore(
+  card: CapabilityCard,
+  preferredCapability: string | null | undefined
+): number {
+  if (preferredCapability === undefined || preferredCapability === null) {
+    return 0;
+  }
+
+  const skillName =
+    typeof card.sourceMetadata.skillName === "string"
+      ? card.sourceMetadata.skillName
+      : undefined;
+
+  return preferredCapability === card.id ||
+    preferredCapability === card.implementation.id ||
+    preferredCapability === skillName
+    ? 1
+    : 0;
+}
+
+function capabilityQueryScore(
+  card: CapabilityCard,
+  query: CapabilityQuery | undefined
+): number {
+  if (query === undefined) {
+    return 0;
+  }
+
+  return (
+    preferredCapabilityScore(card, query.preferredCapability) * 100 +
+    overlapScore(card.query.jobFamilies, query.jobFamilies ?? []) * 10 +
+    overlapScore(card.query.targetTypes, queryTargetTypes(query)) * 4 +
+    overlapScore(card.query.artifacts, query.artifacts ?? []) * 3
+  );
+}
+
 function compareCards(
   left: CapabilityCard,
   right: CapabilityCard,
@@ -34,6 +100,13 @@ function compareCards(
 ): number {
   if (left.hosts.currentHostSupported !== right.hosts.currentHostSupported) {
     return left.hosts.currentHostSupported ? -1 : 1;
+  }
+
+  const leftQueryScore = capabilityQueryScore(left, input.requestCapabilityQuery);
+  const rightQueryScore = capabilityQueryScore(right, input.requestCapabilityQuery);
+
+  if (leftQueryScore !== rightQueryScore) {
+    return rightQueryScore - leftQueryScore;
   }
 
   const leftIntentMatch = left.intent === input.requestIntent ? 1 : 0;
