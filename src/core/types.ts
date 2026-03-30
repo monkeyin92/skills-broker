@@ -23,7 +23,8 @@ export type BrokerOutcomeCode =
 export type BrokerHostAction =
   | "continue_normally"
   | "ask_clarifying_question"
-  | "offer_capability_discovery";
+  | "offer_capability_discovery"
+  | "show_graceful_failure";
 
 export type BrokerRequest = {
   intent: BrokerIntent;

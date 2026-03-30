@@ -94,7 +94,9 @@ function defaultCacheFilePath(): string {
 }
 
 function createNoCandidateResult(debug: BrokerDebug): BrokerFailureResult {
-  const message = "No candidate matched the normalized broker request.";
+  const message =
+    "The broker understood the request, but no installed capability matched it. Offer capability discovery or install help.";
+  const errorMessage = "No candidate matched the normalized broker request.";
 
   return {
     ok: false,
@@ -105,7 +107,7 @@ function createNoCandidateResult(debug: BrokerDebug): BrokerFailureResult {
     },
     error: {
       code: "NO_CANDIDATE",
-      message
+      message: errorMessage
     },
     debug
   };
@@ -115,7 +117,8 @@ function createFailureResult(
   code: Exclude<BrokerOutcomeCode, "HANDOFF_READY" | "NO_CANDIDATE">,
   message: string,
   hostAction: BrokerHostAction,
-  debug: BrokerDebug
+  debug: BrokerDebug,
+  errorMessage = message
 ): BrokerFailureResult {
   return {
     ok: false,
@@ -126,7 +129,7 @@ function createFailureResult(
     },
     error: {
       code,
-      message
+      message: errorMessage
     },
     debug
   };
@@ -157,6 +160,18 @@ async function discoverCapabilityCards(
   return discoverCandidates(hostCandidates, mcpCandidates).map(toCapabilityCard);
 }
 
+function unsupportedRequestMessage(): string {
+  return "This request is outside the broker's supported lanes. Continue with the host's normal workflow.";
+}
+
+function ambiguousRequestMessage(): string {
+  return "This request looks broker-relevant but needs clarification before routing. Ask a clarifying question.";
+}
+
+function prepareFailedMessage(): string {
+  return "The broker selected a candidate but could not prepare a handoff. Explain the failure clearly and do not silently bypass the broker.";
+}
+
 export async function runBroker(
   input: NormalizeRequestInput,
   options: RunBrokerOptions = {}
@@ -178,24 +193,26 @@ export async function runBroker(
     if (error instanceof UnsupportedBrokerRequestError) {
       return createFailureResult(
         "UNSUPPORTED_REQUEST",
-        error.message,
+        unsupportedRequestMessage(),
         "continue_normally",
         {
           cacheHit: false,
           candidateCount: 0
-        }
+        },
+        error.message
       );
     }
 
     if (error instanceof AmbiguousBrokerRequestError) {
       return createFailureResult(
         "AMBIGUOUS_REQUEST",
-        error.message,
+        ambiguousRequestMessage(),
         "ask_clarifying_question",
         {
           cacheHit: false,
           candidateCount: 0
-        }
+        },
+        error.message
       );
     }
 
@@ -279,9 +296,27 @@ export async function runBroker(
           }
         : undefined
   });
-  const prepared = await prepareCandidate(winner, {
-    currentHost
-  });
+  let prepared;
+
+  try {
+    prepared = await prepareCandidate(winner, {
+      currentHost
+    });
+  } catch {
+    return createFailureResult(
+      "PREPARE_FAILED",
+      prepareFailedMessage(),
+      "show_graceful_failure",
+      {
+        cacheHit,
+        cachedCandidateId: cachedCard?.card.id,
+        candidateCount: ranked.length,
+        decision
+      },
+      "Failed to prepare broker handoff."
+    );
+  }
+
   const handoff = buildHandoffEnvelope(
     prepared.candidate,
     prepared.context,
