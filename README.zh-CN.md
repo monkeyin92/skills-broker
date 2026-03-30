@@ -121,6 +121,8 @@ v0 当前包含：
 这不是为了“什么都支持”。  
 v0 的目标是证明：在一个具体任务上，broker 可以比人手动翻 skills 更准确地选到并准备好正确能力。
 
+**当前产品阶段：**先提升真实宿主里的 auto-routing 命中率，让 Claude Code 和 Codex 在遇到明显的外部能力请求时更稳定地先问 broker，而不是装上了却经常不用。
+
 ## 架构一眼看懂
 
 ```mermaid
@@ -308,11 +310,13 @@ npx vitest run
 - 超出“明显外部能力请求”的宽泛 auto-routing
 - 广义开放域任务覆盖
 - 默认走实时联网 discovery 的运行时
+- 在真实宿主会话里足够稳定的 broker-first 命中率
 
 ## Roadmap
 
 接下来大概率会推进：
 
+- 提升 Claude Code 和 Codex 真实会话里的 broker-first 命中率
 - 扩展到 OpenCode 等更多宿主
 - 增加更多任务族，而不只限于当前这组 markdown/discovery 小湖
 - 接入更强的 live registry 能力
@@ -382,11 +386,11 @@ npx vitest run
 
 ### 它已经能直接生产使用了吗？
 
-还没有。现在是一个单宿主、单任务的聚焦 v0。
+还没有。现在仍然是一个聚焦型 v0，但已经有共享 broker home、已发布的 lifecycle CLI、Claude Code 和 Codex 两个薄宿主壳，以及一个小而清楚的 routed lake。当前阶段重点是提升真实宿主里的 auto-routing 命中率。
 
-### 为什么先做 Claude Code？
+### 为什么先做 Claude Code 和 Codex？
 
-因为 v0 需要先在一个具体宿主里把 broker 契约端到端跑通，再往更多宿主扩。
+因为产品需要先在真实的代码型宿主上证明“一个共享 broker 契约可以跨宿主工作”，再往更多宿主扩。Claude Code 和 Codex 是这条路径上的前两个宿主。
 
 ### Claude Code 和 Codex 以后会共享同一份能力知识吗？
 
@@ -394,7 +398,7 @@ npx vitest run
 
 ### `skills-broker update` 以后负责什么？
 
-它会是共享 home 模型下的正式维护命令。当前仓库里已经有一个前身脚本 `./scripts/update-shared-home.sh`；最终产品命令会负责更新共享 runtime、重新扫描宿主、补装或修复薄适配层，同时默认不清空已有 broker 知识。
+它现在就是共享 home 模型下的正式维护命令。它负责更新共享 runtime、重新扫描宿主、补装或修复薄适配层，并且默认不清空已有 broker 知识。
 
 ### 为什么不直接多装几个 skill？
 
