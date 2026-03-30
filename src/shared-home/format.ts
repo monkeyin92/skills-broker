@@ -21,6 +21,11 @@ export function formatLifecycleResult(
     for (const host of result.hosts) {
       const suffix = host.reason ? ` (${host.reason})` : "";
       lines.push(`Host ${host.name}: ${host.status}${suffix}`);
+      if ((host.competingPeerSkills?.length ?? 0) > 0) {
+        lines.push(
+          `Host ${host.name} competing peers: ${host.competingPeerSkills?.join(", ")}`
+        );
+      }
     }
 
     for (const warning of result.warnings) {
@@ -68,6 +73,11 @@ export function formatLifecycleResult(
   for (const host of result.hosts) {
     const suffix = host.reason ? ` (${host.reason})` : "";
     lines.push(`Host ${host.name}: ${host.status}${suffix}`);
+    if ((host.competingPeerSkills?.length ?? 0) > 0) {
+      lines.push(
+        `Host ${host.name} competing peers: ${host.competingPeerSkills?.join(", ")}`
+      );
+    }
   }
 
   return lines.join("\n");

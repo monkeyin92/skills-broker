@@ -41,6 +41,7 @@ export type UpdateLifecycleResult = {
     name: "claude-code" | "codex";
     status: HostLifecycleStatus;
     reason?: string;
+    competingPeerSkills?: string[];
   }>;
   warnings: string[];
 };
@@ -88,7 +89,10 @@ function resolveOverallStatus(
   }
 
   const problemCount = hosts.filter(
-    (host) => host.status === "skipped_conflict" || host.status === "failed"
+    (host) =>
+      host.status === "skipped_conflict" ||
+      host.status === "failed" ||
+      (host.competingPeerSkills?.length ?? 0) > 0
   ).length;
 
   if (problemCount === 0) {
@@ -236,7 +240,8 @@ async function updateHost(
 
     return {
       name,
-      status: wasManaged ? "up_to_date" : "planned_install"
+      status: wasManaged ? "up_to_date" : "planned_install",
+      ...(competingPeerSkills.length > 0 ? { competingPeerSkills } : {})
     };
   }
 
@@ -255,7 +260,8 @@ async function updateHost(
 
     return {
       name,
-      status: wasManaged ? "updated" : "installed"
+      status: wasManaged ? "updated" : "installed",
+      ...(competingPeerSkills.length > 0 ? { competingPeerSkills } : {})
     };
   } catch (error) {
     const reason = error instanceof Error ? error.message : String(error);

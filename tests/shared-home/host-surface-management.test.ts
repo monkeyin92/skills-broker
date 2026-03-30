@@ -77,7 +77,8 @@ describe("host surface management", () => {
       expect(result.hosts).toContainEqual({
         name: "codex",
         status: "detected",
-        reason: "managed by skills-broker"
+        reason: "managed by skills-broker",
+        competingPeerSkills: ["baoyu-danger-x-to-markdown"]
       });
       expect(result.warnings).toContain(
         competingPeerSkillsWarning("codex", ["baoyu-danger-x-to-markdown"])

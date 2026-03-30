@@ -319,10 +319,11 @@ describe("shared-home lifecycle paths", () => {
         homeDirectory: runtimeDirectory
       });
 
-      expect(result.status).toBe("success");
+      expect(result.status).toBe("degraded_success");
       expect(result.hosts).toContainEqual({
         name: "claude-code",
-        status: "installed"
+        status: "installed",
+        competingPeerSkills: ["baoyu-url-to-markdown"]
       });
       expect(result.warnings).toContain(
         "claude-code: competing peer skills detected (baoyu-url-to-markdown); broker-first hit rate may be reduced until these peer skills are hidden behind skills-broker"

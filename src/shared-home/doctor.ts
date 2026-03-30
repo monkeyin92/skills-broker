@@ -18,6 +18,7 @@ export type DoctorLifecycleResult = {
     name: "claude-code" | "codex";
     status: "detected" | "not_detected" | "not_writable" | "conflict";
     reason?: string;
+    competingPeerSkills?: string[];
   }>;
   warnings: string[];
 };
@@ -133,7 +134,8 @@ async function doctorHost(
     return {
       name,
       status: "detected",
-      reason: "managed by skills-broker"
+      reason: "managed by skills-broker",
+      ...(competingPeerSkills.length > 0 ? { competingPeerSkills } : {})
     };
   }
 
