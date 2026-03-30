@@ -127,7 +127,7 @@ describe("lifecycle cli", () => {
         `${JSON.stringify({
           managedBy: "skills-broker",
           host: "codex",
-          version: "0.1.1",
+          version: "0.1.3",
           brokerHome: brokerHomeDirectory
         }, null, 2)}\n`,
         "utf8"
@@ -218,7 +218,7 @@ describe("lifecycle cli", () => {
       await writeManagedShellManifest(codexInstallDirectory, {
         managedBy: "skills-broker",
         host: "codex",
-        version: "0.1.1",
+        version: "0.1.3",
         brokerHome: brokerHomeDirectory
       });
 
