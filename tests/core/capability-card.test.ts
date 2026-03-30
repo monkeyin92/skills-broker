@@ -24,6 +24,17 @@ describe("toCapabilityCard", () => {
       targetTypes: ["url", "website", "repo"],
       artifacts: ["markdown"]
     });
+    expect(card.package).toEqual({
+      packageId: "baoyu",
+      label: "baoyu",
+      installState: "installed",
+      acquisition: "local_skill_bundle"
+    });
+    expect(card.leaf).toEqual({
+      capabilityId: "baoyu.url-to-markdown",
+      packageId: "baoyu",
+      subskillId: "url-to-markdown"
+    });
     expect(card.implementation).toEqual({
       id: "baoyu.url_to_markdown",
       type: "local_skill",
@@ -46,6 +57,17 @@ describe("toCapabilityCard", () => {
     expect(card.query).toMatchObject({
       jobFamilies: ["content_acquisition", "web_content_conversion"],
       artifacts: ["markdown"]
+    });
+    expect(card.package).toEqual({
+      packageId: "mcp",
+      label: "mcp",
+      installState: "installed",
+      acquisition: "mcp_bundle"
+    });
+    expect(card.leaf).toEqual({
+      capabilityId: "mcp.mcp-url-to-markdown",
+      packageId: "mcp",
+      subskillId: "mcp-url-to-markdown"
     });
     expect(card.implementation).toEqual({
       id: "mcp-url-to-markdown",
@@ -73,6 +95,17 @@ describe("toCapabilityCard", () => {
       targetTypes: ["problem_statement", "text"],
       artifacts: ["design_doc"],
       examples: ["帮我分析这个需求"]
+    });
+    expect(card.package).toEqual({
+      packageId: "requirements-analysis",
+      label: "requirements-analysis",
+      installState: "installed",
+      acquisition: "local_skill_bundle"
+    });
+    expect(card.leaf).toEqual({
+      capabilityId: "requirements-analysis.requirements-analysis",
+      packageId: "requirements-analysis",
+      subskillId: "requirements-analysis"
     });
   });
 });

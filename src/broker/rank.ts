@@ -71,6 +71,8 @@ function preferredCapabilityScore(
       : undefined;
 
   return preferredCapability === card.id ||
+    preferredCapability === card.leaf.capabilityId ||
+    preferredCapability === card.leaf.subskillId ||
     preferredCapability === card.implementation.id ||
     preferredCapability === skillName
     ? 1
@@ -107,6 +109,13 @@ function compareCards(
 
   if (leftQueryScore !== rightQueryScore) {
     return rightQueryScore - leftQueryScore;
+  }
+
+  const leftInstalled = left.package.installState === "installed" ? 1 : 0;
+  const rightInstalled = right.package.installState === "installed" ? 1 : 0;
+
+  if (leftInstalled !== rightInstalled) {
+    return rightInstalled - leftInstalled;
   }
 
   const leftIntentMatch = left.intent === input.requestIntent ? 1 : 0;

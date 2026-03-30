@@ -27,7 +27,13 @@ describe("loadHostSkillCandidates", () => {
       fixturePath
     );
 
-    expect(candidates).toEqual([fixture.skills[0]]);
+    expect(candidates).toHaveLength(1);
+    expect(candidates[0]).toMatchObject(fixture.skills[0]);
+    expect(candidates[0].package).toMatchObject({
+      packageId: "baoyu",
+      installState: "installed",
+      acquisition: "local_skill_bundle"
+    });
   });
 
   it('filters the host catalog fixture to the matching "capability_discovery_or_install" candidate', async () => {
@@ -53,6 +59,12 @@ describe("loadHostSkillCandidates", () => {
       fixturePath
     );
 
-    expect(candidates).toEqual([fixture.skills[1]]);
+    expect(candidates).toHaveLength(1);
+    expect(candidates[0]).toMatchObject(fixture.skills[1]);
+    expect(candidates[0].package).toMatchObject({
+      packageId: "skills_broker",
+      installState: "installed",
+      acquisition: "broker_native"
+    });
   });
 });

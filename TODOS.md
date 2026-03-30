@@ -37,11 +37,23 @@
 
 **Why:** The current three-intent router proved the first lake, but it will not scale to cross-language requests or broader reusable workflows like requirements analysis, QA, and investigation.
 
-**Context:** Today `/Users/monkeyin/projects/skills-broker/src/core/request.ts` and `/Users/monkeyin/projects/skills-broker/src/core/types.ts` still assume a small fixed `intent` list. The next product step is to let users describe the job they want done, then have the broker find the best skill, MCP, or workflow even when the user does not know the skill name.
+**Context:** Today `/Users/monkeyin/projects/skills-broker/src/core/request.ts` and `/Users/monkeyin/projects/skills-broker/src/core/types.ts` still assume a small fixed `intent` list. The next product step is to let users describe the job they want done, then have the broker find the best skill, MCP, or workflow even when the user does not know the skill name. The newer proof families also showed a second design gap: package identity and subskill identity still need to be separated cleanly.
 
 **Effort:** L
 **Priority:** P0
 **Depends on:** host-model normalization contract, richer capability-card metadata, and an incremental migration path from the current intent-based router
+
+### Separate package lifecycle from routed subskills
+
+**What:** Introduce a two-layer catalog where packages such as `gstack` or `baoyu` are the acquisition and lifecycle unit, while subskills such as `qa`, `office-hours`, or `url-to-markdown` are the routed leaf capabilities.
+
+**Why:** The current proof path can route to concrete winners, but it still flattens package and subskill identity into one implementation id. That will not scale once packages expose many subskills or multiple packages compete for the same job family.
+
+**Context:** Today `/Users/monkeyin/projects/skills-broker/config/host-skills.seed.json` can point a proof family at values like `gstack.office_hours`, and `/Users/monkeyin/projects/skills-broker/src/broker/handoff.ts` can expose a chosen implementation. The missing product layer is explicit package-aware install semantics plus leaf-first routing across packages.
+
+**Effort:** M
+**Priority:** P0
+**Depends on:** capability-query routing foundations, richer seed/catalog modeling, and package-aware handoff plus acquisition behavior
 
 ### Improve real host auto-routing hit rate
 

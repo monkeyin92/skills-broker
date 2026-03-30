@@ -70,6 +70,33 @@ export type CapabilityImplementationType =
   | "mcp_server"
   | "broker_workflow";
 
+export type CapabilityPackageInstallState = "installed" | "available";
+
+export type CapabilityPackageAcquisition =
+  | "local_skill_bundle"
+  | "published_package"
+  | "broker_native"
+  | "mcp_bundle";
+
+export type CapabilityPackageRef = {
+  packageId: string;
+  label: string;
+  installState: CapabilityPackageInstallState;
+  acquisition: CapabilityPackageAcquisition;
+};
+
+export type LeafCapabilityRef = {
+  capabilityId: string;
+  packageId: string;
+  subskillId: string;
+};
+
+export type PackageAcquisitionHint = {
+  reason: "package_not_installed";
+  package: CapabilityPackageRef;
+  leafCapability: LeafCapabilityRef;
+};
+
 export type BrokerRequest = {
   intent: BrokerIntent;
   outputMode: BrokerOutputMode;

@@ -1,4 +1,4 @@
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -31,6 +31,10 @@ describe("runBroker", () => {
       expect(result.ok).toBe(true);
       expect(result.outcome.code).toBe("HANDOFF_READY");
       expect(result.winner.id).toBe("web-content-to-markdown");
+      expect(result.handoff.chosenPackage.packageId).toBe("baoyu");
+      expect(result.handoff.chosenLeafCapability.subskillId).toBe(
+        "url-to-markdown"
+      );
       expect(result.handoff.chosenImplementation.id).toBe("baoyu.url_to_markdown");
       expect(result.handoff.brokerDone).toBe(true);
       expect(result.handoff.candidate.id).toBe(result.winner.id);
@@ -197,12 +201,205 @@ describe("runBroker", () => {
         hostCatalogFilePath: join(runtime.directory, "missing-host.json"),
         mcpRegistryFilePath,
         currentHost: "open-code",
+        packageSearchRoots: [runtime.directory],
         now: new Date("2026-03-27T08:00:00.000Z")
       });
 
+      expect(result.ok).toBe(false);
+      expect(result.outcome.code).toBe("NO_CANDIDATE");
+      expect(result.outcome.hostAction).toBe("offer_capability_discovery");
+      expect(result.acquisition).toMatchObject({
+        reason: "package_not_installed",
+        package: {
+          packageId: "io.example/url-to-markdown",
+          installState: "available",
+          acquisition: "mcp_bundle"
+        }
+      });
+    } finally {
+      await rm(runtime.directory, { recursive: true, force: true });
+    }
+  });
+
+  it("returns a package-aware NO_CANDIDATE when the best leaf belongs to an uninstalled package", async () => {
+    const runtime = await createRuntimePaths();
+    const hostCatalogFilePath = join(runtime.directory, "host.json");
+    const mcpRegistryFilePath = join(runtime.directory, "mcp.json");
+
+    await writeFile(
+      hostCatalogFilePath,
+      JSON.stringify({
+        packages: [
+          {
+            packageId: "gstack",
+            label: "gstack",
+            installState: "available",
+            acquisition: "published_package"
+          }
+        ],
+        skills: [
+          {
+            id: "requirements-analysis",
+            kind: "skill",
+            label: "Requirements Analysis",
+            intent: "capability_discovery_or_install",
+            package: {
+              packageId: "gstack"
+            },
+            leaf: {
+              capabilityId: "gstack.office-hours",
+              packageId: "gstack",
+              subskillId: "office-hours"
+            },
+            query: {
+              jobFamilies: ["requirements_analysis"],
+              targetTypes: ["problem_statement", "text"],
+              artifacts: ["design_doc"],
+              examples: ["帮我分析这个需求"]
+            },
+            implementation: {
+              id: "gstack.office_hours",
+              type: "local_skill",
+              ownerSurface: "broker_owned_downstream"
+            }
+          }
+        ]
+      }),
+      "utf8"
+    );
+    await writeFile(mcpRegistryFilePath, JSON.stringify({ servers: [] }), "utf8");
+
+    try {
+      const result = await runBroker(
+        {
+          requestText: "帮我做需求分析并产出设计文档",
+          host: "claude-code",
+          capabilityQuery: {
+            kind: "capability_request",
+            goal: "analyze a product requirement and produce a design doc",
+            host: "claude-code",
+            requestText: "帮我做需求分析并产出设计文档",
+            jobFamilies: ["requirements_analysis"],
+            artifacts: ["design_doc"]
+          }
+        },
+        {
+          cacheFilePath: runtime.cacheFilePath,
+          hostCatalogFilePath,
+          mcpRegistryFilePath,
+          packageSearchRoots: [runtime.directory],
+          now: new Date("2026-03-30T10:00:00.000Z")
+        }
+      );
+
+      expect(result.ok).toBe(false);
+      expect(result.outcome.code).toBe("NO_CANDIDATE");
+      expect(result.outcome.hostAction).toBe("offer_capability_discovery");
+      expect(result.acquisition).toMatchObject({
+        reason: "package_not_installed",
+        package: {
+          packageId: "gstack",
+          installState: "available",
+          acquisition: "published_package"
+        },
+        leafCapability: {
+          capabilityId: "gstack.office-hours",
+          subskillId: "office-hours"
+        }
+      });
+    } finally {
+      await rm(runtime.directory, { recursive: true, force: true });
+    }
+  });
+
+  it("upgrades an available package to installed when the runtime can see the bundle skill", async () => {
+    const runtime = await createRuntimePaths();
+    const hostCatalogFilePath = join(runtime.directory, "host.json");
+    const mcpRegistryFilePath = join(runtime.directory, "mcp.json");
+    const searchRoot = join(runtime.directory, "package-search");
+    const nestedSkillDirectory = join(
+      searchRoot,
+      "gstack",
+      ".agents",
+      "skills",
+      "gstack-office-hours"
+    );
+
+    await writeFile(mcpRegistryFilePath, JSON.stringify({ servers: [] }), "utf8");
+    await mkdir(nestedSkillDirectory, { recursive: true });
+    await writeFile(join(nestedSkillDirectory, "SKILL.md"), "# office-hours\n", "utf8");
+    await writeFile(
+      hostCatalogFilePath,
+      JSON.stringify({
+        packages: [
+          {
+            packageId: "gstack",
+            label: "gstack",
+            installState: "available",
+            acquisition: "published_package"
+          }
+        ],
+        skills: [
+          {
+            id: "requirements-analysis",
+            kind: "skill",
+            label: "Requirements Analysis",
+            intent: "capability_discovery_or_install",
+            package: {
+              packageId: "gstack"
+            },
+            leaf: {
+              capabilityId: "gstack.office-hours",
+              packageId: "gstack",
+              subskillId: "office-hours"
+            },
+            query: {
+              jobFamilies: ["requirements_analysis"],
+              targetTypes: ["problem_statement", "text"],
+              artifacts: ["design_doc"],
+              examples: ["帮我分析这个需求"]
+            },
+            implementation: {
+              id: "gstack.office_hours",
+              type: "local_skill",
+              ownerSurface: "broker_owned_downstream"
+            },
+            sourceMetadata: {
+              skillName: "office-hours"
+            }
+          }
+        ]
+      }),
+      "utf8"
+    );
+
+    try {
+      const result = await runBroker(
+        {
+          requestText: "帮我做需求分析并产出设计文档",
+          host: "claude-code",
+          capabilityQuery: {
+            kind: "capability_request",
+            goal: "analyze a product requirement and produce a design doc",
+            host: "claude-code",
+            requestText: "帮我做需求分析并产出设计文档",
+            jobFamilies: ["requirements_analysis"],
+            artifacts: ["design_doc"]
+          }
+        },
+        {
+          cacheFilePath: runtime.cacheFilePath,
+          hostCatalogFilePath,
+          mcpRegistryFilePath,
+          packageSearchRoots: [searchRoot],
+          now: new Date("2026-03-30T10:30:00.000Z")
+        }
+      );
+
       expect(result.ok).toBe(true);
       expect(result.outcome.code).toBe("HANDOFF_READY");
-      expect(result.winner.id).toBe("io.example/url-to-markdown");
+      expect(result.handoff.chosenPackage.installState).toBe("installed");
+      expect(result.handoff.chosenLeafCapability.subskillId).toBe("office-hours");
     } finally {
       await rm(runtime.directory, { recursive: true, force: true });
     }
@@ -283,6 +480,10 @@ describe("runBroker", () => {
       expect(result.ok).toBe(true);
       expect(result.outcome.code).toBe("HANDOFF_READY");
       expect(result.winner.id).toBe("requirements-analysis");
+      expect(result.handoff.chosenPackage.packageId).toBe("gstack");
+      expect(result.handoff.chosenLeafCapability.subskillId).toBe(
+        "office-hours"
+      );
       expect(result.handoff.chosenImplementation.id).toBe("gstack.office_hours");
       expect(result.handoff.request.capabilityQuery).toMatchObject({
         jobFamilies: ["requirements_analysis"]
@@ -325,6 +526,8 @@ describe("runBroker", () => {
       expect(result.ok).toBe(true);
       expect(result.outcome.code).toBe("HANDOFF_READY");
       expect(result.winner.id).toBe("website-qa");
+      expect(result.handoff.chosenPackage.packageId).toBe("gstack");
+      expect(result.handoff.chosenLeafCapability.subskillId).toBe("qa");
       expect(result.handoff.chosenImplementation.id).toBe("gstack.qa");
       expect(result.handoff.request.capabilityQuery).toMatchObject({
         jobFamilies: ["quality_assurance"]

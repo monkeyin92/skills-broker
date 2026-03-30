@@ -15,6 +15,17 @@ describe("broker-owned downstream capabilities", () => {
       type: "local_skill",
       ownerSurface: "broker_owned_downstream"
     });
+    expect(toCapabilityCard(candidates[0]).package).toEqual({
+      packageId: "baoyu",
+      label: "baoyu",
+      installState: "installed",
+      acquisition: "local_skill_bundle"
+    });
+    expect(toCapabilityCard(candidates[0]).leaf).toEqual({
+      capabilityId: "baoyu.url-to-markdown",
+      packageId: "baoyu",
+      subskillId: "url-to-markdown"
+    });
     expect(toCapabilityCard(candidates[0]).query).toMatchObject({
       jobFamilies: ["content_acquisition", "web_content_conversion"],
       artifacts: ["markdown"]
@@ -32,6 +43,17 @@ describe("broker-owned downstream capabilities", () => {
       id: "baoyu.x_post_to_markdown",
       type: "local_skill",
       ownerSurface: "broker_owned_downstream"
+    });
+    expect(toCapabilityCard(candidates[0]).package).toEqual({
+      packageId: "baoyu",
+      label: "baoyu",
+      installState: "installed",
+      acquisition: "local_skill_bundle"
+    });
+    expect(toCapabilityCard(candidates[0]).leaf).toEqual({
+      capabilityId: "baoyu.x-post-to-markdown",
+      packageId: "baoyu",
+      subskillId: "x-post-to-markdown"
     });
     expect(toCapabilityCard(candidates[0]).query).toMatchObject({
       jobFamilies: ["content_acquisition", "social_content_conversion"],
@@ -52,7 +74,25 @@ describe("broker-owned downstream capabilities", () => {
       cards.find((card) => card.id === "requirements-analysis")?.implementation.id
     ).toBe("gstack.office_hours");
     expect(
+      cards.find((card) => card.id === "requirements-analysis")?.package.packageId
+    ).toBe("gstack");
+    expect(
+      cards.find((card) => card.id === "requirements-analysis")?.package.installState
+    ).toBe("installed");
+    expect(
+      cards.find((card) => card.id === "requirements-analysis")?.leaf.subskillId
+    ).toBe("office-hours");
+    expect(
       cards.find((card) => card.id === "website-qa")?.implementation.id
     ).toBe("gstack.qa");
+    expect(
+      cards.find((card) => card.id === "website-qa")?.package.packageId
+    ).toBe("gstack");
+    expect(
+      cards.find((card) => card.id === "website-qa")?.package.installState
+    ).toBe("installed");
+    expect(
+      cards.find((card) => card.id === "website-qa")?.leaf.subskillId
+    ).toBe("qa");
   });
 });

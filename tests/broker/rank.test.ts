@@ -11,6 +11,17 @@ function createCard(
     kind: overrides.kind ?? "skill",
     label: overrides.label,
     intent: overrides.intent ?? "web_content_to_markdown",
+    package: overrides.package ?? {
+      packageId: "test-package",
+      label: "test-package",
+      installState: "installed",
+      acquisition: "local_skill_bundle"
+    },
+    leaf: overrides.leaf ?? {
+      capabilityId: `test-package.${overrides.id}`,
+      packageId: "test-package",
+      subskillId: overrides.id
+    },
     query: overrides.query ?? {
       jobFamilies: ["content_acquisition"],
       targetTypes: ["url"],
@@ -154,6 +165,11 @@ describe("rankCapabilities", () => {
       },
       sourceMetadata: {
         skillName: "office-hours"
+      },
+      leaf: {
+        capabilityId: "gstack.office-hours",
+        packageId: "gstack",
+        subskillId: "office-hours"
       }
     });
     const qa = createCard({
@@ -190,6 +206,31 @@ describe("rankCapabilities", () => {
     });
 
     expect(ranked.map((card) => card.id)[0]).toBe("office-hours");
+  });
+
+  it("prefers installed packages when query strength is otherwise equal", () => {
+    const installed = createCard({
+      id: "installed",
+      label: "Installed candidate"
+    });
+    const available = createCard({
+      id: "available",
+      label: "Available candidate",
+      package: {
+        packageId: "available-package",
+        label: "available-package",
+        installState: "available",
+        acquisition: "published_package"
+      }
+    });
+
+    const ranked = rankCapabilities({
+      currentHost: "claude-code",
+      requestIntent: "web_content_to_markdown",
+      candidates: [available, installed]
+    });
+
+    expect(ranked.map((card) => card.id)[0]).toBe("installed");
   });
 });
 

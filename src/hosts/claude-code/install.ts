@@ -146,6 +146,7 @@ BROKER_INPUT="\${BROKER_INPUT}" \\
 BROKER_CACHE_FILE="\${CACHE_FILE}" \\
 BROKER_HOST_CATALOG="\${INSTALL_DIR}/config/host-skills.seed.json" \\
 BROKER_MCP_REGISTRY="\${INSTALL_DIR}/config/mcp-registry.seed.json" \\
+BROKER_HOME_DIR="\${INSTALL_DIR}" \\
 BROKER_NOW="\${BROKER_NOW:-}" \\
 BROKER_CURRENT_HOST="claude-code" \\
 BROKER_CLI_PATH="\${INSTALL_DIR}/dist/cli.js" \\

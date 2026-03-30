@@ -4,7 +4,7 @@ import {
   type RunBrokerResult
 } from "./broker/run.js";
 import { fileURLToPath } from "node:url";
-import { resolve } from "node:path";
+import { delimiter, resolve } from "node:path";
 import { parseBrokerEnvelope, type BrokerEnvelope } from "./core/envelope.js";
 
 export type RunBrokerCliInput = BrokerEnvelope;
@@ -44,6 +44,9 @@ function directRunOptions(): RunBrokerOptions {
     cacheFilePath: process.env.BROKER_CACHE_FILE,
     hostCatalogFilePath: process.env.BROKER_HOST_CATALOG,
     mcpRegistryFilePath: process.env.BROKER_MCP_REGISTRY,
+    brokerHomeDirectory: process.env.BROKER_HOME_DIR,
+    packageSearchRoots:
+      process.env.BROKER_PACKAGE_SEARCH_ROOTS?.split(delimiter).filter(Boolean),
     currentHost: process.env.BROKER_CURRENT_HOST,
     now: process.env.BROKER_NOW ? new Date(process.env.BROKER_NOW) : undefined
   };

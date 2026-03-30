@@ -2,7 +2,10 @@ import type {
   BrokerIntent,
   CapabilityQueryTargetType,
   CapabilityImplementationType,
-  CapabilityOwnershipSurface
+  CapabilityOwnershipSurface,
+  CapabilityPackageRef,
+  LeafCapabilityRef,
+  CapabilityPackageAcquisition
 } from "./types.js";
 
 export type CapabilityCardKind = "skill" | "mcp";
@@ -25,6 +28,8 @@ export type CapabilityCard = {
   kind: CapabilityCardKind;
   label: string;
   intent: BrokerIntent;
+  package: CapabilityPackageRef;
+  leaf: LeafCapabilityRef;
   query: CapabilityQueryMetadata;
   implementation: CapabilityImplementation;
   hosts: {
@@ -47,6 +52,8 @@ export type CapabilityCandidate = {
   id: string;
   label: string;
   intent: BrokerIntent;
+  package?: Partial<CapabilityPackageRef>;
+  leaf?: Partial<LeafCapabilityRef>;
   query?: Partial<CapabilityQueryMetadata>;
   implementation?: Partial<CapabilityImplementation>;
   sourceMetadata?: Record<string, unknown>;
@@ -112,11 +119,111 @@ function mergeUniqueStrings(
   });
 }
 
+function normalizeIdentifier(value: string): string {
+  const normalized = value
+    .trim()
+    .toLowerCase()
+    .replace(/[_\s]+/g, "-")
+    .replace(/[^a-z0-9.-]+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "");
+
+  return normalized.length > 0 ? normalized : "unknown";
+}
+
+function implementationPackageId(
+  implementationId: string | undefined
+): string | undefined {
+  if (implementationId === undefined || !implementationId.includes(".")) {
+    return undefined;
+  }
+
+  const [packageId] = implementationId.split(".", 1);
+
+  return packageId;
+}
+
+function implementationSubskillId(
+  implementationId: string | undefined
+): string | undefined {
+  if (implementationId === undefined || !implementationId.includes(".")) {
+    return undefined;
+  }
+
+  return implementationId.split(".").slice(1).join(".");
+}
+
+function defaultPackageRef(
+  candidate: CapabilityCandidate,
+  implementationId: string
+): CapabilityPackageRef {
+  const packageId =
+    candidate.package?.packageId ??
+    (typeof candidate.sourceMetadata?.packageId === "string"
+      ? candidate.sourceMetadata.packageId
+      : undefined) ??
+    implementationPackageId(implementationId) ??
+    (candidate.kind === "mcp" ? "mcp" : normalizeIdentifier(candidate.id));
+
+  const installState =
+    candidate.package?.installState ??
+    (typeof candidate.sourceMetadata?.packageInstallState === "string" &&
+    (candidate.sourceMetadata.packageInstallState === "installed" ||
+      candidate.sourceMetadata.packageInstallState === "available")
+      ? candidate.sourceMetadata.packageInstallState
+      : "installed");
+
+  return {
+    packageId,
+    label: candidate.package?.label ?? packageId,
+    installState,
+    acquisition:
+      candidate.package?.acquisition ??
+      defaultPackageAcquisition(candidate.kind, packageId)
+  };
+}
+
+function defaultPackageAcquisition(
+  kind: CapabilityCardKind,
+  packageId: string
+): CapabilityPackageAcquisition {
+  if (packageId === "skills_broker") {
+    return "broker_native";
+  }
+
+  return kind === "mcp" ? "mcp_bundle" : "local_skill_bundle";
+}
+
+function defaultLeafRef(
+  candidate: CapabilityCandidate,
+  packageRef: CapabilityPackageRef,
+  implementationId: string
+): LeafCapabilityRef {
+  const subskillId = normalizeIdentifier(
+    candidate.leaf?.subskillId ??
+      (typeof candidate.sourceMetadata?.subskillId === "string"
+        ? candidate.sourceMetadata.subskillId
+        : undefined) ??
+      implementationSubskillId(implementationId) ??
+      candidate.id
+  );
+
+  return {
+    capabilityId:
+      candidate.leaf?.capabilityId ?? `${packageRef.packageId}.${subskillId}`,
+    packageId: candidate.leaf?.packageId ?? packageRef.packageId,
+    subskillId
+  };
+}
+
 export function toCapabilityCard(candidate: CapabilityCandidate): CapabilityCard {
   const kind = candidate.kind;
   const defaults = defaultQueryMetadata(candidate.intent);
+  const implementationId = candidate.implementation?.id ?? candidate.id;
+  const packageRef = defaultPackageRef(candidate, implementationId);
+  const leafRef = defaultLeafRef(candidate, packageRef, implementationId);
   const implementation: CapabilityImplementation = {
-    id: candidate.implementation?.id ?? candidate.id,
+    id: implementationId,
     type: candidate.implementation?.type ?? defaultImplementationType(kind),
     ownerSurface:
       candidate.implementation?.ownerSurface ?? "broker_owned_downstream"
@@ -127,6 +234,8 @@ export function toCapabilityCard(candidate: CapabilityCandidate): CapabilityCard
     kind,
     label: candidate.label,
     intent: candidate.intent,
+    package: packageRef,
+    leaf: leafRef,
     query: {
       jobFamilies: mergeUniqueStrings(candidate.query?.jobFamilies, defaults.jobFamilies),
       targetTypes: (candidate.query?.targetTypes ?? defaults.targetTypes).slice(),
@@ -140,7 +249,8 @@ export function toCapabilityCard(candidate: CapabilityCandidate): CapabilityCard
     },
     prepare: {
       authRequired: false,
-      installRequired: kind === "mcp"
+      installRequired:
+        kind === "mcp" || packageRef.installState !== "installed"
     },
     ranking: {
       contextCost: kind === "skill" ? 0 : 1,

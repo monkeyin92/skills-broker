@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import { buildHandoffEnvelope, type HandoffEnvelope } from "./handoff.js";
 import { discoverCandidates } from "./discover.js";
 import { explainDecision } from "./explain.js";
+import { hydratePackageAvailability } from "./package-availability.js";
 import { prepareCandidate } from "./prepare.js";
 import { rankCapabilities } from "./rank.js";
 import { toCapabilityCard, type CapabilityCard } from "../core/capability-card.js";
@@ -21,7 +22,8 @@ import {
 import type {
   BrokerHostAction,
   BrokerIntent,
-  BrokerOutcomeCode
+  BrokerOutcomeCode,
+  PackageAcquisitionHint
 } from "../core/types.js";
 import { loadHostSkillCandidates } from "../sources/host-skill-catalog.js";
 import { searchMcpRegistry } from "../sources/mcp-registry.js";
@@ -53,6 +55,7 @@ type BrokerSuccessResult = {
     message: string;
   };
   handoff: HandoffEnvelope;
+  acquisition?: undefined;
   debug: BrokerDebug;
 };
 
@@ -67,6 +70,7 @@ type BrokerFailureResult = {
     code: Exclude<BrokerOutcomeCode, "HANDOFF_READY">;
     message: string;
   };
+  acquisition?: PackageAcquisitionHint;
   debug: BrokerDebug;
 };
 
@@ -77,6 +81,8 @@ export type RunBrokerOptions = {
   hostCatalogFilePath?: string;
   mcpRegistryFilePath?: string;
   currentHost?: string;
+  brokerHomeDirectory?: string;
+  packageSearchRoots?: string[];
   now?: Date;
 };
 
@@ -109,6 +115,30 @@ function createNoCandidateResult(debug: BrokerDebug): BrokerFailureResult {
     error: {
       code: "NO_CANDIDATE",
       message: errorMessage
+    },
+    debug
+  };
+}
+
+function createPackageInstallRequiredResult(
+  winner: CapabilityCard,
+  debug: BrokerDebug
+): BrokerFailureResult {
+  return {
+    ok: false,
+    outcome: {
+      code: "NO_CANDIDATE",
+      message: `The broker found a matching capability in package "${winner.package.packageId}", but that package is not installed yet. Offer package discovery or install help for "${winner.leaf.subskillId}".`,
+      hostAction: "offer_capability_discovery"
+    },
+    error: {
+      code: "NO_CANDIDATE",
+      message: `Package "${winner.package.packageId}" is not installed for capability "${winner.leaf.capabilityId}".`
+    },
+    acquisition: {
+      reason: "package_not_installed",
+      package: winner.package,
+      leafCapability: winner.leaf
     },
     debug
   };
@@ -201,6 +231,10 @@ function buildRequestCacheKey(request: {
     `targetTypes:${targetTypes}`,
     `preferred:${request.capabilityQuery.preferredCapability ?? ""}`
   ].join("|");
+}
+
+function packageInstalled(card: CapabilityCard): boolean {
+  return card.package.installState === "installed";
 }
 
 export async function runBroker(
@@ -296,6 +330,12 @@ export async function runBroker(
     }
   }
 
+  candidates = await hydratePackageAvailability(candidates, {
+    currentHost,
+    brokerHomeDirectory: options.brokerHomeDirectory,
+    packageSearchRoots: options.packageSearchRoots
+  });
+
   const ranked = rankCapabilities({
     currentHost,
     requestIntent: request.intent,
@@ -332,6 +372,16 @@ export async function runBroker(
           }
         : undefined
   });
+
+  if (!packageInstalled(winner)) {
+    return createPackageInstallRequiredResult(winner, {
+      cacheHit,
+      cachedCandidateId: cachedCard?.card.id,
+      candidateCount: ranked.length,
+      decision
+    });
+  }
+
   let prepared;
 
   try {

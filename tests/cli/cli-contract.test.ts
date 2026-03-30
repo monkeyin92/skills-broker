@@ -78,6 +78,12 @@ test("cli accepts a raw envelope for the current webpage flow", async () => {
       },
       handoff: {
         brokerDone: true,
+        chosenPackage: {
+          packageId: "baoyu"
+        },
+        chosenLeafCapability: {
+          subskillId: "url-to-markdown"
+        },
         chosenImplementation: {
           id: "baoyu.url_to_markdown"
         }
@@ -96,6 +102,12 @@ test("cli accepts a raw envelope for the current webpage flow", async () => {
     },
     handoff: {
       brokerDone: true,
+      chosenPackage: {
+        packageId: "baoyu"
+      },
+      chosenLeafCapability: {
+        subskillId: "url-to-markdown"
+      },
       chosenImplementation: {
         id: "baoyu.url_to_markdown"
       }
@@ -161,6 +173,12 @@ test("cli accepts a social-post envelope and returns HANDOFF_READY", async () =>
         code: "HANDOFF_READY"
       },
       handoff: {
+        chosenPackage: {
+          packageId: "baoyu"
+        },
+        chosenLeafCapability: {
+          subskillId: "x-post-to-markdown"
+        },
         chosenImplementation: {
           id: "baoyu.x_post_to_markdown"
         },
@@ -181,6 +199,12 @@ test("cli accepts a social-post envelope and returns HANDOFF_READY", async () =>
       code: "HANDOFF_READY"
     },
     handoff: {
+      chosenPackage: {
+        packageId: "baoyu"
+      },
+      chosenLeafCapability: {
+        subskillId: "x-post-to-markdown"
+      },
       chosenImplementation: {
         id: "baoyu.x_post_to_markdown"
       },
@@ -248,6 +272,12 @@ test("cli accepts an explicit capability discovery envelope and returns HANDOFF_
         code: "HANDOFF_READY"
       },
       handoff: {
+        chosenPackage: {
+          packageId: "skills_broker"
+        },
+        chosenLeafCapability: {
+          subskillId: "capability-discovery"
+        },
         chosenImplementation: {
           id: "skills_broker.capability_discovery"
         },
@@ -268,6 +298,12 @@ test("cli accepts an explicit capability discovery envelope and returns HANDOFF_
       code: "HANDOFF_READY"
     },
     handoff: {
+      chosenPackage: {
+        packageId: "skills_broker"
+      },
+      chosenLeafCapability: {
+        subskillId: "capability-discovery"
+      },
       chosenImplementation: {
         id: "skills_broker.capability_discovery"
       },
@@ -351,6 +387,12 @@ test("cli accepts a structured capability query and routes it through discovery"
         code: "HANDOFF_READY"
       },
       handoff: {
+        chosenPackage: {
+          packageId: "gstack"
+        },
+        chosenLeafCapability: {
+          subskillId: "office-hours"
+        },
         chosenImplementation: {
           id: "gstack.office_hours"
         },
@@ -371,6 +413,12 @@ test("cli accepts a structured capability query and routes it through discovery"
   expect(JSON.parse(writes[0])).toMatchObject({
     ok: true,
     handoff: {
+      chosenPackage: {
+        packageId: "gstack"
+      },
+      chosenLeafCapability: {
+        subskillId: "office-hours"
+      },
       chosenImplementation: {
         id: "gstack.office_hours"
       }

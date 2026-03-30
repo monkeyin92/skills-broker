@@ -45,7 +45,13 @@ function toCapabilityCandidate(
     id: server.name,
     kind: "mcp",
     label: server.title ?? server.name,
-    intent
+    intent,
+    package: {
+      packageId: server.name,
+      label: server.title ?? server.name,
+      installState: "available",
+      acquisition: "mcp_bundle"
+    }
   };
 }
 

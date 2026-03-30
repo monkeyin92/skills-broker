@@ -55,6 +55,7 @@ BROKER_INPUT="\${BROKER_INPUT}" \\
 BROKER_CACHE_FILE="\${CACHE_FILE}" \\
 BROKER_HOST_CATALOG="\${BROKER_HOME}/config/host-skills.seed.json" \\
 BROKER_MCP_REGISTRY="\${BROKER_HOME}/config/mcp-registry.seed.json" \\
+BROKER_HOME_DIR="\${BROKER_HOME}" \\
 BROKER_NOW="\${BROKER_NOW:-}" \\
 BROKER_CURRENT_HOST="\${CURRENT_HOST}" \\
 BROKER_CLI_PATH="\${BROKER_HOME}/dist/cli.js" \\

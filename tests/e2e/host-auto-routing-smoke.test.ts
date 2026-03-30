@@ -156,6 +156,12 @@ describe("host auto-routing smoke", () => {
           code: "HANDOFF_READY"
         },
         handoff: {
+          chosenPackage: {
+            packageId: "gstack"
+          },
+          chosenLeafCapability: {
+            subskillId: "office-hours"
+          },
           chosenImplementation: {
             id: "gstack.office_hours"
           },
@@ -174,6 +180,12 @@ describe("host auto-routing smoke", () => {
           code: "HANDOFF_READY"
         },
         handoff: {
+          chosenPackage: {
+            packageId: "gstack"
+          },
+          chosenLeafCapability: {
+            subskillId: "qa"
+          },
           chosenImplementation: {
             id: "gstack.qa"
           },

@@ -1,10 +1,38 @@
 {
+  "packages": [
+    {
+      "packageId": "baoyu",
+      "label": "baoyu",
+      "installState": "installed",
+      "acquisition": "local_skill_bundle"
+    },
+    {
+      "packageId": "skills_broker",
+      "label": "skills_broker",
+      "installState": "installed",
+      "acquisition": "broker_native"
+    },
+    {
+      "packageId": "gstack",
+      "label": "gstack",
+      "installState": "installed",
+      "acquisition": "local_skill_bundle"
+    }
+  ],
   "skills": [
     {
       "id": "web-content-to-markdown",
       "kind": "skill",
       "label": "Web Content to Markdown",
       "intent": "web_content_to_markdown",
+      "package": {
+        "packageId": "baoyu"
+      },
+      "leaf": {
+        "capabilityId": "baoyu.url-to-markdown",
+        "packageId": "baoyu",
+        "subskillId": "url-to-markdown"
+      },
       "query": {
         "jobFamilies": ["content_acquisition", "web_content_conversion"],
         "targetTypes": ["url", "website", "repo"],
@@ -28,6 +56,14 @@
       "kind": "skill",
       "label": "Social Post to Markdown",
       "intent": "social_post_to_markdown",
+      "package": {
+        "packageId": "baoyu"
+      },
+      "leaf": {
+        "capabilityId": "baoyu.x-post-to-markdown",
+        "packageId": "baoyu",
+        "subskillId": "x-post-to-markdown"
+      },
       "query": {
         "jobFamilies": ["content_acquisition", "social_content_conversion"],
         "targetTypes": ["url", "website"],
@@ -51,6 +87,14 @@
       "kind": "skill",
       "label": "Capability Discovery",
       "intent": "capability_discovery_or_install",
+      "package": {
+        "packageId": "skills_broker"
+      },
+      "leaf": {
+        "capabilityId": "skills_broker.capability-discovery",
+        "packageId": "skills_broker",
+        "subskillId": "capability-discovery"
+      },
       "query": {
         "jobFamilies": ["capability_acquisition"],
         "targetTypes": ["text", "problem_statement"],
@@ -71,6 +115,14 @@
       "kind": "skill",
       "label": "Requirements Analysis",
       "intent": "capability_discovery_or_install",
+      "package": {
+        "packageId": "gstack"
+      },
+      "leaf": {
+        "capabilityId": "gstack.office-hours",
+        "packageId": "gstack",
+        "subskillId": "office-hours"
+      },
       "query": {
         "jobFamilies": ["requirements_analysis", "idea_brainstorming"],
         "targetTypes": ["problem_statement", "text"],
@@ -94,6 +146,14 @@
       "kind": "skill",
       "label": "Website QA",
       "intent": "capability_discovery_or_install",
+      "package": {
+        "packageId": "gstack"
+      },
+      "leaf": {
+        "capabilityId": "gstack.qa",
+        "packageId": "gstack",
+        "subskillId": "qa"
+      },
       "query": {
         "jobFamilies": ["quality_assurance"],
         "targetTypes": ["website", "url"],
