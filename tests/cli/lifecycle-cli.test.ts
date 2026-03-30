@@ -50,6 +50,13 @@ describe("lifecycle cli", () => {
     expect(result.purgeSharedHome).toBe(true);
   });
 
+  it("recognizes --repair-host-surface for update", async () => {
+    const result = await runLifecycleCli(["update", "--repair-host-surface"]);
+
+    expect(result.command).toBe("update");
+    expect(result.repairHostSurface).toBe(true);
+  });
+
   it("recognizes --json doctor", async () => {
     const result = await runLifecycleCli(["--json", "doctor"]);
 
@@ -127,7 +134,7 @@ describe("lifecycle cli", () => {
         `${JSON.stringify({
           managedBy: "skills-broker",
           host: "codex",
-          version: "0.1.1",
+          version: "0.1.3",
           brokerHome: brokerHomeDirectory
         }, null, 2)}\n`,
         "utf8"
@@ -218,7 +225,7 @@ describe("lifecycle cli", () => {
       await writeManagedShellManifest(codexInstallDirectory, {
         managedBy: "skills-broker",
         host: "codex",
-        version: "0.1.1",
+        version: "0.1.3",
         brokerHome: brokerHomeDirectory
       });
 
@@ -333,6 +340,101 @@ describe("lifecycle cli", () => {
       expect(output).toContain("Host claude-code: skipped_not_detected");
       expect(output).toContain("Host codex: skipped_not_detected");
       expect(output).not.toMatch(/^\s*\{/);
+    } finally {
+      await rm(runtimeDirectory, { recursive: true, force: true });
+    }
+  });
+
+  it("repairs competing peer skills through the lifecycle CLI", async () => {
+    const scriptPath = resolve("src/bin/skills-broker.ts");
+    const runtimeDirectory = await mkdtemp(resolve(tmpdir(), "skills-broker-cli-repair-peers-"));
+    const brokerHomeDirectory = resolve(runtimeDirectory, ".skills-broker");
+    const claudeInstallDirectory = resolve(
+      runtimeDirectory,
+      ".claude",
+      "skills",
+      "skills-broker"
+    );
+    const peerSkillDirectory = resolve(
+      runtimeDirectory,
+      ".claude",
+      "skills",
+      "baoyu-url-to-markdown"
+    );
+    const migratedSkillPath = resolve(
+      brokerHomeDirectory,
+      "downstream",
+      "claude-code",
+      "skills",
+      "baoyu-url-to-markdown",
+      "SKILL.md"
+    );
+
+    try {
+      await mkdir(peerSkillDirectory, { recursive: true });
+      await writeFile(resolve(peerSkillDirectory, "SKILL.md"), "# peer skill\n", "utf8");
+
+      const { stdout } = await execFileAsync("node", [
+        "--loader",
+        tsNodeLoaderPath,
+        scriptPath,
+        "update",
+        "--repair-host-surface",
+        "--broker-home",
+        brokerHomeDirectory,
+        "--claude-dir",
+        claudeInstallDirectory
+      ], {
+        env: {
+          ...process.env,
+          HOME: runtimeDirectory
+        },
+        encoding: "utf8"
+      });
+
+      expect(stdout).toContain("Host claude-code migrated peers: baoyu-url-to-markdown");
+      await expect(access(resolve(peerSkillDirectory, "SKILL.md"))).rejects.toThrow();
+      await expect(access(migratedSkillPath)).resolves.toBeUndefined();
+    } finally {
+      await rm(runtimeDirectory, { recursive: true, force: true });
+    }
+  });
+
+  it("prints competing peer remediation in doctor text output", async () => {
+    const scriptPath = resolve("src/bin/skills-broker.ts");
+    const runtimeDirectory = await mkdtemp(resolve(tmpdir(), "skills-broker-cli-doctor-peers-"));
+    const brokerHomeDirectory = resolve(runtimeDirectory, ".skills-broker");
+    const codexInstallDirectory = resolve(runtimeDirectory, ".agents", "skills", "skills-broker");
+
+    try {
+      await mkdir(resolve(runtimeDirectory, ".codex"), { recursive: true });
+      await mkdir(codexInstallDirectory, { recursive: true });
+      await mkdir(resolve(runtimeDirectory, ".agents", "skills", "baoyu-danger-x-to-markdown"), {
+        recursive: true
+      });
+      await writeManagedShellManifest(codexInstallDirectory, {
+        managedBy: "skills-broker",
+        host: "codex",
+        version: "0.1.3",
+        brokerHome: brokerHomeDirectory
+      });
+
+      const { stdout } = await execFileAsync("node", [
+        "--loader",
+        tsNodeLoaderPath,
+        scriptPath,
+        "doctor"
+      ], {
+        env: {
+          ...process.env,
+          HOME: runtimeDirectory
+        },
+        encoding: "utf8"
+      });
+
+      const output = stdout.trim();
+      expect(output).toContain("Host codex competing peers: baoyu-danger-x-to-markdown");
+      expect(output).toContain("Host codex remediation: Hide competing peer skills behind skills-broker");
     } finally {
       await rm(runtimeDirectory, { recursive: true, force: true });
     }

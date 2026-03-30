@@ -47,7 +47,7 @@ async function createClaudeShell(
   await mkdir(join(installDirectory, ".claude-plugin"), { recursive: true });
   await writeFile(
     join(installDirectory, ".claude-plugin", "plugin.json"),
-    JSON.stringify({ name: "skills-broker-claude-code", version: "0.1.1" }),
+    JSON.stringify({ name: "skills-broker-claude-code", version: "0.1.3" }),
     "utf8"
   );
   await writeFile(join(installDirectory, "SKILL.md"), "# Skills Broker\n", "utf8");
@@ -161,10 +161,15 @@ describe("runBroker decline contract", () => {
       JSON.stringify({
         skills: [
           {
-            id: "skill-web-content-to-markdown",
+            id: "web-content-to-markdown",
             kind: "skill",
             label: "Web Content to Markdown",
-            intent: "web_content_to_markdown"
+            intent: "web_content_to_markdown",
+            implementation: {
+              id: "baoyu.url_to_markdown",
+              type: "local_skill",
+              ownerSurface: "broker_owned_downstream"
+            }
           }
         ]
       }),

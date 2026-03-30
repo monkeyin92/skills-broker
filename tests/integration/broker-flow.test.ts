@@ -30,7 +30,8 @@ describe("runBroker", () => {
 
       expect(result.ok).toBe(true);
       expect(result.outcome.code).toBe("HANDOFF_READY");
-      expect(result.winner.id).toBe("skill-web-content-to-markdown");
+      expect(result.winner.id).toBe("web-content-to-markdown");
+      expect(result.handoff.chosenImplementation.id).toBe("baoyu.url_to_markdown");
       expect(result.handoff.brokerDone).toBe(true);
       expect(result.handoff.candidate.id).toBe(result.winner.id);
       expect(result.handoff.request).toEqual({
@@ -139,10 +140,15 @@ describe("runBroker", () => {
       JSON.stringify({
         skills: [
           {
-            id: "skill-web-content-to-markdown",
+            id: "web-content-to-markdown",
             kind: "skill",
             label: "Web Content to Markdown",
-            intent: "web_content_to_markdown"
+            intent: "web_content_to_markdown",
+            implementation: {
+              id: "baoyu.url_to_markdown",
+              type: "local_skill",
+              ownerSurface: "broker_owned_downstream"
+            }
           }
         ]
       }),
@@ -159,7 +165,7 @@ describe("runBroker", () => {
 
       expect(result.ok).toBe(true);
       expect(result.outcome.code).toBe("HANDOFF_READY");
-      expect(result.winner.id).toBe("skill-web-content-to-markdown");
+      expect(result.winner.id).toBe("web-content-to-markdown");
     } finally {
       await rm(runtime.directory, { recursive: true, force: true });
     }

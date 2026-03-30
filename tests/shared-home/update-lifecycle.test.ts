@@ -296,6 +296,104 @@ describe("shared-home lifecycle paths", () => {
     }
   });
 
+  it("warns when a managed broker shell still has competing peer skills beside it", async () => {
+    const runtimeDirectory = await mkdtemp(
+      join(tmpdir(), "skills-broker-update-peer-warning-")
+    );
+    const brokerHomeDirectory = join(runtimeDirectory, ".skills-broker");
+    const claudeCodeInstallDirectory = join(
+      runtimeDirectory,
+      ".claude",
+      "skills",
+      "skills-broker"
+    );
+
+    try {
+      await mkdir(join(runtimeDirectory, ".claude", "skills", "baoyu-url-to-markdown"), {
+        recursive: true
+      });
+
+      const result = await updateSharedBrokerHome({
+        brokerHomeDirectory,
+        claudeCodeInstallDirectory,
+        homeDirectory: runtimeDirectory
+      });
+
+      expect(result.status).toBe("degraded_success");
+      expect(result.hosts).toContainEqual({
+        name: "claude-code",
+        status: "installed",
+        competingPeerSkills: ["baoyu-url-to-markdown"],
+        remediation: {
+          action: "hide_competing_peer_skills",
+          targetDirectory: join(
+            brokerHomeDirectory,
+            "downstream",
+            "claude-code",
+            "skills"
+          ),
+          peerSkills: ["baoyu-url-to-markdown"],
+          message: expect.stringContaining("Hide competing peer skills behind skills-broker")
+        }
+      });
+      expect(result.warnings).toContain(
+        "claude-code: competing peer skills detected (baoyu-url-to-markdown); broker-first hit rate may be reduced until these peer skills are hidden behind skills-broker"
+      );
+    } finally {
+      await rm(runtimeDirectory, { recursive: true, force: true });
+    }
+  });
+
+  it("repairs the host surface by migrating competing peer skills behind broker home", async () => {
+    const runtimeDirectory = await mkdtemp(
+      join(tmpdir(), "skills-broker-update-peer-repair-")
+    );
+    const brokerHomeDirectory = join(runtimeDirectory, ".skills-broker");
+    const claudeCodeInstallDirectory = join(
+      runtimeDirectory,
+      ".claude",
+      "skills",
+      "skills-broker"
+    );
+    const peerSkillDirectory = join(
+      runtimeDirectory,
+      ".claude",
+      "skills",
+      "baoyu-url-to-markdown"
+    );
+    const migratedSkillPath = join(
+      brokerHomeDirectory,
+      "downstream",
+      "claude-code",
+      "skills",
+      "baoyu-url-to-markdown",
+      "SKILL.md"
+    );
+
+    try {
+      await mkdir(peerSkillDirectory, { recursive: true });
+      await writeFile(join(peerSkillDirectory, "SKILL.md"), "# peer skill\n", "utf8");
+
+      const result = await updateSharedBrokerHome({
+        brokerHomeDirectory,
+        claudeCodeInstallDirectory,
+        homeDirectory: runtimeDirectory,
+        repairHostSurface: true
+      });
+
+      expect(result.status).toBe("success");
+      expect(result.hosts).toContainEqual({
+        name: "claude-code",
+        status: "installed",
+        migratedPeerSkills: ["baoyu-url-to-markdown"]
+      });
+      await expect(access(join(peerSkillDirectory, "SKILL.md"))).rejects.toThrow();
+      await expect(access(migratedSkillPath)).resolves.toBeUndefined();
+    } finally {
+      await rm(runtimeDirectory, { recursive: true, force: true });
+    }
+  });
+
   it("does not overwrite an existing unmanaged host directory", async () => {
     const runtimeDirectory = await mkdtemp(
       join(tmpdir(), "skills-broker-update-unmanaged-conflict-")

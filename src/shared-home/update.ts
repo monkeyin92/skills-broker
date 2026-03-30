@@ -9,6 +9,12 @@ import {
 } from "../hosts/codex/install.js";
 import { readManagedShellManifest } from "./ownership.js";
 import {
+  buildPeerSkillRemediation,
+  competingPeerSkillsWarning,
+  detectCompetingPeerSkills,
+  migrateCompetingPeerSkills
+} from "./host-surface.js";
+import {
   installSharedBrokerHome,
   resolveSharedBrokerHomeLayout,
   type InstallSharedBrokerHomeOptions
@@ -37,6 +43,14 @@ export type UpdateLifecycleResult = {
     name: "claude-code" | "codex";
     status: HostLifecycleStatus;
     reason?: string;
+    competingPeerSkills?: string[];
+    migratedPeerSkills?: string[];
+    remediation?: {
+      action: "hide_competing_peer_skills";
+      targetDirectory: string;
+      peerSkills: string[];
+      message: string;
+    };
   }>;
   warnings: string[];
 };
@@ -46,6 +60,7 @@ export type UpdateSharedBrokerHomeOptions = InstallSharedBrokerHomeOptions & {
   claudeCodeInstallDirectory?: string;
   codexInstallDirectory?: string;
   dryRun?: boolean;
+  repairHostSurface?: boolean;
 };
 
 type HostLifecycleEntry = UpdateLifecycleResult["hosts"][number];
@@ -84,7 +99,10 @@ function resolveOverallStatus(
   }
 
   const problemCount = hosts.filter(
-    (host) => host.status === "skipped_conflict" || host.status === "failed"
+    (host) =>
+      host.status === "skipped_conflict" ||
+      host.status === "failed" ||
+      (host.competingPeerSkills?.length ?? 0) > 0
   ).length;
 
   if (problemCount === 0) {
@@ -225,9 +243,24 @@ async function updateHost(
   }
 
   if (options.dryRun) {
+    const competingPeerSkills = await detectCompetingPeerSkills(installDirectory);
+    if (competingPeerSkills.length > 0) {
+      warnings.push(competingPeerSkillsWarning(name, competingPeerSkills));
+    }
+
     return {
       name,
-      status: wasManaged ? "up_to_date" : "planned_install"
+      status: wasManaged ? "up_to_date" : "planned_install",
+      ...(competingPeerSkills.length > 0
+        ? {
+            competingPeerSkills,
+            remediation: buildPeerSkillRemediation(
+              name,
+              options.brokerHomeDirectory,
+              competingPeerSkills
+            )
+          }
+        : {})
     };
   }
 
@@ -239,9 +272,40 @@ async function updateHost(
       options.projectRoot
     );
 
+    let competingPeerSkills = await detectCompetingPeerSkills(installDirectory);
+    let migratedPeerSkills: string[] = [];
+
+    if (competingPeerSkills.length > 0 && options.repairHostSurface) {
+      const migration = await migrateCompetingPeerSkills(
+        name,
+        installDirectory,
+        options.brokerHomeDirectory,
+        competingPeerSkills
+      );
+
+      migratedPeerSkills = migration.migratedPeerSkills;
+      warnings.push(...migration.warnings);
+      competingPeerSkills = migration.remainingPeerSkills;
+    }
+
+    if (competingPeerSkills.length > 0) {
+      warnings.push(competingPeerSkillsWarning(name, competingPeerSkills));
+    }
+
     return {
       name,
-      status: wasManaged ? "updated" : "installed"
+      status: wasManaged ? "updated" : "installed",
+      ...(migratedPeerSkills.length > 0 ? { migratedPeerSkills } : {}),
+      ...(competingPeerSkills.length > 0
+        ? {
+            competingPeerSkills,
+            remediation: buildPeerSkillRemediation(
+              name,
+              options.brokerHomeDirectory,
+              competingPeerSkills
+            )
+          }
+        : {})
     };
   } catch (error) {
     const reason = error instanceof Error ? error.message : String(error);

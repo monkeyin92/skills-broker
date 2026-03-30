@@ -2,6 +2,11 @@ import { access, readdir, stat } from "node:fs/promises";
 import { resolveSharedBrokerHomeLayout } from "./install.js";
 import { readManagedShellManifest } from "./ownership.js";
 import { detectWritableDirectory } from "./detect.js";
+import {
+  buildPeerSkillRemediation,
+  competingPeerSkillsWarning,
+  detectCompetingPeerSkills
+} from "./host-surface.js";
 import { detectLifecycleHostTargets } from "./paths.js";
 
 export type DoctorLifecycleResult = {
@@ -14,6 +19,13 @@ export type DoctorLifecycleResult = {
     name: "claude-code" | "codex";
     status: "detected" | "not_detected" | "not_writable" | "conflict";
     reason?: string;
+    competingPeerSkills?: string[];
+    remediation?: {
+      action: "hide_competing_peer_skills";
+      targetDirectory: string;
+      peerSkills: string[];
+      message: string;
+    };
   }>;
   warnings: string[];
 };
@@ -94,6 +106,7 @@ async function doctorHost(
   name: "claude-code" | "codex",
   installDirectory: string | undefined,
   notDetectedReason: string | undefined,
+  brokerHomeDirectory: string,
   warnings: string[]
 ): Promise<DoctorHostEntry> {
   if (installDirectory === undefined) {
@@ -120,10 +133,26 @@ async function doctorHost(
 
   const manifestState = await readManagedShellManifest(installDirectory);
   if (manifestState.status === "managed") {
+    const competingPeerSkills = await detectCompetingPeerSkills(installDirectory);
+
+    if (competingPeerSkills.length > 0) {
+      warnings.push(competingPeerSkillsWarning(name, competingPeerSkills));
+    }
+
     return {
       name,
       status: "detected",
-      reason: "managed by skills-broker"
+      reason: "managed by skills-broker",
+      ...(competingPeerSkills.length > 0
+        ? {
+            competingPeerSkills,
+            remediation: buildPeerSkillRemediation(
+              name,
+              brokerHomeDirectory,
+              competingPeerSkills
+            )
+          }
+        : {})
     };
   }
 
@@ -186,12 +215,14 @@ export async function doctorSharedBrokerHome(
         "claude-code",
         hostTargets.claudeCode.installDirectory,
         hostTargets.claudeCode.reason,
+        options.brokerHomeDirectory,
         warnings
       ),
       await doctorHost(
         "codex",
         hostTargets.codex.installDirectory,
         hostTargets.codex.reason,
+        options.brokerHomeDirectory,
         warnings
       )
     ],

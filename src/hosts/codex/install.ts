@@ -14,7 +14,7 @@ export type InstallCodexHostShellResult = {
 };
 
 const RUNNER_FILE_NAME = "run-broker";
-const DEFAULT_VERSION = "0.1.1";
+const DEFAULT_VERSION = "0.1.3";
 const HOST_SHELL_NAME = "skills-broker";
 
 function buildSkillMarkdown(installDirectory: string): string {

@@ -1,4 +1,4 @@
-import { chmod, mkdtemp, mkdir, rm } from "node:fs/promises";
+import { chmod, mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -101,6 +101,61 @@ describe("doctor shared broker home", () => {
           reason: expect.stringContaining("--codex-dir")
         }
       ]);
+    } finally {
+      await rm(runtimeDirectory, { recursive: true, force: true });
+    }
+  });
+
+  it("includes structured remediation when competing peer skills are detected", async () => {
+    const runtimeDirectory = await mkdtemp(join(tmpdir(), "skills-broker-doctor-remediation-"));
+    const brokerHomeDirectory = join(runtimeDirectory, ".skills-broker");
+    const codexInstallDirectory = join(
+      runtimeDirectory,
+      ".agents",
+      "skills",
+      "skills-broker"
+    );
+
+    try {
+      await mkdir(join(runtimeDirectory, ".codex"), { recursive: true });
+      await mkdir(codexInstallDirectory, { recursive: true });
+      await mkdir(
+        join(runtimeDirectory, ".agents", "skills", "baoyu-danger-x-to-markdown"),
+        { recursive: true }
+      );
+      await writeFile(
+        join(codexInstallDirectory, ".skills-broker.json"),
+        JSON.stringify({
+          managedBy: "skills-broker",
+          host: "codex",
+          version: "0.1.3",
+          brokerHome: brokerHomeDirectory
+        }),
+        "utf8"
+      );
+
+      const result = await doctorSharedBrokerHome({
+        brokerHomeDirectory,
+        homeDirectory: runtimeDirectory
+      });
+
+      expect(result.hosts).toContainEqual({
+        name: "codex",
+        status: "detected",
+        reason: "managed by skills-broker",
+        competingPeerSkills: ["baoyu-danger-x-to-markdown"],
+        remediation: {
+          action: "hide_competing_peer_skills",
+          targetDirectory: join(
+            brokerHomeDirectory,
+            "downstream",
+            "codex",
+            "skills"
+          ),
+          peerSkills: ["baoyu-danger-x-to-markdown"],
+          message: expect.stringContaining("Hide competing peer skills behind skills-broker")
+        }
+      });
     } finally {
       await rm(runtimeDirectory, { recursive: true, force: true });
     }

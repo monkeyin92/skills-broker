@@ -9,6 +9,11 @@ function createWinner(): CapabilityCard {
     kind: "skill",
     label: "Winner",
     intent: "web_content_to_markdown",
+    implementation: {
+      id: "baoyu.url_to_markdown",
+      type: "local_skill",
+      ownerSurface: "broker_owned_downstream"
+    },
     hosts: {
       currentHostSupported: true,
       portabilityScore: 1
@@ -38,5 +43,10 @@ describe("buildHandoffEnvelope", () => {
 
     expect(handoff.brokerDone).toBe(true);
     expect(handoff.request).toEqual(request);
+    expect(handoff.chosenImplementation).toEqual({
+      id: "baoyu.url_to_markdown",
+      type: "local_skill",
+      ownerSurface: "broker_owned_downstream"
+    });
   });
 });

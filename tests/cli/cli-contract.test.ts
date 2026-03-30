@@ -37,10 +37,15 @@ test("cli accepts a raw envelope for the current webpage flow", async () => {
       JSON.stringify({
         skills: [
           {
-            id: "skill-web-content-to-markdown",
+            id: "web-content-to-markdown",
             kind: "skill",
             label: "Web Content to Markdown",
-            intent: "web_content_to_markdown"
+            intent: "web_content_to_markdown",
+            implementation: {
+              id: "baoyu.url_to_markdown",
+              type: "local_skill",
+              ownerSurface: "broker_owned_downstream"
+            }
           }
         ]
       }),
@@ -72,7 +77,10 @@ test("cli accepts a raw envelope for the current webpage flow", async () => {
         code: "HANDOFF_READY"
       },
       handoff: {
-        brokerDone: true
+        brokerDone: true,
+        chosenImplementation: {
+          id: "baoyu.url_to_markdown"
+        }
       }
     });
   } finally {
@@ -87,7 +95,10 @@ test("cli accepts a raw envelope for the current webpage flow", async () => {
       code: "HANDOFF_READY"
     },
     handoff: {
-      brokerDone: true
+      brokerDone: true,
+      chosenImplementation: {
+        id: "baoyu.url_to_markdown"
+      }
     }
   });
 });
@@ -110,10 +121,15 @@ test("cli accepts a social-post envelope and returns HANDOFF_READY", async () =>
       JSON.stringify({
         skills: [
           {
-            id: "skill-social-post-to-markdown",
+            id: "social-post-to-markdown",
             kind: "skill",
             label: "Social Post to Markdown",
-            intent: "social_post_to_markdown"
+            intent: "social_post_to_markdown",
+            implementation: {
+              id: "baoyu.x_post_to_markdown",
+              type: "local_skill",
+              ownerSurface: "broker_owned_downstream"
+            }
           }
         ]
       }),
@@ -145,6 +161,9 @@ test("cli accepts a social-post envelope and returns HANDOFF_READY", async () =>
         code: "HANDOFF_READY"
       },
       handoff: {
+        chosenImplementation: {
+          id: "baoyu.x_post_to_markdown"
+        },
         request: {
           intent: "social_post_to_markdown"
         }
@@ -162,6 +181,9 @@ test("cli accepts a social-post envelope and returns HANDOFF_READY", async () =>
       code: "HANDOFF_READY"
     },
     handoff: {
+      chosenImplementation: {
+        id: "baoyu.x_post_to_markdown"
+      },
       request: {
         intent: "social_post_to_markdown"
       }
@@ -187,10 +209,15 @@ test("cli accepts an explicit capability discovery envelope and returns HANDOFF_
       JSON.stringify({
         skills: [
           {
-            id: "skill-capability-discovery",
+            id: "capability-discovery",
             kind: "skill",
             label: "Capability Discovery",
-            intent: "capability_discovery_or_install"
+            intent: "capability_discovery_or_install",
+            implementation: {
+              id: "skills_broker.capability_discovery",
+              type: "broker_workflow",
+              ownerSurface: "broker_owned_downstream"
+            }
           }
         ]
       }),
@@ -221,6 +248,9 @@ test("cli accepts an explicit capability discovery envelope and returns HANDOFF_
         code: "HANDOFF_READY"
       },
       handoff: {
+        chosenImplementation: {
+          id: "skills_broker.capability_discovery"
+        },
         request: {
           intent: "capability_discovery_or_install"
         }
@@ -238,6 +268,9 @@ test("cli accepts an explicit capability discovery envelope and returns HANDOFF_
       code: "HANDOFF_READY"
     },
     handoff: {
+      chosenImplementation: {
+        id: "skills_broker.capability_discovery"
+      },
       request: {
         intent: "capability_discovery_or_install"
       }
