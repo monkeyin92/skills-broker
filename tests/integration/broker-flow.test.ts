@@ -214,6 +214,11 @@ describe("runBroker", () => {
           packageId: "io.example/url-to-markdown",
           installState: "available",
           acquisition: "mcp_bundle"
+        },
+        leafCapability: {
+          capabilityId: "io.example/url-to-markdown",
+          packageId: "io.example/url-to-markdown",
+          subskillId: "url-to-markdown"
         }
       });
     } finally {

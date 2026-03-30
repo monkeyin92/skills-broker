@@ -33,6 +33,28 @@ async function readRecordedSearchResponse(
   return JSON.parse(raw) as McpRegistrySearchResponse;
 }
 
+function normalizeIdentifier(value: string): string {
+  const normalized = value
+    .trim()
+    .toLowerCase()
+    .replace(/[_\s/]+/g, "-")
+    .replace(/[^a-z0-9.-]+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "");
+
+  return normalized.length > 0 ? normalized : "default";
+}
+
+function deriveLeafSubskillId(server: McpRegistryServer): string {
+  const rawSegment =
+    server.name?.split("/").pop() ??
+    server.title ??
+    server.name ??
+    "default";
+
+  return normalizeIdentifier(rawSegment);
+}
+
 function toCapabilityCandidate(
   server: McpRegistryServer | undefined,
   intent: BrokerIntent
@@ -40,6 +62,8 @@ function toCapabilityCandidate(
   if (server?.name === undefined || !matchesIntent(server, intent)) {
     return null;
   }
+
+  const leafSubskillId = deriveLeafSubskillId(server);
 
   return {
     id: server.name,
@@ -50,7 +74,29 @@ function toCapabilityCandidate(
       packageId: server.name,
       label: server.title ?? server.name,
       installState: "available",
-      acquisition: "mcp_bundle"
+      acquisition: "mcp_bundle",
+      probe: {
+        layouts: ["single_skill_directory"],
+        manifestNames: [server.name, server.title ?? server.name]
+      }
+    },
+    leaf: {
+      capabilityId: server.name,
+      packageId: server.name,
+      subskillId: leafSubskillId,
+      probe: {
+        manifestNames: [server.name, server.title ?? server.name],
+        aliases: [leafSubskillId]
+      }
+    },
+    implementation: {
+      id: server.name,
+      type: "mcp_server",
+      ownerSurface: "broker_owned_downstream"
+    },
+    sourceMetadata: {
+      registryName: server.name,
+      registryTitle: server.title
     }
   };
 }
