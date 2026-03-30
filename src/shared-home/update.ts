@@ -11,7 +11,8 @@ import { readManagedShellManifest } from "./ownership.js";
 import {
   buildPeerSkillRemediation,
   competingPeerSkillsWarning,
-  detectCompetingPeerSkills
+  detectCompetingPeerSkills,
+  migrateCompetingPeerSkills
 } from "./host-surface.js";
 import {
   installSharedBrokerHome,
@@ -43,6 +44,7 @@ export type UpdateLifecycleResult = {
     status: HostLifecycleStatus;
     reason?: string;
     competingPeerSkills?: string[];
+    migratedPeerSkills?: string[];
     remediation?: {
       action: "hide_competing_peer_skills";
       targetDirectory: string;
@@ -58,6 +60,7 @@ export type UpdateSharedBrokerHomeOptions = InstallSharedBrokerHomeOptions & {
   claudeCodeInstallDirectory?: string;
   codexInstallDirectory?: string;
   dryRun?: boolean;
+  repairHostSurface?: boolean;
 };
 
 type HostLifecycleEntry = UpdateLifecycleResult["hosts"][number];
@@ -269,7 +272,22 @@ async function updateHost(
       options.projectRoot
     );
 
-    const competingPeerSkills = await detectCompetingPeerSkills(installDirectory);
+    let competingPeerSkills = await detectCompetingPeerSkills(installDirectory);
+    let migratedPeerSkills: string[] = [];
+
+    if (competingPeerSkills.length > 0 && options.repairHostSurface) {
+      const migration = await migrateCompetingPeerSkills(
+        name,
+        installDirectory,
+        options.brokerHomeDirectory,
+        competingPeerSkills
+      );
+
+      migratedPeerSkills = migration.migratedPeerSkills;
+      warnings.push(...migration.warnings);
+      competingPeerSkills = migration.remainingPeerSkills;
+    }
+
     if (competingPeerSkills.length > 0) {
       warnings.push(competingPeerSkillsWarning(name, competingPeerSkills));
     }
@@ -277,6 +295,7 @@ async function updateHost(
     return {
       name,
       status: wasManaged ? "updated" : "installed",
+      ...(migratedPeerSkills.length > 0 ? { migratedPeerSkills } : {}),
       ...(competingPeerSkills.length > 0
         ? {
             competingPeerSkills,

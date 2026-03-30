@@ -29,6 +29,7 @@ export type LifecycleCliResult = {
   command: ValidCommand;
   dryRun: boolean;
   purgeSharedHome: boolean;
+  repairHostSurface: boolean;
   outputMode: "text" | "json";
   brokerHomeOverride?: string;
   claudeDirOverride?: string;
@@ -39,6 +40,7 @@ export async function runLifecycleCli(argv: string[]): Promise<LifecycleCliResul
   let commandInput: string | undefined;
   let dryRun = false;
   let purgeSharedHome = false;
+  let repairHostSurface = false;
   let outputMode: LifecycleCliResult["outputMode"] = "text";
   let brokerHomeOverride: string | undefined;
   let claudeDirOverride: string | undefined;
@@ -58,6 +60,11 @@ export async function runLifecycleCli(argv: string[]): Promise<LifecycleCliResul
 
     if (arg === "--purge" || arg === "--all") {
       purgeSharedHome = true;
+      continue;
+    }
+
+    if (arg === "--repair-host-surface") {
+      repairHostSurface = true;
       continue;
     }
 
@@ -97,6 +104,7 @@ export async function runLifecycleCli(argv: string[]): Promise<LifecycleCliResul
     command: candidate,
     dryRun,
     purgeSharedHome,
+    repairHostSurface,
     outputMode,
     brokerHomeOverride,
     claudeDirOverride,
@@ -125,6 +133,7 @@ async function main(argv = process.argv.slice(2)) {
           ? undefined
           : paths.codexInstallDirectory,
       dryRun: result.dryRun,
+      repairHostSurface: result.repairHostSurface,
       projectRoot: resolvePackageRoot()
     });
 
@@ -176,6 +185,9 @@ async function main(argv = process.argv.slice(2)) {
     }
     if (result.purgeSharedHome) {
       pieces.push("purge");
+    }
+    if (result.repairHostSurface) {
+      pieces.push("repair-host-surface");
     }
     console.log(pieces.join("; "));
   }

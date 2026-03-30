@@ -76,6 +76,11 @@ export function formatLifecycleResult(
   for (const host of result.hosts) {
     const suffix = host.reason ? ` (${host.reason})` : "";
     lines.push(`Host ${host.name}: ${host.status}${suffix}`);
+    if ((host.migratedPeerSkills?.length ?? 0) > 0) {
+      lines.push(
+        `Host ${host.name} migrated peers: ${host.migratedPeerSkills?.join(", ")}`
+      );
+    }
     if ((host.competingPeerSkills?.length ?? 0) > 0) {
       lines.push(
         `Host ${host.name} competing peers: ${host.competingPeerSkills?.join(", ")}`
@@ -84,6 +89,10 @@ export function formatLifecycleResult(
         lines.push(`Host ${host.name} remediation: ${host.remediation.message}`);
       }
     }
+  }
+
+  for (const warning of result.warnings) {
+    lines.push(`Warning: ${warning}`);
   }
 
   return lines.join("\n");

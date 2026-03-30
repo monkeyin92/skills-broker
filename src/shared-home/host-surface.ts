@@ -1,4 +1,4 @@
-import { readdir, stat } from "node:fs/promises";
+import { cp, mkdir, readdir, rename, rm, stat } from "node:fs/promises";
 import { dirname, join } from "node:path";
 
 const COMPETING_PEER_SKILL_NAMES = [
@@ -77,5 +77,79 @@ export function buildPeerSkillRemediation(
     targetDirectory,
     peerSkills,
     message: `Hide competing peer skills behind skills-broker by moving ${peerSkills.join(", ")} out of the host-visible skills surface and into ${targetDirectory}`
+  };
+}
+
+export function resolveDownstreamSkillStoreDirectory(
+  brokerHomeDirectory: string,
+  hostName: "claude-code" | "codex"
+): string {
+  return join(brokerHomeDirectory, "downstream", hostName, "skills");
+}
+
+type MigratePeerSkillsResult = {
+  migratedPeerSkills: string[];
+  remainingPeerSkills: string[];
+  warnings: string[];
+};
+
+async function moveDirectory(sourceDirectory: string, targetDirectory: string): Promise<void> {
+  try {
+    await rename(sourceDirectory, targetDirectory);
+  } catch (error) {
+    const nodeError = error as NodeJS.ErrnoException;
+
+    if (nodeError.code !== "EXDEV") {
+      throw error;
+    }
+
+    await cp(sourceDirectory, targetDirectory, { recursive: true, force: false });
+    await rm(sourceDirectory, { recursive: true, force: true });
+  }
+}
+
+export async function migrateCompetingPeerSkills(
+  hostName: "claude-code" | "codex",
+  installDirectory: string,
+  brokerHomeDirectory: string,
+  skillNames: string[]
+): Promise<MigratePeerSkillsResult> {
+  const hostSkillsDirectory = dirname(installDirectory);
+  const downstreamDirectory = resolveDownstreamSkillStoreDirectory(
+    brokerHomeDirectory,
+    hostName
+  );
+  const migratedPeerSkills: string[] = [];
+  const remainingPeerSkills: string[] = [];
+  const warnings: string[] = [];
+
+  await mkdir(downstreamDirectory, { recursive: true });
+
+  for (const skillName of skillNames) {
+    const sourceDirectory = join(hostSkillsDirectory, skillName);
+    const targetDirectory = join(downstreamDirectory, skillName);
+
+    if (await directoryExists(targetDirectory)) {
+      remainingPeerSkills.push(skillName);
+      warnings.push(
+        `${hostName}: cannot migrate ${skillName} because downstream target already exists at ${targetDirectory}`
+      );
+      continue;
+    }
+
+    try {
+      await moveDirectory(sourceDirectory, targetDirectory);
+      migratedPeerSkills.push(skillName);
+    } catch (error) {
+      remainingPeerSkills.push(skillName);
+      const message = error instanceof Error ? error.message : String(error);
+      warnings.push(`${hostName}: failed to migrate ${skillName}: ${message}`);
+    }
+  }
+
+  return {
+    migratedPeerSkills,
+    remainingPeerSkills,
+    warnings
   };
 }
