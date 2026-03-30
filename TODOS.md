@@ -29,6 +29,14 @@
 - `social_post_to_markdown`
 - `capability_discovery_or_install`
 
+### Shipped package-aware capability routing with manifest-based availability probing
+
+**What:** The broker now models routed leaf capabilities separately from owning packages, preserves both identities in ranking and handoff, and only upgrades package availability after validating real package and leaf manifests.
+
+**Why:** This fixes the earlier flattening bug where package identity, subskill identity, and implementation identity were all collapsed into one string. It also prevents fake "installed" upgrades from raw directory hits.
+
+**Shipped:** package-plus-leaf capability cards, package-aware acquisition hints, runtime manifest-based install detection, explicit `probe` contracts in the host catalog, catalog-load validation for those contracts, and MCP candidate alignment onto the same internal routing shape.
+
 ## Next
 
 ### Replace fixed-intent routing with capability-query routing
@@ -37,7 +45,7 @@
 
 **Why:** The current three-intent router proved the first lake, but it will not scale to cross-language requests or broader reusable workflows like requirements analysis, QA, and investigation.
 
-**Context:** Today `/Users/monkeyin/projects/skills-broker/src/core/request.ts` and `/Users/monkeyin/projects/skills-broker/src/core/types.ts` still assume a small fixed `intent` list. The next product step is to let users describe the job they want done, then have the broker find the best skill, MCP, or workflow even when the user does not know the skill name. The newer proof families also showed a second design gap: package identity and subskill identity still need to be separated cleanly.
+**Context:** The broker already supports structured `capabilityQuery`, richer capability metadata, package-versus-leaf identity, and package-aware probing. The remaining gap is at the top boundary: `/Users/monkeyin/projects/skills-broker/src/core/request.ts` and `/Users/monkeyin/projects/skills-broker/src/core/types.ts` still use the legacy fixed `intent` enum as the coarse lane gate.
 
 **Effort:** L
 **Priority:** P0
@@ -49,7 +57,7 @@
 
 **Why:** The current proof path can route to concrete winners, but it still flattens package and subskill identity into one implementation id. That will not scale once packages expose many subskills or multiple packages compete for the same job family.
 
-**Context:** Today `/Users/monkeyin/projects/skills-broker/config/host-skills.seed.json` can point a proof family at values like `gstack.office_hours`, and `/Users/monkeyin/projects/skills-broker/src/broker/handoff.ts` can expose a chosen implementation. The missing product layer is explicit package-aware install semantics plus leaf-first routing across packages.
+**Context:** The core package-aware model is now in `main`: `/Users/monkeyin/projects/skills-broker/config/host-skills.seed.json`, `/Users/monkeyin/projects/skills-broker/src/core/capability-card.ts`, `/Users/monkeyin/projects/skills-broker/src/broker/run.ts`, and `/Users/monkeyin/projects/skills-broker/src/broker/package-availability.ts` already distinguish packages from routed leaf capabilities. The remaining work is to keep expanding the package catalog, reduce legacy compatibility bridges, and broaden package-aware acquisition behavior.
 
 **Effort:** M
 **Priority:** P0

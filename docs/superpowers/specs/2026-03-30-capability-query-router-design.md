@@ -1,7 +1,7 @@
 # skills-broker Capability Query Router Design
 
 Date: 2026-03-30
-Status: Drafted after CEO review
+Status: Active design, partially implemented in `main`
 Builds on: `/Users/monkeyin/projects/skills-broker/docs/superpowers/specs/2026-03-28-broker-auto-router-design.md`
 Builds on: `/Users/monkeyin/projects/skills-broker/docs/superpowers/specs/2026-03-30-host-auto-routing-hit-rate-design.md`
 Builds on: `/Users/monkeyin/projects/skills-broker/docs/superpowers/specs/2026-03-30-broker-owned-downstream-capabilities.md`
@@ -18,6 +18,28 @@ The core shift is:
 - adding new capabilities should mostly mean adding metadata, not editing `request.ts`
 
 This is the path from "route 3 known intents" to "help the user find the right capability even when they do not know the skill name."
+
+## Implementation Status
+
+As of 2026-03-30, the capability-query direction is no longer only a design doc.
+
+The following pieces are already live in `main`:
+
+- shared `capabilityQuery` types and envelope validation
+- richer capability cards with `jobFamilies`, `targetTypes`, `artifacts`, and examples
+- query-aware ranking instead of pure `intent === requestIntent`
+- package-aware and leaf-aware identity on broker candidates and handoff
+- proof families for requirements analysis and QA
+
+The following constraint still exists:
+
+- the broker still uses the legacy fixed `BrokerIntent` enum as the top-level lane boundary
+
+So the current product state is:
+
+- structured capability queries are real
+- leaf-first capability matching is real
+- fixed-intent routing is not fully deleted yet
 
 ## Problem Statement
 
@@ -258,6 +280,15 @@ They should evolve toward richer matching metadata, including:
 - portability
 - install burden
 - confidence hints
+
+This has already started in `/Users/monkeyin/projects/skills-broker/src/core/capability-card.ts`.
+
+The current runtime now expects capability metadata to carry both:
+
+- retrieval metadata for query matching
+- identity metadata for package and leaf routing
+
+That is now the real foundation, not a future abstraction.
 - example requests
 
 A future shape can look like:

@@ -1,7 +1,7 @@
 # skills-broker Package and Subskill Catalog Design
 
 Date: 2026-03-30
-Status: Drafted after CEO review
+Status: Active design, core model implemented in `main`
 Builds on: `/Users/monkeyin/projects/skills-broker/docs/superpowers/specs/2026-03-30-capability-query-router-design.md`
 Builds on: `/Users/monkeyin/projects/skills-broker/docs/superpowers/specs/2026-03-30-broker-owned-downstream-capabilities.md`
 
@@ -27,6 +27,27 @@ It is not the durable product model.
 
 The routing unit should be the leaf capability.
 The acquisition and lifecycle unit should be the package.
+
+## Implementation Status
+
+This model is no longer theoretical.
+
+As of 2026-03-30, `main` already ships:
+
+- explicit `package` and `leaf` identity on capability cards
+- package-aware handoff fields
+- package-aware acquisition hints when the winning leaf belongs to an uninstalled package
+- runtime package availability probing
+- manifest-based install detection instead of raw directory-hit upgrades
+- catalog-side `probe` contracts for packages and leaf capabilities
+- load-time validation for those probe contracts
+- MCP candidates aligned onto the same package-plus-leaf shape
+
+This means the design center is now real:
+
+- retrieve at the leaf layer
+- install and lifecycle-manage at the package layer
+- validate package and leaf identity through metadata contracts, not just guessed directory names
 
 ## Problem Statement
 
@@ -225,11 +246,11 @@ Example mental model:
 {
   "packageId": "gstack",
   "label": "gstack",
-  "kind": "skill_bundle",
-  "hosts": ["claude-code", "codex"],
-  "install": {
-    "present": true,
-    "acquisition": "local_skill_bundle"
+  "installState": "installed",
+  "acquisition": "local_skill_bundle",
+  "probe": {
+    "layouts": ["bundle_root_children", "nested_agent_skills"],
+    "manifestNames": ["gstack"]
   }
 }
 ```
@@ -251,6 +272,7 @@ Suggested leaf fields:
 - `capabilityId`
 - `packageId`
 - `subskillId`
+- `probe`
 - `label`
 - `kind`
 - `query`
@@ -272,6 +294,10 @@ Example mental model:
   "capabilityId": "gstack.qa",
   "packageId": "gstack",
   "subskillId": "qa",
+  "probe": {
+    "manifestNames": ["qa"],
+    "aliases": ["gstack-qa"]
+  },
   "label": "Website QA",
   "kind": "skill",
   "query": {
@@ -288,6 +314,85 @@ Example mental model:
 
 The package is the thing you install.
 The leaf is the thing you route to.
+
+## Probe Contract
+
+The runtime now depends on an explicit probe contract on both layers.
+
+### Package probe
+
+The package probe describes how to validate that a package really exists on disk.
+
+Current shape:
+
+- `layouts`
+- `manifestFiles`
+- `manifestNames`
+- `aliases`
+
+Current layout modes:
+
+- `single_skill_directory`
+- `bundle_root_children`
+- `nested_agent_skills`
+
+This lets the broker distinguish between very different package shapes, such as:
+
+- a single standalone skill directory under `~/.agents/skills`
+- a bundle such as `gstack` whose subskills live directly under the root
+- a bundle whose routed skills live under `.agents/skills` or similar nested directories
+
+### Leaf probe
+
+The leaf probe describes how to validate that the specific subskill exists, not only the parent package.
+
+Current shape:
+
+- `manifestFiles`
+- `manifestNames`
+- `aliases`
+
+This is what fixes the old bug where seeing a package root could incorrectly upgrade every leaf inside that package to `installed`.
+
+## Runtime Install Detection
+
+The current runtime logic is now:
+
+1. find candidate roots
+2. validate package manifests against the package probe contract
+3. validate leaf manifests against the leaf probe contract
+4. only then upgrade `available -> installed`
+
+This is stricter than the earlier directory-hit approach.
+
+That strictness matters because the user outcome is binary:
+
+- either the broker can really hand off
+- or it should honestly recommend acquisition instead of bluffing
+
+## Catalog Validation
+
+The host skill catalog is now validated when loaded.
+
+That validation checks:
+
+- package-level probe layout values
+- probe string-array fields such as `manifestNames` and `aliases`
+- basic package and leaf identity shape
+
+This is important because a broken catalog entry should fail at load time, not silently degrade routing quality at runtime.
+
+## MCP Alignment
+
+MCP sources are now being shaped into the same internal model:
+
+- explicit package identity
+- explicit leaf identity
+- explicit implementation metadata
+- explicit probe hints
+
+That does not mean MCP install detection is feature-complete.
+It means the internal routing model is now unified enough that skill and MCP sources no longer need separate mental models inside the broker.
 
 ### Relationship Rules
 

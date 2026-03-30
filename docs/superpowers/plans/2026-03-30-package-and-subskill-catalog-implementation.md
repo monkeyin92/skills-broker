@@ -1,7 +1,7 @@
 # skills-broker Package and Subskill Catalog Implementation Plan
 
 Date: 2026-03-30
-Status: Drafted from package-and-subskill catalog spec
+Status: Incremental implementation in progress, core foundations shipped in `main`
 Builds on: `/Users/monkeyin/projects/skills-broker/docs/superpowers/specs/2026-03-30-package-and-subskill-catalog-design.md`
 
 ## Goal
@@ -35,6 +35,26 @@ But the current identity model is still flattened in places such as:
 - `/Users/monkeyin/projects/skills-broker/src/broker/handoff.ts`
 
 That means this migration should be additive first.
+
+## Shipped So Far
+
+The following parts of this plan are already live in `main`:
+
+- Task 1 foundations, explicit package and leaf identity types
+- Task 2 foundations, two-layer seed modeling in the host catalog
+- Task 3 foundations, leaf-first ranking with package-aware installed-state signals
+- Task 4 foundations, package-aware handoff fields with compatibility `chosenImplementation`
+- Task 5 foundations, package-aware acquisition hints and runtime availability probing
+- Task 6 proof families for requirements analysis and QA on top of the new model
+- Task 7 regression coverage for handoff, acquisition, package probing, host auto-routing, and catalog validation
+
+The biggest shipped delta after the original draft is this:
+
+- package availability is now validated through manifest and metadata contracts
+- host catalog entries now carry explicit `probe` contracts
+- MCP candidates are being aligned to the same package-plus-leaf model
+
+So this plan is now a migration tracker, not a greenfield proposal.
 
 ## Implementation Strategy
 
@@ -112,6 +132,7 @@ Acceptance:
 
 - `gstack` can expose multiple leaf capabilities cleanly
 - `baoyu` can expose one or many leaf capabilities without changing the core model
+- probe contracts can describe how package and leaf installation should be validated
 
 ### Task 3: Make ranking leaf-first and package-aware
 
@@ -167,6 +188,7 @@ Acceptance:
 
 - install and discovery no longer pretend that leaf identity alone is enough
 - future reuse can happen at the package level
+- package availability upgrades require validated package-plus-leaf presence, not raw directory hits
 
 ### Task 6: Migrate current proof families onto the new model
 
@@ -204,6 +226,23 @@ Acceptance:
 
 - no regression in the current shipped flows
 - package-versus-subskill identity is visible in tests, not just implied in docs
+- invalid probe contracts fail at catalog-load time with path-specific errors
+
+## Remaining Work
+
+The main unfinished pieces are now above the catalog layer, not inside it.
+
+Remaining product work:
+
+- keep shrinking the legacy fixed-intent boundary at the top of broker request normalization
+- decide how far MCP install semantics should go beyond "known but not installed"
+- document the now-shipped probe contract and catalog validation behavior in the higher-level architecture docs
+
+Remaining technical work:
+
+- add stronger schema ownership so seed validation rules are not duplicated across loaders
+- decide whether package and leaf probe contracts should become reusable shared config schemas
+- extend richer package metadata beyond local skill bundles and broker-native packages
 
 ## Migration Notes
 
