@@ -115,6 +115,8 @@ v0 currently includes:
 This is deliberately not "solve everything."  
 The point of v0 is to prove that a broker can pick and prepare the right capability better than a human manually browsing skills.
 
+**Current product phase:** improve real host auto-routing hit rate, so Claude Code and Codex ask the broker first for obvious external-capability work instead of leaving the broker installed-but-ignored.
+
 ## Architecture At A Glance
 
 ```mermaid
@@ -297,11 +299,13 @@ It does **not** yet provide:
 - broad auto-routing beyond clearly external capability requests
 - broad open-domain task coverage
 - live network discovery as the default runtime path
+- consistently strong broker-first hit rate across real host sessions
 
 ## Roadmap
 
 Likely next:
 
+- stronger broker-first hit rate in real Claude Code and Codex sessions
 - broader host support such as OpenCode
 - richer host-side observability around broker first-refusal decisions
 - more task families beyond the first markdown/discovery lake
@@ -372,11 +376,11 @@ No. It is a broker and routing layer.
 
 ### Is this production-ready?
 
-Not yet. It is a focused v0 with one host and one workflow.
+Not yet. It is still a focused v0, but it now includes a shared broker home, published lifecycle CLI, Claude Code and Codex thin shells, and a small first routed lake. The current phase is improving real host auto-routing hit rate.
 
-### Why Claude Code first?
+### Why Claude Code and Codex first?
 
-Because v0 needs one concrete host to prove the broker contract end to end before expanding to more hosts.
+Because the product first had to prove one shared broker contract across real code-native hosts before expanding further. Claude Code and Codex are the first two hosts on that path.
 
 ### Will Claude Code and Codex share the same capability knowledge?
 
@@ -384,7 +388,7 @@ Yes. The repository now includes an experimental shared-home flow so that Claude
 
 ### What is `skills-broker update` supposed to do?
 
-It is the planned product-level maintenance command for the shared-home model. The repository currently ships a repo-local precursor through `./scripts/update-shared-home.sh`; the final command should update the shared runtime, rescan known hosts, and install or repair thin host shells without wiping existing broker knowledge.
+It is the current product-level maintenance command for the shared-home model. It updates the shared runtime, rescans known hosts, and installs or repairs thin host shells without wiping existing broker knowledge by default.
 
 ### Why not just install more skills?
 

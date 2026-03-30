@@ -123,6 +123,7 @@ describe("runBroker", () => {
       expect(result.ok).toBe(false);
       expect(result.outcome.code).toBe("NO_CANDIDATE");
       expect(result.outcome.hostAction).toBe("offer_capability_discovery");
+      expect(result.outcome.message).toContain("Offer capability discovery or install help");
       expect(result.error.message).toContain("No candidate");
     } finally {
       await rm(runtime.directory, { recursive: true, force: true });
@@ -219,6 +220,7 @@ describe("runBroker", () => {
       expect(result.ok).toBe(false);
       expect(result.outcome.code).toBe("UNSUPPORTED_REQUEST");
       expect(result.outcome.hostAction).toBe("continue_normally");
+      expect(result.outcome.message).toContain("Continue with the host's normal workflow");
     } finally {
       await rm(runtime.directory, { recursive: true, force: true });
     }
@@ -243,6 +245,7 @@ describe("runBroker", () => {
       expect(result.ok).toBe(false);
       expect(result.outcome.code).toBe("AMBIGUOUS_REQUEST");
       expect(result.outcome.hostAction).toBe("ask_clarifying_question");
+      expect(result.outcome.message).toContain("needs clarification");
     } finally {
       await rm(runtime.directory, { recursive: true, force: true });
     }
