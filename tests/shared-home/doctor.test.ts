@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { formatLifecycleResult } from "../../src/shared-home/format";
 import { doctorSharedBrokerHome } from "../../src/shared-home/doctor";
+import { writeManagedShellManifest } from "../../src/shared-home/ownership";
 
 describe("doctor shared broker home", () => {
   it("explains why codex was not detected", async () => {
@@ -70,6 +71,43 @@ describe("doctor shared broker home", () => {
       expect(result.hosts[1]?.reason ?? "").toMatch(/not writable|permission/i);
     } finally {
       await chmod(parentDirectory, 0o755).catch(() => undefined);
+      await rm(runtimeDirectory, { recursive: true, force: true });
+    }
+  });
+
+  it("keeps an existing managed host detected even when the install directory is read-only", async () => {
+    const runtimeDirectory = await mkdtemp(join(tmpdir(), "skills-broker-doctor-managed-"));
+    const brokerHomeDirectory = join(runtimeDirectory, ".skills-broker");
+    const codexInstallDirectory = join(
+      runtimeDirectory,
+      ".agents",
+      "skills",
+      "skills-broker"
+    );
+
+    try {
+      await mkdir(codexInstallDirectory, { recursive: true });
+      await writeManagedShellManifest(codexInstallDirectory, {
+        managedBy: "skills-broker",
+        host: "codex",
+        version: "0.1.6",
+        brokerHome: brokerHomeDirectory
+      });
+      await chmod(codexInstallDirectory, 0o555);
+
+      const result = await doctorSharedBrokerHome({
+        brokerHomeDirectory,
+        homeDirectory: runtimeDirectory,
+        codexInstallDirectory
+      });
+
+      expect(result.hosts).toContainEqual({
+        name: "codex",
+        status: "detected",
+        reason: "managed by skills-broker"
+      });
+    } finally {
+      await chmod(codexInstallDirectory, 0o755).catch(() => undefined);
       await rm(runtimeDirectory, { recursive: true, force: true });
     }
   });

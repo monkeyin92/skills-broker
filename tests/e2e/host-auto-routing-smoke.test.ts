@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
 import { describe, expect, it } from "vitest";
+import { createSyntheticHostSkippedBrokerTrace } from "../../src/broker/trace";
 import { runClaudeCodeAdapter } from "../../src/hosts/claude-code/adapter";
 import { runCodexAdapter } from "../../src/hosts/codex/adapter";
 
@@ -212,5 +213,29 @@ describe("installed host-shell routing smoke", () => {
     } finally {
       await rm(runtimeDirectory, { recursive: true, force: true });
     }
+  });
+
+  it("records a synthetic host-selection trace when the host never invokes the broker", () => {
+    const trace = createSyntheticHostSkippedBrokerTrace({
+      requestText: "测下这个网站的质量：https://www.baidu.com",
+      host: "codex",
+      now: new Date("2026-03-31T02:45:00.000Z")
+    });
+
+    expect(trace).toEqual({
+      traceVersion: "2026-03-31",
+      requestText: "测下这个网站的质量：https://www.baidu.com",
+      host: "codex",
+      hostDecision: "handle_normally",
+      resultCode: "HOST_SKIPPED_BROKER",
+      missLayer: "host_selection",
+      normalizedBy: null,
+      requestSurface: null,
+      hostAction: "continue_normally",
+      candidateCount: null,
+      winnerId: null,
+      winnerPackageId: null,
+      timestamp: "2026-03-31T02:45:00.000Z"
+    });
   });
 });

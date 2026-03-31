@@ -29,7 +29,8 @@ describe("remove shared broker home", () => {
 
       const result = await removeSharedBrokerHome({
         brokerHomeDirectory,
-        codexInstallDirectory
+        codexInstallDirectory,
+        homeDirectory: runtimeDirectory
       });
 
       expect(result.command).toBe("remove");
@@ -67,7 +68,8 @@ describe("remove shared broker home", () => {
 
       const result = await removeSharedBrokerHome({
         brokerHomeDirectory,
-        codexInstallDirectory
+        codexInstallDirectory,
+        homeDirectory: runtimeDirectory
       });
 
       expect(result.hosts).toContainEqual({
@@ -103,6 +105,7 @@ describe("remove shared broker home", () => {
       const result = await removeSharedBrokerHome({
         brokerHomeDirectory,
         codexInstallDirectory,
+        homeDirectory: runtimeDirectory,
         purgeSharedHome: true
       });
 

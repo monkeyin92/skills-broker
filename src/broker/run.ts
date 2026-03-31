@@ -6,6 +6,10 @@ import { explainDecision } from "./explain.js";
 import { hydratePackageAvailability } from "./package-availability.js";
 import { prepareCandidate } from "./prepare.js";
 import { rankCapabilities } from "./rank.js";
+import {
+  createBrokerRoutingTrace,
+  type BrokerRoutingTrace
+} from "./trace.js";
 import { toCapabilityCard, type CapabilityCard } from "../core/capability-card.js";
 import {
   handleRefreshFailure,
@@ -57,6 +61,7 @@ type BrokerSuccessResult = {
   handoff: HandoffEnvelope;
   acquisition?: undefined;
   debug: BrokerDebug;
+  trace: BrokerRoutingTrace;
 };
 
 type BrokerFailureResult = {
@@ -72,6 +77,7 @@ type BrokerFailureResult = {
   };
   acquisition?: PackageAcquisitionHint;
   debug: BrokerDebug;
+  trace: BrokerRoutingTrace;
 };
 
 export type RunBrokerResult = BrokerSuccessResult | BrokerFailureResult;
@@ -100,7 +106,10 @@ function defaultCacheFilePath(): string {
   return join(tmpdir(), "skills-broker-cache.json");
 }
 
-function createNoCandidateResult(debug: BrokerDebug): BrokerFailureResult {
+function createNoCandidateResult(
+  debug: BrokerDebug,
+  trace: BrokerRoutingTrace
+): BrokerFailureResult {
   const message =
     "The broker understood the request, but no installed capability matched it. Offer capability discovery or install help.";
   const errorMessage = "No candidate matched the normalized broker request.";
@@ -116,13 +125,15 @@ function createNoCandidateResult(debug: BrokerDebug): BrokerFailureResult {
       code: "NO_CANDIDATE",
       message: errorMessage
     },
-    debug
+    debug,
+    trace
   };
 }
 
 function createPackageInstallRequiredResult(
   winner: CapabilityCard,
-  debug: BrokerDebug
+  debug: BrokerDebug,
+  trace: BrokerRoutingTrace
 ): BrokerFailureResult {
   return {
     ok: false,
@@ -140,7 +151,8 @@ function createPackageInstallRequiredResult(
       package: winner.package,
       leafCapability: winner.leaf
     },
-    debug
+    debug,
+    trace
   };
 }
 
@@ -149,6 +161,7 @@ function createFailureResult(
   message: string,
   hostAction: BrokerHostAction,
   debug: BrokerDebug,
+  trace: BrokerRoutingTrace,
   errorMessage = message
 ): BrokerFailureResult {
   return {
@@ -162,7 +175,8 @@ function createFailureResult(
       code,
       message: errorMessage
     },
-    debug
+    debug,
+    trace
   };
 }
 
@@ -264,6 +278,14 @@ export async function runBroker(
           cacheHit: false,
           candidateCount: 0
         },
+        createBrokerRoutingTrace({
+          input,
+          currentHost,
+          resultCode: "UNSUPPORTED_REQUEST",
+          now,
+          hostAction: "continue_normally",
+          candidateCount: 0
+        }),
         error.message
       );
     }
@@ -277,6 +299,14 @@ export async function runBroker(
           cacheHit: false,
           candidateCount: 0
         },
+        createBrokerRoutingTrace({
+          input,
+          currentHost,
+          resultCode: "AMBIGUOUS_REQUEST",
+          now,
+          hostAction: "ask_clarifying_question",
+          candidateCount: 0
+        }),
         error.message
       );
     }
@@ -357,7 +387,14 @@ export async function runBroker(
       cacheHit,
       cachedCandidateId: cachedCard?.card.id,
       candidateCount: 0
-    });
+    }, createBrokerRoutingTrace({
+      input,
+      currentHost,
+      resultCode: "NO_CANDIDATE",
+      now,
+      hostAction: "offer_capability_discovery",
+      candidateCount: 0
+    }));
   }
 
   const winner = ranked[0];
@@ -379,7 +416,15 @@ export async function runBroker(
       cachedCandidateId: cachedCard?.card.id,
       candidateCount: ranked.length,
       decision
-    });
+    }, createBrokerRoutingTrace({
+      input,
+      currentHost,
+      resultCode: "NO_CANDIDATE",
+      now,
+      hostAction: "offer_capability_discovery",
+      candidateCount: ranked.length,
+      winner
+    }));
   }
 
   let prepared;
@@ -399,6 +444,15 @@ export async function runBroker(
         candidateCount: ranked.length,
         decision
       },
+      createBrokerRoutingTrace({
+        input,
+        currentHost,
+        resultCode: "PREPARE_FAILED",
+        now,
+        hostAction: "show_graceful_failure",
+        candidateCount: ranked.length,
+        winner
+      }),
       "Failed to prepare broker handoff."
     );
   }
@@ -434,6 +488,15 @@ export async function runBroker(
       cachedCandidateId: cachedCard?.card.id,
       candidateCount: ranked.length,
       decision
-    }
+    },
+    trace: createBrokerRoutingTrace({
+      input,
+      currentHost,
+      resultCode: "HANDOFF_READY",
+      now,
+      hostAction: null,
+      candidateCount: ranked.length,
+      winner
+    })
   };
 }

@@ -1,4 +1,4 @@
-import { access, mkdtemp, readFile, rm } from "node:fs/promises";
+import { access, chmod, mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { execFile } from "node:child_process";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -6,8 +6,46 @@ import { promisify } from "node:util";
 import { describe, expect, it } from "vitest";
 import { runClaudeCodeAdapter } from "../../src/hosts/claude-code/adapter";
 import { runCodexAdapter } from "../../src/hosts/codex/adapter";
+import { installSharedBrokerHome } from "../../src/shared-home/install";
 
 const execFileAsync = promisify(execFile);
+
+async function writeLegacyCodexShell(
+  installDirectory: string,
+  brokerHomeDirectory: string
+): Promise<void> {
+  const runnerPath = join(installDirectory, "bin", "run-broker");
+
+  await mkdir(join(installDirectory, "bin"), { recursive: true });
+  await writeFile(join(installDirectory, "SKILL.md"), "# Skills Broker\n", "utf8");
+  await writeFile(
+    join(installDirectory, ".skills-broker.json"),
+    `${JSON.stringify({
+      managedBy: "skills-broker",
+      host: "codex",
+      version: "0.1.5",
+      brokerHome: brokerHomeDirectory
+    }, null, 2)}\n`,
+    "utf8"
+  );
+  await writeFile(
+    runnerPath,
+    `#!/usr/bin/env bash
+set -euo pipefail
+
+BROKER_INPUT="\${1:-}"
+
+if [[ -z "\${BROKER_INPUT}" ]]; then
+  echo "usage: $0 '<broker-envelope-json>'" >&2
+  exit 1
+fi
+
+BROKER_CURRENT_HOST="codex" exec "${brokerHomeDirectory}/bin/run-broker" "\${BROKER_INPUT}"
+`,
+    "utf8"
+  );
+  await chmod(runnerPath, 0o755);
+}
 
 describe("shared broker home smoke", () => {
   it("lets Claude Code and Codex reuse the same shared broker home", async () => {
@@ -83,6 +121,49 @@ describe("shared broker home smoke", () => {
       expect(codexResult.handoff.context.currentHost).toBe("codex");
       expect(codexResult.debug.cacheHit).toBe(true);
       expect(codexResult.debug.cachedCandidateId).toBe(claudeResult.winner.id);
+      expect(codexResult).not.toHaveProperty("trace");
+    } finally {
+      await rm(runtimeDirectory, { recursive: true, force: true });
+    }
+  });
+
+  it("keeps an old codex host shell working against a new shared runtime", async () => {
+    const runtimeDirectory = await mkdtemp(join(tmpdir(), "skills-broker-mixed-version-"));
+    const brokerHomeDirectory = join(runtimeDirectory, ".skills-broker");
+    const codexShellDirectory = join(runtimeDirectory, ".agents", "skills", "skills-broker");
+
+    try {
+      await installSharedBrokerHome({
+        brokerHomeDirectory,
+        projectRoot: process.cwd()
+      });
+      await writeLegacyCodexShell(codexShellDirectory, brokerHomeDirectory);
+
+      const result = await runCodexAdapter(
+        {
+          requestText: "turn this webpage into markdown: https://example.com/article",
+          host: "codex",
+          invocationMode: "explicit",
+          urls: ["https://example.com/article"]
+        },
+        {
+          installDirectory: codexShellDirectory,
+          now: new Date("2026-03-31T08:00:00.000Z")
+        }
+      );
+
+      expect(result).toMatchObject({
+        ok: true,
+        outcome: {
+          code: "HANDOFF_READY"
+        },
+        handoff: {
+          chosenImplementation: {
+            id: "baoyu.url_to_markdown"
+          }
+        }
+      });
+      expect(result).not.toHaveProperty("trace");
     } finally {
       await rm(runtimeDirectory, { recursive: true, force: true });
     }

@@ -20,7 +20,7 @@ const HOST_SHELL_NAME = "skills-broker";
 function buildSkillMarkdown(installDirectory: string): string {
   return `---
 name: "${HOST_SHELL_NAME}"
-description: "Route capability requests through skills-broker. Use when the user wants a reusable skill, MCP, or workflow such as webpage-to-markdown, social-post-to-markdown, requirements analysis, QA, investigation, or explicit capability discovery/install. Do not use for ordinary chat, coding, or summarization."
+description: "Route capability requests through skills-broker. Use when the user wants a reusable skill, MCP, or workflow such as webpage-to-markdown, social-post-to-markdown, requirements analysis, website QA, investigation, or explicit capability discovery/install, including phrases like '测下这个网站的质量', '检查这个网站质量', 'QA 这个网站', 'QA this website', and 'check this website quality'. Do not use for ordinary chat, coding, or summarization."
 ---
 
 # Skills Broker
@@ -33,11 +33,13 @@ Use this skill only for capability requests, such as:
 - QA or quality-checking a website
 - explicitly finding or installing a skill or MCP
 
-Chinese QA trigger examples include:
+QA trigger examples include:
 
 - "测下这个网站的质量"
 - "检查这个网站质量"
 - "QA 这个网站"
+- "QA this website"
+- "check this website quality"
 
 When this skill is loaded:
 

@@ -41,6 +41,8 @@ describe("host shell installers", () => {
       expect(claudeSkill).toContain('"测下这个网站的质量"');
       expect(claudeSkill).toContain('"检查这个网站质量"');
       expect(claudeSkill).toContain('"QA 这个网站"');
+      expect(claudeSkill).toContain('"QA this website"');
+      expect(claudeSkill).toContain('"check this website quality"');
       expect(claudeSkill).toContain("If the broker returns `UNSUPPORTED_REQUEST`, continue normally.");
       expect(claudeSkill).toContain("If the broker returns `AMBIGUOUS_REQUEST`, ask a clarifying question.");
       expect(claudeSkill).toContain("If the broker returns `NO_CANDIDATE`, offer capability discovery or install help.");
@@ -53,6 +55,8 @@ describe("host shell installers", () => {
       expect(codexSkill).toContain('"测下这个网站的质量"');
       expect(codexSkill).toContain('"检查这个网站质量"');
       expect(codexSkill).toContain('"QA 这个网站"');
+      expect(codexSkill).toContain('"QA this website"');
+      expect(codexSkill).toContain('"check this website quality"');
       expect(codexSkill).toContain("If the broker returns `UNSUPPORTED_REQUEST`, continue normally.");
       expect(codexSkill).toContain("If the broker returns `AMBIGUOUS_REQUEST`, ask a clarifying question.");
       expect(codexSkill).toContain("If the broker returns `NO_CANDIDATE`, offer capability discovery or install help.");

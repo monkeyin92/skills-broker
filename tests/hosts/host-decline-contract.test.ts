@@ -212,6 +212,14 @@ describe("runBroker decline contract", () => {
         },
         error: {
           code: "PREPARE_FAILED"
+        },
+        trace: {
+          host: "claude-code",
+          resultCode: "PREPARE_FAILED",
+          missLayer: "prepare",
+          normalizedBy: "raw_request_fallback",
+          requestSurface: "raw_envelope",
+          hostAction: "show_graceful_failure"
         }
       });
     } finally {

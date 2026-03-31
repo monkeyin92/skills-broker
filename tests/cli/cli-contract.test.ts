@@ -89,6 +89,7 @@ test("cli accepts a raw envelope for the current webpage flow", async () => {
         }
       }
     });
+    expect(result).not.toHaveProperty("trace");
   } finally {
     writeSpy.mockRestore();
     await rm(runtimeDirectory, { recursive: true, force: true });
@@ -111,6 +112,90 @@ test("cli accepts a raw envelope for the current webpage flow", async () => {
       chosenImplementation: {
         id: "baoyu.url_to_markdown"
       }
+    }
+  });
+  expect(JSON.parse(writes[0])).not.toHaveProperty("trace");
+});
+
+test("cli includes routing trace only when includeTrace is enabled", async () => {
+  const runtimeDirectory = await mkdtemp(join(tmpdir(), "skills-broker-cli-trace-"));
+  const hostCatalogPath = join(runtimeDirectory, "host-skills.seed.json");
+  const mcpRegistryPath = join(runtimeDirectory, "mcp-registry.seed.json");
+  const writes: string[] = [];
+  const writeSpy = vi.spyOn(process.stdout, "write").mockImplementation(
+    (chunk: string) => {
+      writes.push(String(chunk));
+      return true;
+    }
+  );
+
+  try {
+    await writeFile(
+      hostCatalogPath,
+      JSON.stringify({
+        skills: [
+          {
+            id: "web-content-to-markdown",
+            kind: "skill",
+            label: "Web Content to Markdown",
+            intent: "web_content_to_markdown",
+            implementation: {
+              id: "baoyu.url_to_markdown",
+              type: "local_skill",
+              ownerSurface: "broker_owned_downstream"
+            }
+          }
+        ]
+      }),
+      "utf8"
+    );
+    await writeFile(
+      mcpRegistryPath,
+      JSON.stringify({ servers: [] }),
+      "utf8"
+    );
+
+    const result = await runBrokerCli(
+      {
+        requestText: "turn this webpage into markdown: https://example.com/post",
+        host: "claude-code",
+        invocationMode: "explicit",
+        urls: ["https://example.com/post"]
+      },
+      {
+        cacheFilePath: join(runtimeDirectory, "cache.json"),
+        hostCatalogFilePath: hostCatalogPath,
+        mcpRegistryFilePath: mcpRegistryPath,
+        includeTrace: true
+      }
+    );
+
+    expect(result).toMatchObject({
+      ok: true,
+      outcome: {
+        code: "HANDOFF_READY"
+      },
+      trace: {
+        hostDecision: "broker_first",
+        resultCode: "HANDOFF_READY",
+        missLayer: null,
+        normalizedBy: "raw_request_fallback",
+        requestSurface: "raw_envelope"
+      }
+    });
+  } finally {
+    writeSpy.mockRestore();
+    await rm(runtimeDirectory, { recursive: true, force: true });
+  }
+
+  expect(writes).toHaveLength(1);
+  expect(JSON.parse(writes[0])).toMatchObject({
+    trace: {
+      hostDecision: "broker_first",
+      resultCode: "HANDOFF_READY",
+      missLayer: null,
+      normalizedBy: "raw_request_fallback",
+      requestSurface: "raw_envelope"
     }
   });
 });

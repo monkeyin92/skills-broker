@@ -44,6 +44,17 @@ describe("runBroker", () => {
         url: validUrlRequest.url
       });
       expect(result.debug.cacheHit).toBe(false);
+      expect(result.trace).toMatchObject({
+        host: "claude-code",
+        hostDecision: "broker_first",
+        resultCode: "HANDOFF_READY",
+        missLayer: null,
+        normalizedBy: "legacy_intent",
+        requestSurface: "legacy_task",
+        candidateCount: result.debug.candidateCount,
+        winnerId: "web-content-to-markdown",
+        winnerPackageId: "baoyu"
+      });
     } finally {
       await rm(runtime.directory, { recursive: true, force: true });
     }
@@ -130,6 +141,16 @@ describe("runBroker", () => {
       expect(result.outcome.hostAction).toBe("offer_capability_discovery");
       expect(result.outcome.message).toContain("Offer capability discovery or install help");
       expect(result.error.message).toContain("No candidate");
+      expect(result.trace).toMatchObject({
+        host: "claude-code",
+        resultCode: "NO_CANDIDATE",
+        missLayer: "retrieval",
+        normalizedBy: "legacy_intent",
+        requestSurface: "legacy_task",
+        candidateCount: 0,
+        winnerId: null,
+        winnerPackageId: null
+      });
     } finally {
       await rm(runtime.directory, { recursive: true, force: true });
     }
@@ -561,6 +582,15 @@ describe("runBroker", () => {
       expect(result.outcome.code).toBe("UNSUPPORTED_REQUEST");
       expect(result.outcome.hostAction).toBe("continue_normally");
       expect(result.outcome.message).toContain("Continue with the host's normal workflow");
+      expect(result.trace).toMatchObject({
+        host: "claude-code",
+        resultCode: "UNSUPPORTED_REQUEST",
+        missLayer: "broker_normalization",
+        normalizedBy: "raw_request_fallback",
+        requestSurface: "raw_envelope",
+        candidateCount: 0,
+        hostAction: "continue_normally"
+      });
     } finally {
       await rm(runtime.directory, { recursive: true, force: true });
     }
@@ -586,6 +616,15 @@ describe("runBroker", () => {
       expect(result.outcome.code).toBe("AMBIGUOUS_REQUEST");
       expect(result.outcome.hostAction).toBe("ask_clarifying_question");
       expect(result.outcome.message).toContain("needs clarification");
+      expect(result.trace).toMatchObject({
+        host: "claude-code",
+        resultCode: "AMBIGUOUS_REQUEST",
+        missLayer: "broker_normalization",
+        normalizedBy: "raw_request_fallback",
+        requestSurface: "raw_envelope",
+        candidateCount: 0,
+        hostAction: "ask_clarifying_question"
+      });
     } finally {
       await rm(runtime.directory, { recursive: true, force: true });
     }
@@ -618,6 +657,15 @@ describe("runBroker", () => {
       expect(result.outcome.code).toBe("HANDOFF_READY");
       expect(result.winner.id).toBe("requirements-analysis");
       expect(result.handoff.chosenPackage.packageId).toBe("gstack");
+      expect(result.trace).toMatchObject({
+        host: "claude-code",
+        resultCode: "HANDOFF_READY",
+        missLayer: null,
+        normalizedBy: "structured_query",
+        requestSurface: "structured_query",
+        winnerId: "requirements-analysis",
+        winnerPackageId: "gstack"
+      });
       expect(result.handoff.chosenLeafCapability.subskillId).toBe(
         "office-hours"
       );

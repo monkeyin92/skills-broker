@@ -117,20 +117,6 @@ async function doctorHost(
     };
   }
 
-  const writableState = await detectWritableDirectory(installDirectory);
-  if (writableState.status === "not-writable") {
-    const reason =
-      writableState.reason === "not-a-directory"
-        ? `host path is blocked by a file at ${writableState.blockingPath}`
-        : `host path is not writable: ${writableState.blockingPath}`;
-    warnings.push(`${name}: ${reason}`);
-    return {
-      name,
-      status: "not_writable",
-      reason
-    };
-  }
-
   const manifestState = await readManagedShellManifest(installDirectory);
   if (manifestState.status === "managed") {
     const competingPeerSkills = await detectCompetingPeerSkills(installDirectory);
@@ -167,6 +153,20 @@ async function doctorHost(
     return {
       name,
       status: "conflict",
+      reason
+    };
+  }
+
+  const writableState = await detectWritableDirectory(installDirectory);
+  if (writableState.status === "not-writable") {
+    const reason =
+      writableState.reason === "not-a-directory"
+        ? `host path is blocked by a file at ${writableState.blockingPath}`
+        : `host path is not writable: ${writableState.blockingPath}`;
+    warnings.push(`${name}: ${reason}`);
+    return {
+      name,
+      status: "not_writable",
       reason
     };
   }

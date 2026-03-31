@@ -9,6 +9,10 @@ import { parseBrokerEnvelope, type BrokerEnvelope } from "./core/envelope.js";
 
 export type RunBrokerCliInput = BrokerEnvelope;
 
+export type RunBrokerCliOptions = RunBrokerOptions & {
+  includeTrace?: boolean;
+};
+
 export type RunBrokerCliOutput = RunBrokerResult;
 
 function resolveCurrentHost(
@@ -26,7 +30,7 @@ function resolveCurrentHost(
 
 export async function runBrokerCli(
   input: RunBrokerCliInput,
-  options: RunBrokerOptions = {}
+  options: RunBrokerCliOptions = {}
 ): Promise<RunBrokerCliOutput> {
   const envelope = parseBrokerEnvelope(input);
   const currentHost = resolveCurrentHost(envelope, options);
@@ -34,12 +38,27 @@ export async function runBrokerCli(
     ...options,
     currentHost
   });
+  const output =
+    options.includeTrace === true
+      ? response
+      : (() => {
+          const { trace: _trace, ...rest } = response;
+          return rest as RunBrokerCliOutput;
+        })();
 
-  process.stdout.write(JSON.stringify(response));
-  return response;
+  process.stdout.write(JSON.stringify(output));
+  return output;
 }
 
-function directRunOptions(): RunBrokerOptions {
+function shouldIncludeTrace(value: string | undefined): boolean {
+  if (value === undefined) {
+    return false;
+  }
+
+  return /^(?:1|true|yes|trace)$/i.test(value);
+}
+
+function directRunOptions(): RunBrokerCliOptions {
   return {
     cacheFilePath: process.env.BROKER_CACHE_FILE,
     hostCatalogFilePath: process.env.BROKER_HOST_CATALOG,
@@ -48,7 +67,10 @@ function directRunOptions(): RunBrokerOptions {
     packageSearchRoots:
       process.env.BROKER_PACKAGE_SEARCH_ROOTS?.split(delimiter).filter(Boolean),
     currentHost: process.env.BROKER_CURRENT_HOST,
-    now: process.env.BROKER_NOW ? new Date(process.env.BROKER_NOW) : undefined
+    now: process.env.BROKER_NOW ? new Date(process.env.BROKER_NOW) : undefined,
+    includeTrace: shouldIncludeTrace(
+      process.env.BROKER_DEBUG ?? process.env.BROKER_TRACE
+    )
   };
 }
 

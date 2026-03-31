@@ -14,17 +14,24 @@ describe("published package smoke", () => {
     const hostConfigPath = join(brokerHomeDirectory, "config", "host-skills.seed.json");
     const mcpConfigPath = join(brokerHomeDirectory, "config", "mcp-registry.seed.json");
     const distCliPath = join(brokerHomeDirectory, "dist", "cli.js");
+    const npmCacheDirectory = join(runtimeDirectory, ".npm-cache");
+    const env = {
+      ...process.env,
+      NPM_CONFIG_CACHE: npmCacheDirectory
+    };
 
     let tarballPath: string | undefined;
 
     try {
       await execFileAsync("npm", ["run", "build"], {
         cwd: process.cwd(),
+        env,
         encoding: "utf8"
       });
 
       const { stdout: packOutput } = await execFileAsync("npm", ["pack", "--json"], {
         cwd: process.cwd(),
+        env,
         encoding: "utf8"
       });
       const packResult = JSON.parse(packOutput) as Array<{ filename: string }>;
@@ -42,6 +49,7 @@ describe("published package smoke", () => {
         brokerHomeDirectory
       ], {
         cwd: process.cwd(),
+        env,
         encoding: "utf8"
       });
 
