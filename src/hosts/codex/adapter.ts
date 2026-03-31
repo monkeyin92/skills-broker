@@ -9,7 +9,11 @@ const execFileAsync = promisify(execFile);
 
 export type RunCodexAdapterOptions = {
   installDirectory: string;
-} & Pick<RunBrokerOptions, "cacheFilePath" | "now">;
+  includeTrace?: boolean;
+} & Pick<
+  RunBrokerOptions,
+  "cacheFilePath" | "hostCatalogFilePath" | "mcpRegistryFilePath" | "now"
+>;
 
 async function assertInstalledSkill(installDirectory: string): Promise<void> {
   const skillPath = join(installDirectory, "SKILL.md");
@@ -33,11 +37,24 @@ export async function runCodexAdapter(
     env.BROKER_CACHE_FILE = options.cacheFilePath;
   }
 
+  if (options.hostCatalogFilePath !== undefined) {
+    env.BROKER_HOST_CATALOG = options.hostCatalogFilePath;
+  }
+
+  if (options.mcpRegistryFilePath !== undefined) {
+    env.BROKER_MCP_REGISTRY = options.mcpRegistryFilePath;
+  }
+
   if (options.now !== undefined) {
     env.BROKER_NOW = options.now.toISOString();
   }
 
-  const { stdout } = await execFileAsync(runnerPath, [JSON.stringify(input)], {
+  const args =
+    options.includeTrace === true
+      ? ["--debug", JSON.stringify(input)]
+      : [JSON.stringify(input)];
+
+  const { stdout } = await execFileAsync(runnerPath, args, {
     cwd: options.installDirectory,
     env
   });

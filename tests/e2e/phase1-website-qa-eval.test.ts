@@ -1,17 +1,15 @@
-import { execFile } from "node:child_process";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { promisify } from "node:util";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   createSyntheticHostSkippedBrokerTrace,
   type BrokerRoutingTrace
 } from "../../src/broker/trace";
+import { runCodexAdapter } from "../../src/hosts/codex/adapter";
 import { installCodexHostShell } from "../../src/hosts/codex/install";
 import { installSharedBrokerHome } from "../../src/shared-home/install";
 
-const execFileAsync = promisify(execFile);
 const PHASE1_MISS_LAYERS = [
   "host_selection",
   "broker_normalization",
@@ -104,45 +102,35 @@ async function writeEmptyRegistry(runtimeDirectory: string): Promise<string> {
 
 async function runHostRunnerEvalCase(
   testCase: HostRunnerEvalCase,
-  codexRunnerPath: string,
   codexShellDirectory: string,
   overrides: {
     emptyCatalogPath: string;
     emptyRegistryPath: string;
   }
 ): Promise<BrokerRoutingTrace> {
-  const { stdout } = await execFileAsync(
-    codexRunnerPath,
-    [
-      "--debug",
-      JSON.stringify({
-        requestText: testCase.requestText,
-        host: testCase.host,
-        invocationMode: testCase.invocationMode,
-        ...(testCase.urls === undefined ? {} : { urls: testCase.urls })
-      })
-    ],
+  const result = await runCodexAdapter(
     {
-      cwd: codexShellDirectory,
-      env: {
-        ...process.env,
-        BROKER_NOW: testCase.now,
-        ...(testCase.catalogVariant === "empty"
-          ? { BROKER_HOST_CATALOG: overrides.emptyCatalogPath }
-          : {}),
-        ...(testCase.registryVariant === "empty"
-          ? { BROKER_MCP_REGISTRY: overrides.emptyRegistryPath }
-          : {})
-      }
+      requestText: testCase.requestText,
+      host: testCase.host,
+      invocationMode: testCase.invocationMode,
+      ...(testCase.urls === undefined ? {} : { urls: testCase.urls })
+    },
+    {
+      installDirectory: codexShellDirectory,
+      includeTrace: true,
+      now: new Date(testCase.now),
+      ...(testCase.catalogVariant === "empty"
+        ? { hostCatalogFilePath: overrides.emptyCatalogPath }
+        : {}),
+      ...(testCase.registryVariant === "empty"
+        ? { mcpRegistryFilePath: overrides.emptyRegistryPath }
+        : {})
     }
   );
-  const result = JSON.parse(stdout) as {
-    trace?: BrokerRoutingTrace;
-  };
 
   expect(result.trace).toBeDefined();
 
-  return result.trace as BrokerRoutingTrace;
+  return result.trace;
 }
 
 async function runPrepareFailureEvalCase(
@@ -183,7 +171,6 @@ describe("Phase 1 website QA eval harness", () => {
       "skills",
       "skills-broker"
     );
-    const codexRunnerPath = join(codexShellDirectory, "bin", "run-broker");
 
     try {
       const cases = await loadEvalFixture();
@@ -212,7 +199,6 @@ describe("Phase 1 website QA eval harness", () => {
             : testCase.mode === "host_runner"
               ? await runHostRunnerEvalCase(
                   testCase,
-                  codexRunnerPath,
                   codexShellDirectory,
                   {
                     emptyCatalogPath,

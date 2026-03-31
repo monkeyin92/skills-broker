@@ -210,6 +210,67 @@ describe("installed host-shell routing smoke", () => {
           hostAction: "ask_clarifying_question"
         }
       });
+      expect(socialResult).not.toHaveProperty("trace");
+      expect(qaResult).not.toHaveProperty("trace");
+    } finally {
+      await rm(runtimeDirectory, { recursive: true, force: true });
+    }
+  });
+
+  it("lets installed host adapters opt into routing trace without changing default output", async () => {
+    const runtimeDirectory = await mkdtemp(join(tmpdir(), "skills-broker-host-debug-"));
+    const brokerHomeDirectory = join(runtimeDirectory, ".skills-broker");
+    const codexShellDirectory = join(runtimeDirectory, ".agents", "skills", "skills-broker");
+    const buildScriptPath = join(process.cwd(), "dist", "bin", "skills-broker.js");
+
+    try {
+      await expect(access(buildScriptPath)).resolves.toBeUndefined();
+      await execFileAsync("node", [
+        buildScriptPath,
+        "update",
+        "--broker-home",
+        brokerHomeDirectory,
+        "--codex-dir",
+        codexShellDirectory
+      ]);
+
+      const defaultResult = await runCodexAdapter(
+        {
+          requestText: "测下这个网站的质量",
+          host: "codex",
+          invocationMode: "explicit",
+          urls: ["https://example.com"]
+        },
+        {
+          installDirectory: codexShellDirectory,
+          now: new Date("2026-03-31T06:00:00.000Z")
+        }
+      );
+
+      const debugResult = await runCodexAdapter(
+        {
+          requestText: "测下这个网站的质量",
+          host: "codex",
+          invocationMode: "explicit",
+          urls: ["https://example.com"]
+        },
+        {
+          installDirectory: codexShellDirectory,
+          includeTrace: true,
+          now: new Date("2026-03-31T06:05:00.000Z")
+        }
+      );
+
+      expect(defaultResult).not.toHaveProperty("trace");
+      expect(debugResult).toMatchObject({
+        trace: {
+          host: "codex",
+          hostDecision: "broker_first",
+          resultCode: "HANDOFF_READY",
+          missLayer: null,
+          winnerId: "website-qa"
+        }
+      });
     } finally {
       await rm(runtimeDirectory, { recursive: true, force: true });
     }
