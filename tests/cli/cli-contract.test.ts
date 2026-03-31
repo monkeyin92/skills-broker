@@ -642,6 +642,118 @@ test("cli routes raw requirements-analysis requests through discovery", async ()
   });
 });
 
+test("cli routes raw investigation requests through discovery", async () => {
+  const runtimeDirectory = await mkdtemp(
+    join(tmpdir(), "skills-broker-cli-raw-investigation-")
+  );
+  const hostCatalogPath = join(runtimeDirectory, "host-skills.seed.json");
+  const mcpRegistryPath = join(runtimeDirectory, "mcp-registry.seed.json");
+  const writes: string[] = [];
+  const writeSpy = vi.spyOn(process.stdout, "write").mockImplementation(
+    (chunk: string) => {
+      writes.push(String(chunk));
+      return true;
+    }
+  );
+
+  try {
+    await writeFile(
+      hostCatalogPath,
+      JSON.stringify({
+        skills: [
+          {
+            id: "investigation",
+            kind: "skill",
+            label: "Investigation",
+            intent: "capability_discovery_or_install",
+            query: {
+              jobFamilies: ["investigation"],
+              targetTypes: ["website", "url", "codebase", "problem_statement", "text"],
+              artifacts: ["analysis", "recommendation"],
+              examples: ["investigate this site failure with a reusable workflow"]
+            },
+            implementation: {
+              id: "gstack.investigate",
+              type: "local_skill",
+              ownerSurface: "broker_owned_downstream"
+            }
+          }
+        ]
+      }),
+      "utf8"
+    );
+    await writeFile(
+      mcpRegistryPath,
+      JSON.stringify({ servers: [] }),
+      "utf8"
+    );
+
+    const result = await runBrokerCli(
+      {
+        requestText: "investigate this site failure with a reusable workflow",
+        host: "codex",
+        invocationMode: "explicit",
+        urls: ["https://example.com"]
+      },
+      {
+        cacheFilePath: join(runtimeDirectory, "cache.json"),
+        hostCatalogFilePath: hostCatalogPath,
+        mcpRegistryFilePath: mcpRegistryPath
+      }
+    );
+
+    expect(result).toMatchObject({
+      ok: true,
+      outcome: {
+        code: "HANDOFF_READY"
+      },
+      handoff: {
+        chosenPackage: {
+          packageId: "gstack"
+        },
+        chosenLeafCapability: {
+          subskillId: "investigate"
+        },
+        chosenImplementation: {
+          id: "gstack.investigate"
+        },
+        request: {
+          intent: "capability_discovery_or_install",
+          capabilityQuery: {
+            jobFamilies: ["investigation"],
+            targets: [
+              {
+                type: "website",
+                value: "https://example.com"
+              }
+            ],
+            artifacts: ["analysis", "recommendation"]
+          }
+        }
+      }
+    });
+  } finally {
+    writeSpy.mockRestore();
+    await rm(runtimeDirectory, { recursive: true, force: true });
+  }
+
+  expect(writes).toHaveLength(1);
+  expect(JSON.parse(writes[0])).toMatchObject({
+    ok: true,
+    handoff: {
+      chosenPackage: {
+        packageId: "gstack"
+      },
+      chosenLeafCapability: {
+        subskillId: "investigate"
+      },
+      chosenImplementation: {
+        id: "gstack.investigate"
+      }
+    }
+  });
+});
+
 test("cli parser normalizes away unknown fields", () => {
   const parsedEnvelope = parseBrokerEnvelopeFromCommandLine(
     JSON.stringify({

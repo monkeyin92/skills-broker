@@ -11,25 +11,27 @@ import { runCodexAdapter } from "../../src/hosts/codex/adapter";
 const execFileAsync = promisify(execFile);
 
 describe("installed host-shell routing smoke", () => {
-  it("covers routed and declined broker outcomes once the installed host shell is invoked", async () => {
-    const runtimeDirectory = await mkdtemp(join(tmpdir(), "skills-broker-host-routing-"));
-    const brokerHomeDirectory = join(runtimeDirectory, ".skills-broker");
-    const claudeShellDirectory = join(runtimeDirectory, ".claude", "skills", "skills-broker");
-    const codexShellDirectory = join(runtimeDirectory, ".agents", "skills", "skills-broker");
-    const buildScriptPath = join(process.cwd(), "dist", "bin", "skills-broker.js");
+  it(
+    "covers routed and declined broker outcomes once the installed host shell is invoked",
+    async () => {
+      const runtimeDirectory = await mkdtemp(join(tmpdir(), "skills-broker-host-routing-"));
+      const brokerHomeDirectory = join(runtimeDirectory, ".skills-broker");
+      const claudeShellDirectory = join(runtimeDirectory, ".claude", "skills", "skills-broker");
+      const codexShellDirectory = join(runtimeDirectory, ".agents", "skills", "skills-broker");
+      const buildScriptPath = join(process.cwd(), "dist", "bin", "skills-broker.js");
 
-    try {
-      await expect(access(buildScriptPath)).resolves.toBeUndefined();
-      await execFileAsync("node", [
-        buildScriptPath,
-        "update",
-        "--broker-home",
-        brokerHomeDirectory,
-        "--claude-dir",
-        claudeShellDirectory,
-        "--codex-dir",
-        codexShellDirectory
-      ]);
+      try {
+        await expect(access(buildScriptPath)).resolves.toBeUndefined();
+        await execFileAsync("node", [
+          buildScriptPath,
+          "update",
+          "--broker-home",
+          brokerHomeDirectory,
+          "--claude-dir",
+          claudeShellDirectory,
+          "--codex-dir",
+          codexShellDirectory
+        ]);
 
       const socialResult = await runClaudeCodeAdapter(
         {
@@ -78,6 +80,19 @@ describe("installed host-shell routing smoke", () => {
         {
           installDirectory: codexShellDirectory,
           now: new Date("2026-03-30T02:45:00.000Z")
+        }
+      );
+
+      const investigationResult = await runClaudeCodeAdapter(
+        {
+          requestText: "investigate this site failure with a reusable workflow",
+          host: "claude-code",
+          invocationMode: "auto",
+          urls: ["https://example.com"]
+        },
+        {
+          installDirectory: claudeShellDirectory,
+          now: new Date("2026-03-30T02:50:00.000Z")
         }
       );
 
@@ -195,6 +210,39 @@ describe("installed host-shell routing smoke", () => {
         }
       });
 
+      expect(investigationResult).toMatchObject({
+        ok: true,
+        outcome: {
+          code: "HANDOFF_READY"
+        },
+        handoff: {
+          chosenPackage: {
+            packageId: "gstack"
+          },
+          chosenLeafCapability: {
+            subskillId: "investigate"
+          },
+          chosenImplementation: {
+            id: "gstack.investigate"
+          },
+          request: {
+            intent: "capability_discovery_or_install",
+            capabilityQuery: {
+              goal: "investigate a site failure and identify root cause",
+              requestText: "investigate this site failure with a reusable workflow",
+              jobFamilies: ["investigation"],
+              targets: [
+                {
+                  type: "website",
+                  value: "https://example.com"
+                }
+              ],
+              artifacts: ["analysis", "recommendation"]
+            }
+          }
+        }
+      });
+
       expect(unsupportedResult).toMatchObject({
         ok: false,
         outcome: {
@@ -212,10 +260,13 @@ describe("installed host-shell routing smoke", () => {
       });
       expect(socialResult).not.toHaveProperty("trace");
       expect(qaResult).not.toHaveProperty("trace");
-    } finally {
-      await rm(runtimeDirectory, { recursive: true, force: true });
-    }
-  });
+        expect(investigationResult).not.toHaveProperty("trace");
+      } finally {
+        await rm(runtimeDirectory, { recursive: true, force: true });
+      }
+    },
+    15_000
+  );
 
   it("lets installed host adapters opt into routing trace without changing default output", async () => {
     const runtimeDirectory = await mkdtemp(join(tmpdir(), "skills-broker-host-debug-"));

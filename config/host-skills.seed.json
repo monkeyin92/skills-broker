@@ -202,6 +202,41 @@
       "sourceMetadata": {
         "skillName": "qa"
       }
+    },
+    {
+      "id": "investigation",
+      "kind": "skill",
+      "label": "Investigation",
+      "intent": "capability_discovery_or_install",
+      "package": {
+        "packageId": "gstack"
+      },
+      "leaf": {
+        "capabilityId": "gstack.investigate",
+        "packageId": "gstack",
+        "subskillId": "investigate",
+        "probe": {
+          "manifestNames": ["investigate"],
+          "aliases": ["gstack-investigate"]
+        }
+      },
+      "query": {
+        "jobFamilies": ["investigation"],
+        "targetTypes": ["website", "url", "codebase", "problem_statement", "text"],
+        "artifacts": ["analysis", "recommendation"],
+        "examples": [
+          "investigate this site failure with a reusable workflow",
+          "帮我排查这个网站为什么报错"
+        ]
+      },
+      "implementation": {
+        "id": "gstack.investigate",
+        "type": "local_skill",
+        "ownerSurface": "broker_owned_downstream"
+      },
+      "sourceMetadata": {
+        "skillName": "investigate"
+      }
     }
   ]
 }

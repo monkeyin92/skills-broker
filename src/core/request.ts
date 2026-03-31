@@ -139,6 +139,24 @@ function hasRequirementSignal(requestText: string): boolean {
   );
 }
 
+function hasInvestigationSignal(requestText: string): boolean {
+  return /(?:\binvestigat(?:e|ing|ion)\b|\bdebug(?:ging)?\b|\broot cause\b|\btroubleshoot(?:ing)?\b|排查|调查|定位|根因|排障)/i.test(
+    requestText
+  );
+}
+
+function hasFailureSignal(requestText: string): boolean {
+  return /(?:\bfailure\b|\berror\b|\bbroken\b|\bcrash(?:ed|ing)?\b|\boutage\b|\bbug\b|\bissue\b|故障|报错|异常|挂了|坏了|失败)/i.test(
+    requestText
+  );
+}
+
+function hasCodebaseTargetSignal(requestText: string): boolean {
+  return /(?:\bcodebase\b|\brepo(?:sitory)?\b|\bservice\b|\bsystem\b|\bapi\b|代码库|仓库|服务|系统|接口)/i.test(
+    requestText
+  );
+}
+
 function hasRequirementsWorkflowSignal(requestText: string): boolean {
   return /(?:分析|评审|审查|漏洞|风险|缺口|缺陷|\banaly[sz]e\b|\banalysis\b|\breview\b|\bthink through\b|\bgaps?\b|\bholes?\b|\brisks?\b|\bdesign doc(?:ument)?\b)/i.test(
     requestText
@@ -165,6 +183,20 @@ function looksLikeRequirementsAnalysisRequest(requestText: string): boolean {
   return (
     hasRequirementSignal(requestText) &&
     hasRequirementsWorkflowSignal(requestText) &&
+    !hasMarkdownTarget(requestText) &&
+    !hasNonMarkdownTarget(requestText)
+  );
+}
+
+function looksLikeInvestigationRequest(
+  requestText: string,
+  url: string | undefined
+): boolean {
+  return (
+    hasInvestigationSignal(requestText) &&
+    (hasFailureSignal(requestText) ||
+      hasWebsiteTargetSignal(requestText, url) ||
+      hasCodebaseTargetSignal(requestText)) &&
     !hasMarkdownTarget(requestText) &&
     !hasNonMarkdownTarget(requestText)
   );
@@ -277,6 +309,49 @@ function buildRequirementsAnalysisCapabilityQuery(
   };
 }
 
+function buildInvestigationCapabilityQuery(
+  input: BrokerEnvelope,
+  url: string | undefined
+): CapabilityQuery {
+  const normalizedRequestText = normalizeText(input.requestText);
+  const hasWebsiteTarget = hasWebsiteTargetSignal(normalizedRequestText, url);
+  const hasCodebaseTarget = hasCodebaseTargetSignal(normalizedRequestText);
+
+  return {
+    kind: "capability_request",
+    goal: hasWebsiteTarget
+      ? "investigate a site failure and identify root cause"
+      : hasCodebaseTarget
+        ? "investigate a codebase issue and identify root cause"
+        : "investigate a failure and identify root cause",
+    host: input.host,
+    requestText: input.requestText,
+    jobFamilies: ["investigation"],
+    targets:
+      url !== undefined && !isSocialUrl(url)
+        ? [
+            {
+              type: "website",
+              value: url
+            }
+          ]
+        : hasCodebaseTarget
+          ? [
+              {
+                type: "codebase",
+                value: input.requestText
+              }
+            ]
+          : [
+              {
+                type: "problem_statement",
+                value: input.requestText
+              }
+            ],
+    artifacts: ["analysis", "recommendation"]
+  };
+}
+
 function normalizeCapabilityQueryRequest(
   query: CapabilityQuery
 ): BrokerRequest {
@@ -353,6 +428,14 @@ function normalizeEnvelopeRequest(input: BrokerEnvelope): BrokerRequest {
       "capability_discovery_or_install",
       undefined,
       buildRequirementsAnalysisCapabilityQuery(input)
+    );
+  }
+
+  if (looksLikeInvestigationRequest(requestText, url)) {
+    return buildBrokerRequest(
+      "capability_discovery_or_install",
+      undefined,
+      buildInvestigationCapabilityQuery(input, url)
     );
   }
 

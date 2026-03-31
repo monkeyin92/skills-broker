@@ -809,6 +809,54 @@ describe("runBroker", () => {
     }
   });
 
+  it("routes raw investigation requests to the investigation downstream skill", async () => {
+    const runtime = await createRuntimePaths();
+
+    try {
+      const result = await runBroker(
+        {
+          requestText: "investigate this site failure with a reusable workflow",
+          host: "codex",
+          urls: ["https://example.com"]
+        },
+        {
+          ...runtime,
+          currentHost: "codex",
+          now: new Date("2026-03-30T08:50:00.000Z")
+        }
+      );
+
+      expect(result.ok).toBe(true);
+      expect(result.outcome.code).toBe("HANDOFF_READY");
+      expect(result.winner.id).toBe("investigation");
+      expect(result.handoff.chosenPackage.packageId).toBe("gstack");
+      expect(result.handoff.chosenLeafCapability.subskillId).toBe("investigate");
+      expect(result.handoff.chosenImplementation.id).toBe("gstack.investigate");
+      expect(result.trace).toMatchObject({
+        host: "codex",
+        resultCode: "HANDOFF_READY",
+        missLayer: null,
+        normalizedBy: "raw_request_fallback",
+        requestSurface: "raw_envelope",
+        winnerId: "investigation",
+        winnerPackageId: "gstack"
+      });
+      expect(result.handoff.request.capabilityQuery).toMatchObject({
+        goal: "investigate a site failure and identify root cause",
+        jobFamilies: ["investigation"],
+        targets: [
+          {
+            type: "website",
+            value: "https://example.com"
+          }
+        ],
+        artifacts: ["analysis", "recommendation"]
+      });
+    } finally {
+      await rm(runtime.directory, { recursive: true, force: true });
+    }
+  });
+
   it("does not reuse a generic discovery cache entry for a different capability-query family", async () => {
     const runtime = await createRuntimePaths();
 

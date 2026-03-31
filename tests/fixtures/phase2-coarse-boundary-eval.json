@@ -1,0 +1,96 @@
+{
+  "cases": [
+    {
+      "id": "broker-first-website-qa",
+      "mode": "host_runner",
+      "hosts": ["claude-code", "codex"],
+      "requestText": "测下这个网站的质量：https://www.baidu.com",
+      "urls": ["https://www.baidu.com"],
+      "now": "2026-03-31T10:00:00.000Z",
+      "expect": {
+        "hostDecision": "broker_first",
+        "resultCode": "HANDOFF_READY",
+        "normalizedBy": "raw_request_fallback",
+        "requestSurface": "raw_envelope",
+        "winnerId": "website-qa"
+      }
+    },
+    {
+      "id": "broker-first-requirements-analysis",
+      "mode": "host_runner",
+      "hosts": ["claude-code", "codex"],
+      "requestText": "帮我做需求分析并产出设计文档",
+      "now": "2026-03-31T10:05:00.000Z",
+      "expect": {
+        "hostDecision": "broker_first",
+        "resultCode": "HANDOFF_READY",
+        "normalizedBy": "raw_request_fallback",
+        "requestSurface": "raw_envelope",
+        "winnerId": "requirements-analysis"
+      }
+    },
+    {
+      "id": "broker-first-investigation",
+      "mode": "host_runner",
+      "hosts": ["claude-code", "codex"],
+      "requestText": "investigate this site failure with a reusable workflow",
+      "urls": ["https://example.com"],
+      "now": "2026-03-31T10:10:00.000Z",
+      "expect": {
+        "hostDecision": "broker_first",
+        "resultCode": "HANDOFF_READY",
+        "normalizedBy": "raw_request_fallback",
+        "requestSurface": "raw_envelope",
+        "winnerId": "investigation"
+      }
+    },
+    {
+      "id": "handle-normally-page-summary",
+      "mode": "synthetic_host_skip",
+      "hosts": ["claude-code", "codex"],
+      "requestText": "what is on this page",
+      "now": "2026-03-31T10:15:00.000Z",
+      "expect": {
+        "hostDecision": "handle_normally",
+        "resultCode": "HOST_SKIPPED_BROKER",
+        "hostAction": "continue_normally"
+      }
+    },
+    {
+      "id": "handle-normally-code-help",
+      "mode": "synthetic_host_skip",
+      "hosts": ["claude-code", "codex"],
+      "requestText": "Explain this TypeScript error",
+      "now": "2026-03-31T10:20:00.000Z",
+      "expect": {
+        "hostDecision": "handle_normally",
+        "resultCode": "HOST_SKIPPED_BROKER",
+        "hostAction": "continue_normally"
+      }
+    },
+    {
+      "id": "clarify-before-broker-check-page",
+      "mode": "synthetic_host_skip",
+      "hosts": ["claude-code", "codex"],
+      "requestText": "check this page",
+      "now": "2026-03-31T10:25:00.000Z",
+      "expect": {
+        "hostDecision": "clarify_before_broker",
+        "resultCode": "HOST_SKIPPED_BROKER",
+        "hostAction": "ask_clarifying_question"
+      }
+    },
+    {
+      "id": "clarify-before-broker-analyze",
+      "mode": "synthetic_host_skip",
+      "hosts": ["claude-code", "codex"],
+      "requestText": "帮我分析一下",
+      "now": "2026-03-31T10:30:00.000Z",
+      "expect": {
+        "hostDecision": "clarify_before_broker",
+        "resultCode": "HOST_SKIPPED_BROKER",
+        "hostAction": "ask_clarifying_question"
+      }
+    }
+  ]
+}

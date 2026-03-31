@@ -314,6 +314,28 @@ describe("normalizeRequest", () => {
     });
   });
 
+  it("normalizes raw investigation requests into a synthesized capability query", () => {
+    const normalized = normalizeRequest({
+      requestText: "investigate this site failure with a reusable workflow",
+      host: "codex",
+      urls: ["https://example.com"]
+    });
+
+    expect(normalized.intent).toBe("capability_discovery_or_install");
+    expect(normalized.capabilityQuery).toMatchObject({
+      goal: "investigate a site failure and identify root cause",
+      requestText: "investigate this site failure with a reusable workflow",
+      jobFamilies: ["investigation"],
+      targets: [
+        {
+          type: "website",
+          value: "https://example.com"
+        }
+      ],
+      artifacts: ["analysis", "recommendation"]
+    });
+  });
+
   it("normalizes a structured capability query for webpage markdown into the web lane", () => {
     const normalized = normalizeRequest({
       requestText: "将这个页面转为markdown文件：https://example.com/post",
