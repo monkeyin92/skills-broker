@@ -9,8 +9,8 @@ import { runCodexAdapter } from "../../src/hosts/codex/adapter";
 
 const execFileAsync = promisify(execFile);
 
-describe("host auto-routing smoke", () => {
-  it("covers routed and declined outcomes through installed host shells", async () => {
+describe("installed host-shell routing smoke", () => {
+  it("covers routed and declined broker outcomes once the installed host shell is invoked", async () => {
     const runtimeDirectory = await mkdtemp(join(tmpdir(), "skills-broker-host-routing-"));
     const brokerHomeDirectory = join(runtimeDirectory, ".skills-broker");
     const claudeShellDirectory = join(runtimeDirectory, ".claude", "skills", "skills-broker");
@@ -77,23 +77,10 @@ describe("host auto-routing smoke", () => {
 
       const qaResult = await runCodexAdapter(
         {
-          requestText: "QA 这个网站",
+          requestText: "测下这个网站的质量",
           host: "codex",
           invocationMode: "explicit",
-          capabilityQuery: {
-            kind: "capability_request",
-            goal: "qa a website",
-            host: "codex",
-            requestText: "QA 这个网站",
-            jobFamilies: ["quality_assurance"],
-            targets: [
-              {
-                type: "website",
-                value: "https://example.com"
-              }
-            ],
-            artifacts: ["qa_report"]
-          }
+          urls: ["https://example.com"]
         },
         {
           installDirectory: codexShellDirectory,
@@ -192,7 +179,16 @@ describe("host auto-routing smoke", () => {
           request: {
             intent: "capability_discovery_or_install",
             capabilityQuery: {
-              jobFamilies: ["quality_assurance"]
+              goal: "qa a website",
+              requestText: "测下这个网站的质量",
+              jobFamilies: ["quality_assurance"],
+              targets: [
+                {
+                  type: "website",
+                  value: "https://example.com"
+                }
+              ],
+              artifacts: ["qa_report"]
             }
           }
         }

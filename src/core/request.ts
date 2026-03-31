@@ -115,6 +115,36 @@ function hasAmbiguousContentSignal(requestText: string): boolean {
   );
 }
 
+function hasWebsiteTargetSignal(
+  requestText: string,
+  url: string | undefined
+): boolean {
+  return (
+    (url !== undefined && !isSocialUrl(url)) ||
+    /(?:\bwebsite\b|\bsite\b|\bweb app\b|\bwebapp\b|\bweb page\b|\bwebpage\b|\bpage\b|网站|站点|网页|页面)/i.test(
+      requestText
+    )
+  );
+}
+
+function hasQaSignal(requestText: string): boolean {
+  return /(?:\bqa\b|\bquality(?:\s|-)?check(?:ing)?\b|\bquality assurance\b|\btest(?:ing)?\b|\baudit\b|质量|测试|测下|检测)/i.test(
+    requestText
+  );
+}
+
+function looksLikeWebsiteQaRequest(
+  requestText: string,
+  url: string | undefined
+): boolean {
+  return (
+    hasQaSignal(requestText) &&
+    hasWebsiteTargetSignal(requestText, url) &&
+    !hasMarkdownTarget(requestText) &&
+    !hasNonMarkdownTarget(requestText)
+  );
+}
+
 function looksLikeUnsupportedConversionTarget(
   requestText: string,
   url: string | undefined
@@ -173,6 +203,29 @@ function hasQueryFamily(query: CapabilityQuery, family: string): boolean {
 
 function hasQueryArtifact(query: CapabilityQuery, artifact: string): boolean {
   return query.artifacts?.includes(artifact) ?? false;
+}
+
+function buildWebsiteQaCapabilityQuery(
+  input: BrokerEnvelope,
+  url: string | undefined
+): CapabilityQuery {
+  return {
+    kind: "capability_request",
+    goal: "qa a website",
+    host: input.host,
+    requestText: input.requestText,
+    jobFamilies: ["quality_assurance"],
+    targets:
+      url === undefined
+        ? undefined
+        : [
+            {
+              type: "website",
+              value: url
+            }
+          ],
+    artifacts: ["qa_report"]
+  };
 }
 
 function normalizeCapabilityQueryRequest(
@@ -244,6 +297,14 @@ function normalizeEnvelopeRequest(input: BrokerEnvelope): BrokerRequest {
 
   if (looksLikeWebContent(requestText, url)) {
     return buildBrokerRequest("web_content_to_markdown", url);
+  }
+
+  if (looksLikeWebsiteQaRequest(requestText, url)) {
+    return buildBrokerRequest(
+      "capability_discovery_or_install",
+      undefined,
+      buildWebsiteQaCapabilityQuery(input, url)
+    );
   }
 
   if (looksAmbiguous(requestText)) {

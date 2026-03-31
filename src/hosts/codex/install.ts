@@ -14,7 +14,7 @@ export type InstallCodexHostShellResult = {
 };
 
 const RUNNER_FILE_NAME = "run-broker";
-const DEFAULT_VERSION = "0.1.4";
+const DEFAULT_VERSION = "0.1.6";
 const HOST_SHELL_NAME = "skills-broker";
 
 function buildSkillMarkdown(installDirectory: string): string {
@@ -32,6 +32,12 @@ Use this skill only for capability requests, such as:
 - analyzing a requirement and producing a design doc
 - QA or quality-checking a website
 - explicitly finding or installing a skill or MCP
+
+Chinese QA trigger examples include:
+
+- "测下这个网站的质量"
+- "检查这个网站质量"
+- "QA 这个网站"
 
 When this skill is loaded:
 

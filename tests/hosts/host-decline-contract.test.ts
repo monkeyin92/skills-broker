@@ -47,7 +47,7 @@ async function createClaudeShell(
   await mkdir(join(installDirectory, ".claude-plugin"), { recursive: true });
   await writeFile(
     join(installDirectory, ".claude-plugin", "plugin.json"),
-    JSON.stringify({ name: "skills-broker-claude-code", version: "0.1.4" }),
+    JSON.stringify({ name: "skills-broker-claude-code", version: "0.1.6" }),
     "utf8"
   );
   await writeFile(join(installDirectory, "SKILL.md"), "# Skills Broker\n", "utf8");

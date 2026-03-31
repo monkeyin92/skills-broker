@@ -674,6 +674,45 @@ describe("runBroker", () => {
     }
   });
 
+  it("routes raw chinese website QA requests to the qa downstream skill", async () => {
+    const runtime = await createRuntimePaths();
+
+    try {
+      const result = await runBroker(
+        {
+          requestText: "测下这个网站的质量",
+          host: "codex",
+          urls: ["http://116.63.15.60/#/login"]
+        },
+        {
+          ...runtime,
+          currentHost: "codex",
+          now: new Date("2026-03-30T08:45:00.000Z")
+        }
+      );
+
+      expect(result.ok).toBe(true);
+      expect(result.outcome.code).toBe("HANDOFF_READY");
+      expect(result.winner.id).toBe("website-qa");
+      expect(result.handoff.chosenPackage.packageId).toBe("gstack");
+      expect(result.handoff.chosenLeafCapability.subskillId).toBe("qa");
+      expect(result.handoff.chosenImplementation.id).toBe("gstack.qa");
+      expect(result.handoff.request.capabilityQuery).toMatchObject({
+        goal: "qa a website",
+        jobFamilies: ["quality_assurance"],
+        targets: [
+          {
+            type: "website",
+            value: "http://116.63.15.60/#/login"
+          }
+        ],
+        artifacts: ["qa_report"]
+      });
+    } finally {
+      await rm(runtime.directory, { recursive: true, force: true });
+    }
+  });
+
   it("does not reuse a generic discovery cache entry for a different capability-query family", async () => {
     const runtime = await createRuntimePaths();
 

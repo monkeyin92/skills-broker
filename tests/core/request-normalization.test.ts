@@ -184,6 +184,39 @@ describe("normalizeRequest", () => {
     );
   });
 
+  it("rejects check this page as unsupported instead of misrouting it to website QA", () => {
+    expectRejected(
+      {
+        requestText: "check this page",
+        host: "codex",
+        urls: ["https://example.com/page"]
+      },
+      "UNSUPPORTED_REQUEST"
+    );
+  });
+
+  it("rejects check this url as unsupported instead of misrouting it to website QA", () => {
+    expectRejected(
+      {
+        requestText: "check this url",
+        host: "codex",
+        urls: ["https://example.com/page"]
+      },
+      "UNSUPPORTED_REQUEST"
+    );
+  });
+
+  it("rejects check this website as unsupported instead of misrouting it to website QA", () => {
+    expectRejected(
+      {
+        requestText: "check this website",
+        host: "codex",
+        urls: ["https://example.com/page"]
+      },
+      "UNSUPPORTED_REQUEST"
+    );
+  });
+
   it('accepts an auto-invoked envelope with invocationMode: "auto"', () => {
     const normalized = normalizeRequest({
       requestText: "convert this page to markdown",
@@ -214,6 +247,28 @@ describe("normalizeRequest", () => {
     expect(normalized.capabilityQuery).toMatchObject({
       jobFamilies: ["requirements_analysis"],
       artifacts: ["design_doc"]
+    });
+  });
+
+  it("normalizes raw website QA requests into a synthesized capability query", () => {
+    const normalized = normalizeRequest({
+      requestText: "测下这个网站的质量",
+      host: "codex",
+      urls: ["http://116.63.15.60/#/login"]
+    });
+
+    expect(normalized.intent).toBe("capability_discovery_or_install");
+    expect(normalized.capabilityQuery).toMatchObject({
+      goal: "qa a website",
+      requestText: "测下这个网站的质量",
+      jobFamilies: ["quality_assurance"],
+      targets: [
+        {
+          type: "website",
+          value: "http://116.63.15.60/#/login"
+        }
+      ],
+      artifacts: ["qa_report"]
     });
   });
 
