@@ -1,0 +1,162 @@
+type HostShellSkillMarkdownOptions = {
+  host: "claude-code" | "codex";
+  invocationMode: "auto" | "explicit";
+  runnerCommand: string;
+};
+
+const BROKER_FIRST_EXAMPLES = [
+  "测下这个网站的质量：https://www.baidu.com",
+  "QA 这个网站 https://example.com",
+  "检查这个网站质量",
+  "帮我做需求分析并产出设计文档",
+  "帮我看看这个需求有没有漏洞",
+  "把这个页面转成 markdown: https://example.com/a",
+  "convert this webpage to markdown https://example.com/a",
+  "find a skill or MCP for website QA",
+  "有没有现成 skill 能做这个网站 QA",
+  "investigate this site failure with a reusable workflow"
+] as const;
+
+const HANDLE_NORMALLY_EXAMPLES = [
+  "总结一下这个网页讲了什么",
+  "Explain this TypeScript error",
+  "帮我翻译这段话",
+  "写一封邮件回复客户",
+  "这个网站怎么样",
+  "check this code",
+  "what is on this page",
+  "save this webpage as pdf"
+] as const;
+
+const CLARIFY_BEFORE_BROKER_EXAMPLES = [
+  "check this page",
+  "看下这个页面",
+  "look at this url",
+  "检查一下这个链接",
+  "test this",
+  "帮我分析一下"
+] as const;
+
+function renderExamples(examples: readonly string[]): string {
+  return examples.map((example) => `- "${example}"`).join("\n");
+}
+
+function renderCommand(runnerCommand: string, payload: object, debug = false): string {
+  const prefix = debug ? `${runnerCommand} --debug` : runnerCommand;
+  return `\`\`\`bash
+${prefix} '${JSON.stringify(payload)}'
+\`\`\``;
+}
+
+export function buildHostShellSkillMarkdown(
+  options: HostShellSkillMarkdownOptions
+): string {
+  const markdownPayload = {
+    requestText: "turn this webpage into markdown: https://example.com/article",
+    host: options.host,
+    invocationMode: options.invocationMode,
+    urls: ["https://example.com/article"]
+  };
+  const debugPayload = {
+    requestText: "QA this website https://example.com",
+    host: options.host,
+    invocationMode: options.invocationMode,
+    urls: ["https://example.com"]
+  };
+  const structuredPayload = {
+    requestText: "帮我做需求分析并产出设计文档",
+    host: options.host,
+    invocationMode: options.invocationMode,
+    capabilityQuery: {
+      kind: "capability_request",
+      goal: "analyze a product requirement and produce a design doc",
+      host: options.host,
+      requestText: "帮我做需求分析并产出设计文档",
+      jobFamilies: ["requirements_analysis"],
+      artifacts: ["design_doc"]
+    }
+  };
+
+  return `---
+name: "skills-broker"
+description: "Route capability requests through skills-broker. Use when the user wants a reusable skill, MCP, workflow, capability lookup, or external capability execution. Broker-first examples include '测下这个网站的质量', '帮我做需求分析并产出设计文档', 'convert this webpage to markdown https://example.com/a', and 'find a skill or MCP for website QA'. Handle ordinary chat, coding, translation, summarization, and drafting normally. If the request is underspecified, clarify before routing."
+---
+
+# Skills Broker
+
+Use this skill only at the coarse broker boundary.
+
+## Broker-First
+
+Use the broker first when the user is asking for:
+
+- a specialized reusable workflow
+- capability lookup or install help
+- external capability execution instead of ordinary model-native work
+
+Examples:
+
+${renderExamples(BROKER_FIRST_EXAMPLES)}
+
+## Handle Normally
+
+Keep the request in the host when it is ordinary model-native work, such as:
+
+- summarization
+- coding help
+- translation
+- drafting
+- casual inspection without workflow intent
+
+Examples:
+
+${renderExamples(HANDLE_NORMALLY_EXAMPLES)}
+
+## Clarify Before Broker
+
+Do not silently broker vague phrases. Ask a short clarifying question first when the request is missing workflow shape, target, or artifact clues.
+
+Examples:
+
+${renderExamples(CLARIFY_BEFORE_BROKER_EXAMPLES)}
+
+## Host Contract
+
+When this skill is loaded:
+
+1. preserve the user's original wording
+2. if the request looks broker-first, build a broker envelope with raw request text plus safe hints
+3. when confident, optionally include a structured \`capabilityQuery\`
+4. forward that envelope to the local broker runner
+5. if the request is ordinary model-native work, keep it in the host's normal flow
+6. if the request is too vague, ask a short clarifying question before brokering
+7. do not silently substitute a host-native fetch, browsing, or install path when broker routing should decide
+
+## Capability Query Contract
+
+When you can confidently normalize the request, \`capabilityQuery\` is optional but preferred.
+
+Use this shape:
+
+\`\`\`json
+${JSON.stringify(structuredPayload.capabilityQuery, null, 2)}
+\`\`\`
+
+If you are not confident, omit \`capabilityQuery\` and still send the raw envelope.
+
+## Decline Contract
+
+- If the broker returns \`UNSUPPORTED_REQUEST\`, continue normally.
+- If the broker returns \`AMBIGUOUS_REQUEST\`, ask a clarifying question.
+- If the broker returns \`NO_CANDIDATE\`, offer capability discovery or install help.
+- If the broker returns \`PREPARE_FAILED\`, explain the failure clearly and do not silently substitute a native tool path.
+
+## Runner Contract
+
+${renderCommand(options.runnerCommand, markdownPayload)}
+
+${renderCommand(options.runnerCommand, debugPayload, true)}
+
+${renderCommand(options.runnerCommand, structuredPayload)}
+`;
+}

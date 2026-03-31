@@ -53,7 +53,11 @@ describe("Claude Code smoke", () => {
       const skillContents = await readFile(skillPath, "utf8");
       expect(skillContents).toContain("# Skills Broker");
       expect(skillContents).toContain("Route capability requests through skills-broker");
-      expect(skillContents).toContain("do not independently substitute WebFetch");
+      expect(skillContents).toContain("Use this skill only at the coarse broker boundary.");
+      expect(skillContents).toContain("## Broker-First");
+      expect(skillContents).toContain("## Handle Normally");
+      expect(skillContents).toContain("## Clarify Before Broker");
+      expect(skillContents).toContain("build a broker envelope with raw request text plus safe hints");
       expect(skillContents).toContain("structured `capabilityQuery`");
       expect(skillContents).toContain("If the broker returns `UNSUPPORTED_REQUEST`, continue normally.");
       expect(skillContents).toContain("If the broker returns `AMBIGUOUS_REQUEST`, ask a clarifying question.");

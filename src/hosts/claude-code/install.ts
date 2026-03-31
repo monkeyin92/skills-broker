@@ -1,5 +1,6 @@
 import { chmod, copyFile, cp, mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
+import { buildHostShellSkillMarkdown } from "../skill-markdown.js";
 import { writeManagedShellManifest } from "../../shared-home/ownership.js";
 
 export type InstallClaudeCodePluginOptions = {
@@ -47,81 +48,11 @@ function buildRuntimePackageJson(version: string) {
 }
 
 function buildSkillMarkdown(runnerCommand: string) {
-  return `---
-name: "skills-broker"
-description: "Route capability requests through skills-broker. Use when the user wants a reusable skill, MCP, or workflow such as webpage-to-markdown, social-post-to-markdown, requirements analysis, website QA, investigation, or explicit capability discovery/install, including phrases like '测下这个网站的质量', '检查这个网站质量', 'QA 这个网站', 'QA this website', and 'check this website quality'. Do not use for ordinary chat, coding, or summarization."
----
-
-# Skills Broker
-
-Use this skill only for capability requests, such as:
-
-- converting web content to markdown
-- converting a social post to markdown
-- analyzing a requirement and producing a design doc
-- QA or quality-checking a website
-- explicitly finding or installing a skill or MCP
-
-QA trigger examples include:
-
-- "测下这个网站的质量"
-- "检查这个网站质量"
-- "QA 这个网站"
-- "QA this website"
-- "check this website quality"
-
-When this skill is loaded:
-
-1. preserve the user's original wording
-2. decide whether the user is asking for a reusable capability instead of ordinary chat
-3. build a broker envelope that includes raw request text plus safe hints
-4. when confident, also include a structured \`capabilityQuery\` describing the job, targets, and output artifacts
-5. forward that envelope to the local broker runner
-6. do not independently substitute WebFetch or host-native fetch/install behavior when broker routing should decide
-
-## Capability Query Contract
-
-When you can confidently normalize the request, include a structured \`capabilityQuery\`.
-
-Use this shape:
-
-\`\`\`json
-{
-  "kind": "capability_request",
-  "goal": "analyze a product requirement and produce a design doc",
-  "host": "claude-code",
-  "requestText": "帮我做需求分析并产出设计文档",
-  "jobFamilies": ["requirements_analysis"],
-  "targets": [
-    { "type": "problem_statement", "value": "..." }
-  ],
-  "artifacts": ["design_doc"]
-}
-\`\`\`
-
-If you are not confident, omit \`capabilityQuery\` and still send the raw envelope.
-
-## Decline Contract
-
-- If the broker returns \`UNSUPPORTED_REQUEST\`, continue normally.
-- If the broker returns \`AMBIGUOUS_REQUEST\`, ask a clarifying question.
-- If the broker returns \`NO_CANDIDATE\`, offer capability discovery or install help.
-- If the broker returns \`PREPARE_FAILED\`, explain the failure clearly and do not silently substitute a native tool path.
-
-## Runner Contract
-
-\`\`\`bash
-${runnerCommand} '{"requestText":"turn this webpage into markdown: https://example.com/article","host":"claude-code","invocationMode":"auto","urls":["https://example.com/article"]}'
-\`\`\`
-
-\`\`\`bash
-${runnerCommand} --debug '{"requestText":"测下这个网站的质量","host":"claude-code","invocationMode":"auto","urls":["https://example.com"]}'
-\`\`\`
-
-\`\`\`bash
-${runnerCommand} '{"requestText":"帮我做需求分析并产出设计文档","host":"claude-code","invocationMode":"auto","capabilityQuery":{"kind":"capability_request","goal":"analyze a product requirement and produce a design doc","host":"claude-code","requestText":"帮我做需求分析并产出设计文档","jobFamilies":["requirements_analysis"],"artifacts":["design_doc"]}}'
-\`\`\`
-`;
+  return buildHostShellSkillMarkdown({
+    host: "claude-code",
+    invocationMode: "auto",
+    runnerCommand
+  });
 }
 
 function buildHostShellRunnerScript(brokerHomeDirectory: string): string {
