@@ -60,15 +60,7 @@ describe("installed host-shell routing smoke", () => {
         {
           requestText: "帮我做需求分析并产出设计文档",
           host: "claude-code",
-          invocationMode: "auto",
-          capabilityQuery: {
-            kind: "capability_request",
-            goal: "analyze a product requirement and produce a design doc",
-            host: "claude-code",
-            requestText: "帮我做需求分析并产出设计文档",
-            jobFamilies: ["requirements_analysis"],
-            artifacts: ["design_doc"]
-          }
+          invocationMode: "auto"
         },
         {
           installDirectory: claudeShellDirectory,
@@ -156,7 +148,15 @@ describe("installed host-shell routing smoke", () => {
           request: {
             intent: "capability_discovery_or_install",
             capabilityQuery: {
-              jobFamilies: ["requirements_analysis"]
+              goal: "analyze a product requirement and produce a design doc",
+              jobFamilies: ["requirements_analysis"],
+              targets: [
+                {
+                  type: "problem_statement",
+                  value: "帮我做需求分析并产出设计文档"
+                }
+              ],
+              artifacts: ["design_doc", "analysis"]
             }
           }
         }

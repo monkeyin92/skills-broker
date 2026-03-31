@@ -133,6 +133,22 @@ function hasQaSignal(requestText: string): boolean {
   );
 }
 
+function hasRequirementSignal(requestText: string): boolean {
+  return /(?:需求|requirement(?:s)?\b|\bprd\b|\bproblem statement\b|\bproduct spec\b|\bspecification\b)/i.test(
+    requestText
+  );
+}
+
+function hasRequirementsWorkflowSignal(requestText: string): boolean {
+  return /(?:分析|评审|审查|漏洞|风险|缺口|缺陷|\banaly[sz]e\b|\banalysis\b|\breview\b|\bthink through\b|\bgaps?\b|\bholes?\b|\brisks?\b|\bdesign doc(?:ument)?\b)/i.test(
+    requestText
+  );
+}
+
+function hasDesignDocSignal(requestText: string): boolean {
+  return /(?:设计文档|\bdesign doc(?:ument)?\b)/i.test(requestText);
+}
+
 function looksLikeWebsiteQaRequest(
   requestText: string,
   url: string | undefined
@@ -140,6 +156,15 @@ function looksLikeWebsiteQaRequest(
   return (
     hasQaSignal(requestText) &&
     hasWebsiteTargetSignal(requestText, url) &&
+    !hasMarkdownTarget(requestText) &&
+    !hasNonMarkdownTarget(requestText)
+  );
+}
+
+function looksLikeRequirementsAnalysisRequest(requestText: string): boolean {
+  return (
+    hasRequirementSignal(requestText) &&
+    hasRequirementsWorkflowSignal(requestText) &&
     !hasMarkdownTarget(requestText) &&
     !hasNonMarkdownTarget(requestText)
   );
@@ -228,6 +253,30 @@ function buildWebsiteQaCapabilityQuery(
   };
 }
 
+function buildRequirementsAnalysisCapabilityQuery(
+  input: BrokerEnvelope
+): CapabilityQuery {
+  const normalizedRequestText = normalizeText(input.requestText);
+  const wantsDesignDoc = hasDesignDocSignal(normalizedRequestText);
+
+  return {
+    kind: "capability_request",
+    goal: wantsDesignDoc
+      ? "analyze a product requirement and produce a design doc"
+      : "analyze a product requirement and identify gaps",
+    host: input.host,
+    requestText: input.requestText,
+    jobFamilies: ["requirements_analysis"],
+    targets: [
+      {
+        type: "problem_statement",
+        value: input.requestText
+      }
+    ],
+    artifacts: wantsDesignDoc ? ["design_doc", "analysis"] : ["analysis"]
+  };
+}
+
 function normalizeCapabilityQueryRequest(
   query: CapabilityQuery
 ): BrokerRequest {
@@ -297,6 +346,14 @@ function normalizeEnvelopeRequest(input: BrokerEnvelope): BrokerRequest {
 
   if (looksLikeWebContent(requestText, url)) {
     return buildBrokerRequest("web_content_to_markdown", url);
+  }
+
+  if (looksLikeRequirementsAnalysisRequest(requestText)) {
+    return buildBrokerRequest(
+      "capability_discovery_or_install",
+      undefined,
+      buildRequirementsAnalysisCapabilityQuery(input)
+    );
   }
 
   if (looksLikeWebsiteQaRequest(requestText, url)) {

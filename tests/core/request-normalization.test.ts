@@ -272,6 +272,48 @@ describe("normalizeRequest", () => {
     });
   });
 
+  it("normalizes raw requirements-analysis requests into a synthesized capability query", () => {
+    const normalized = normalizeRequest({
+      requestText: "帮我做需求分析并产出设计文档",
+      host: "claude-code"
+    });
+
+    expect(normalized.intent).toBe("capability_discovery_or_install");
+    expect(normalized.capabilityQuery).toMatchObject({
+      goal: "analyze a product requirement and produce a design doc",
+      requestText: "帮我做需求分析并产出设计文档",
+      jobFamilies: ["requirements_analysis"],
+      targets: [
+        {
+          type: "problem_statement",
+          value: "帮我做需求分析并产出设计文档"
+        }
+      ],
+      artifacts: ["design_doc", "analysis"]
+    });
+  });
+
+  it("normalizes raw requirement-gap review requests into a synthesized analysis query", () => {
+    const normalized = normalizeRequest({
+      requestText: "帮我看看这个需求有没有漏洞",
+      host: "codex"
+    });
+
+    expect(normalized.intent).toBe("capability_discovery_or_install");
+    expect(normalized.capabilityQuery).toMatchObject({
+      goal: "analyze a product requirement and identify gaps",
+      requestText: "帮我看看这个需求有没有漏洞",
+      jobFamilies: ["requirements_analysis"],
+      targets: [
+        {
+          type: "problem_statement",
+          value: "帮我看看这个需求有没有漏洞"
+        }
+      ],
+      artifacts: ["analysis"]
+    });
+  });
+
   it("normalizes a structured capability query for webpage markdown into the web lane", () => {
     const normalized = normalizeRequest({
       requestText: "将这个页面转为markdown文件：https://example.com/post",

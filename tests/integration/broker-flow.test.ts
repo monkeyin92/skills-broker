@@ -678,6 +678,54 @@ describe("runBroker", () => {
     }
   });
 
+  it("routes raw requirements-analysis requests to office-hours", async () => {
+    const runtime = await createRuntimePaths();
+
+    try {
+      const result = await runBroker(
+        {
+          requestText: "帮我做需求分析并产出设计文档",
+          host: "claude-code"
+        },
+        {
+          ...runtime,
+          now: new Date("2026-03-30T08:15:00.000Z")
+        }
+      );
+
+      expect(result.ok).toBe(true);
+      expect(result.outcome.code).toBe("HANDOFF_READY");
+      expect(result.winner.id).toBe("requirements-analysis");
+      expect(result.handoff.chosenPackage.packageId).toBe("gstack");
+      expect(result.trace).toMatchObject({
+        host: "claude-code",
+        resultCode: "HANDOFF_READY",
+        missLayer: null,
+        normalizedBy: "raw_request_fallback",
+        requestSurface: "raw_envelope",
+        winnerId: "requirements-analysis",
+        winnerPackageId: "gstack"
+      });
+      expect(result.handoff.chosenLeafCapability.subskillId).toBe(
+        "office-hours"
+      );
+      expect(result.handoff.chosenImplementation.id).toBe("gstack.office_hours");
+      expect(result.handoff.request.capabilityQuery).toMatchObject({
+        goal: "analyze a product requirement and produce a design doc",
+        jobFamilies: ["requirements_analysis"],
+        targets: [
+          {
+            type: "problem_statement",
+            value: "帮我做需求分析并产出设计文档"
+          }
+        ],
+        artifacts: ["design_doc", "analysis"]
+      });
+    } finally {
+      await rm(runtime.directory, { recursive: true, force: true });
+    }
+  });
+
   it("routes qa capability queries to the qa downstream skill", async () => {
     const runtime = await createRuntimePaths();
 
@@ -779,15 +827,7 @@ describe("runBroker", () => {
       const secondResult = await runBroker(
         {
           requestText: "帮我做需求分析并产出设计文档",
-          host: "claude-code",
-          capabilityQuery: {
-            kind: "capability_request",
-            goal: "analyze a product requirement and produce a design doc",
-            host: "claude-code",
-            requestText: "帮我做需求分析并产出设计文档",
-            jobFamilies: ["requirements_analysis"],
-            artifacts: ["design_doc"]
-          }
+          host: "claude-code"
         },
         {
           ...runtime,
