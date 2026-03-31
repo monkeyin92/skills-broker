@@ -14,6 +14,10 @@ export type RunBrokerCliOptions = RunBrokerOptions & {
 };
 
 export type RunBrokerCliOutput = RunBrokerResult;
+export type BrokerCliCommandLineArgs = {
+  rawInput: string;
+  includeTrace: boolean;
+};
 
 function resolveCurrentHost(
   input: BrokerEnvelope,
@@ -58,7 +62,11 @@ function shouldIncludeTrace(value: string | undefined): boolean {
   return /^(?:1|true|yes|trace)$/i.test(value);
 }
 
-function directRunOptions(): RunBrokerCliOptions {
+function directRunOptions(includeTraceOverride = false): RunBrokerCliOptions {
+  const includeTraceFromEnvironment = shouldIncludeTrace(
+    process.env.BROKER_DEBUG ?? process.env.BROKER_TRACE
+  );
+
   return {
     cacheFilePath: process.env.BROKER_CACHE_FILE,
     hostCatalogFilePath: process.env.BROKER_HOST_CATALOG,
@@ -68,21 +76,45 @@ function directRunOptions(): RunBrokerCliOptions {
       process.env.BROKER_PACKAGE_SEARCH_ROOTS?.split(delimiter).filter(Boolean),
     currentHost: process.env.BROKER_CURRENT_HOST,
     now: process.env.BROKER_NOW ? new Date(process.env.BROKER_NOW) : undefined,
-    includeTrace: shouldIncludeTrace(
-      process.env.BROKER_DEBUG ?? process.env.BROKER_TRACE
-    )
+    includeTrace: includeTraceOverride || includeTraceFromEnvironment
+  };
+}
+
+export function parseBrokerCliCommandLineArgs(
+  argv: string[]
+): BrokerCliCommandLineArgs {
+  let includeTrace = false;
+  let inputIndex = 0;
+
+  if (argv[0] === "--debug") {
+    includeTrace = true;
+    inputIndex = 1;
+  }
+
+  const rawInput = argv[inputIndex];
+
+  if (rawInput === undefined) {
+    throw new Error(
+      "Expected broker envelope JSON as the first argument. Usage: cli.js [--debug] '<broker-envelope-json>'."
+    );
+  }
+
+  if (argv.length !== inputIndex + 1) {
+    throw new Error(
+      "Unexpected extra CLI arguments. Usage: cli.js [--debug] '<broker-envelope-json>'."
+    );
+  }
+
+  return {
+    rawInput,
+    includeTrace
   };
 }
 
 async function runFromCommandLine(): Promise<void> {
-  const rawInput = process.argv[2];
-
-  if (rawInput === undefined) {
-    throw new Error("Expected broker envelope JSON as the first argument.");
-  }
-
-  const input = parseBrokerEnvelopeFromCommandLine(rawInput);
-  await runBrokerCli(input, directRunOptions());
+  const commandLine = parseBrokerCliCommandLineArgs(process.argv.slice(2));
+  const input = parseBrokerEnvelopeFromCommandLine(commandLine.rawInput);
+  await runBrokerCli(input, directRunOptions(commandLine.includeTrace));
 }
 
 export function parseBrokerEnvelopeFromCommandLine(

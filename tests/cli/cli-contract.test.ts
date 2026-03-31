@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { expect, test, vi } from "vitest";
 import {
+  parseBrokerCliCommandLineArgs,
   parseBrokerEnvelopeFromCommandLine,
   runBrokerCli
 } from "../../src/cli";
@@ -197,6 +198,25 @@ test("cli includes routing trace only when includeTrace is enabled", async () =>
       normalizedBy: "raw_request_fallback",
       requestSurface: "raw_envelope"
     }
+  });
+});
+
+test("cli command line parser recognizes --debug without breaking the legacy json-only form", () => {
+  const rawEnvelopeJson = JSON.stringify({
+    requestText: "turn this webpage into markdown: https://example.com/post",
+    host: "claude-code",
+    invocationMode: "explicit",
+    urls: ["https://example.com/post"]
+  });
+
+  expect(parseBrokerCliCommandLineArgs([rawEnvelopeJson])).toEqual({
+    rawInput: rawEnvelopeJson,
+    includeTrace: false
+  });
+
+  expect(parseBrokerCliCommandLineArgs(["--debug", rawEnvelopeJson])).toEqual({
+    rawInput: rawEnvelopeJson,
+    includeTrace: true
   });
 });
 

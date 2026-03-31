@@ -66,6 +66,7 @@ describe("Claude Code smoke", () => {
         "claude-code-plugin-relocated"
       );
       await rename(installDirectory, relocatedInstallDirectory);
+      const relocatedRunnerPath = join(relocatedInstallDirectory, "bin", "run-broker");
 
       const result = await runClaudeCodeAdapter(
         {
@@ -84,6 +85,41 @@ describe("Claude Code smoke", () => {
       expect(result.outcome.code).toBe("HANDOFF_READY");
       expect(result.handoff.context.currentHost).toBe("claude-code");
       expect(result.handoff.request.url).toBe("https://example.com/article");
+
+      const { stdout } = await execFileAsync(
+        relocatedRunnerPath,
+        [
+          "--debug",
+          JSON.stringify({
+            requestText: "测下这个网站的质量",
+            host: "claude-code",
+            invocationMode: "auto",
+            urls: ["https://example.com/qa"]
+          })
+        ],
+        {
+          cwd: relocatedInstallDirectory,
+          env: {
+            ...process.env,
+            BROKER_NOW: "2026-03-31T10:00:00.000Z"
+          }
+        }
+      );
+      const debugResult = JSON.parse(stdout) as {
+        trace?: {
+          host: string;
+          resultCode: string;
+          winnerId: string | null;
+        };
+      };
+
+      expect(debugResult).toMatchObject({
+        trace: {
+          host: "claude-code",
+          resultCode: "HANDOFF_READY",
+          winnerId: "website-qa"
+        }
+      });
     } finally {
       await rm(runtimeDirectory, { recursive: true, force: true });
     }

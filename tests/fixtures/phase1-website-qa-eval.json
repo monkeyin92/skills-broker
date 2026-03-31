@@ -1,0 +1,56 @@
+{
+  "cases": [
+    {
+      "id": "host-skip-website-qa",
+      "mode": "synthetic_host_skip",
+      "host": "codex",
+      "requestText": "测下这个网站的质量：https://www.baidu.com",
+      "now": "2026-03-31T02:45:00.000Z",
+      "expect": {
+        "resultCode": "HOST_SKIPPED_BROKER",
+        "missLayer": "host_selection"
+      }
+    },
+    {
+      "id": "normalization-miss-check-this-website",
+      "mode": "host_runner",
+      "host": "codex",
+      "requestText": "check this website",
+      "invocationMode": "auto",
+      "urls": ["https://www.baidu.com"],
+      "now": "2026-03-31T03:00:00.000Z",
+      "expect": {
+        "resultCode": "UNSUPPORTED_REQUEST",
+        "missLayer": "broker_normalization"
+      }
+    },
+    {
+      "id": "retrieval-miss-empty-catalog",
+      "mode": "host_runner",
+      "host": "codex",
+      "requestText": "测下这个网站的质量",
+      "invocationMode": "explicit",
+      "urls": ["https://www.baidu.com"],
+      "catalogVariant": "empty",
+      "registryVariant": "empty",
+      "now": "2026-03-31T03:15:00.000Z",
+      "expect": {
+        "resultCode": "NO_CANDIDATE",
+        "missLayer": "retrieval"
+      }
+    },
+    {
+      "id": "prepare-miss-website-qa",
+      "mode": "prepare_failure",
+      "host": "codex",
+      "requestText": "QA this website",
+      "invocationMode": "explicit",
+      "urls": ["https://www.baidu.com"],
+      "now": "2026-03-31T03:30:00.000Z",
+      "expect": {
+        "resultCode": "PREPARE_FAILED",
+        "missLayer": "prepare"
+      }
+    }
+  ]
+}

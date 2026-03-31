@@ -86,6 +86,10 @@ ${join(installDirectory, "bin", RUNNER_FILE_NAME)} '{"requestText":"turn this we
 \`\`\`
 
 \`\`\`bash
+${join(installDirectory, "bin", RUNNER_FILE_NAME)} --debug '{"requestText":"QA this website","host":"codex","invocationMode":"explicit","urls":["https://example.com"]}'
+\`\`\`
+
+\`\`\`bash
 ${join(installDirectory, "bin", RUNNER_FILE_NAME)} '{"requestText":"QA 这个网站","host":"codex","invocationMode":"explicit","capabilityQuery":{"kind":"capability_request","goal":"qa a website","host":"codex","requestText":"QA 这个网站","jobFamilies":["quality_assurance"],"targets":[{"type":"website","value":"https://example.com"}],"artifacts":["qa_report"]}}'
 \`\`\`
 `;
@@ -95,14 +99,23 @@ function buildRunnerScript(brokerHomeDirectory: string): string {
   return `#!/usr/bin/env bash
 set -euo pipefail
 
+CLI_ARGS=()
+
+if [[ "\${1:-}" == "--debug" ]]; then
+  CLI_ARGS+=("--debug")
+  shift
+fi
+
 BROKER_INPUT="\${1:-}"
 
-if [[ -z "\${BROKER_INPUT}" ]]; then
-  echo "usage: $0 '<broker-envelope-json>'" >&2
+if [[ -z "\${BROKER_INPUT}" || "\${#}" -ne 1 ]]; then
+  echo "usage: $0 [--debug] '<broker-envelope-json>'" >&2
   exit 1
 fi
 
-BROKER_CURRENT_HOST="codex" exec "${brokerHomeDirectory}/bin/run-broker" "\${BROKER_INPUT}"
+CLI_ARGS+=("\${BROKER_INPUT}")
+
+BROKER_CURRENT_HOST="codex" exec "${brokerHomeDirectory}/bin/run-broker" "\${CLI_ARGS[@]}"
 `;
 }
 

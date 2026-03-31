@@ -62,6 +62,7 @@ describe("shared broker home smoke", () => {
       "plugin.json"
     );
     const codexSkillPath = join(codexShellDirectory, "SKILL.md");
+    const codexRunnerPath = join(codexShellDirectory, "bin", "run-broker");
 
     try {
       await expect(access(buildScriptPath)).resolves.toBeUndefined();
@@ -122,6 +123,78 @@ describe("shared broker home smoke", () => {
       expect(codexResult.debug.cacheHit).toBe(true);
       expect(codexResult.debug.cachedCandidateId).toBe(claudeResult.winner.id);
       expect(codexResult).not.toHaveProperty("trace");
+
+      const { stdout: sharedRunnerStdout } = await execFileAsync(
+        sharedRunnerPath,
+        [
+          "--debug",
+          JSON.stringify({
+            requestText: "turn this webpage into markdown: https://example.com/debug",
+            host: "claude-code",
+            invocationMode: "explicit",
+            urls: ["https://example.com/debug"]
+          })
+        ],
+        {
+          env: {
+            ...process.env,
+            BROKER_CURRENT_HOST: "claude-code",
+            BROKER_NOW: "2026-03-31T09:00:00.000Z"
+          }
+        }
+      );
+      const sharedRunnerResult = JSON.parse(sharedRunnerStdout) as {
+        trace?: {
+          host: string;
+          resultCode: string;
+          missLayer: string | null;
+        };
+      };
+
+      expect(sharedRunnerResult).toMatchObject({
+        trace: {
+          host: "claude-code",
+          resultCode: "HANDOFF_READY",
+          missLayer: null
+        }
+      });
+
+      const { stdout: codexRunnerStdout } = await execFileAsync(
+        codexRunnerPath,
+        [
+          "--debug",
+          JSON.stringify({
+            requestText: "测下这个网站的质量",
+            host: "codex",
+            invocationMode: "explicit",
+            urls: ["https://example.com/debug-qa"]
+          })
+        ],
+        {
+          cwd: codexShellDirectory,
+          env: {
+            ...process.env,
+            BROKER_NOW: "2026-03-31T09:15:00.000Z"
+          }
+        }
+      );
+      const codexRunnerResult = JSON.parse(codexRunnerStdout) as {
+        trace?: {
+          host: string;
+          resultCode: string;
+          missLayer: string | null;
+          winnerId: string | null;
+        };
+      };
+
+      expect(codexRunnerResult).toMatchObject({
+        trace: {
+          host: "codex",
+          resultCode: "HANDOFF_READY",
+          missLayer: null,
+          winnerId: "website-qa"
+        }
+      });
     } finally {
       await rm(runtimeDirectory, { recursive: true, force: true });
     }

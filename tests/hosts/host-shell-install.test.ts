@@ -32,8 +32,8 @@ describe("host shell installers", () => {
 
       expect(claudeRunner).toContain(resolve(relativeBrokerHomeDirectory));
       expect(codexRunner).toContain(resolve(relativeBrokerHomeDirectory));
-      expect(claudeRunner).toContain("<broker-envelope-json>");
-      expect(codexRunner).toContain("<broker-envelope-json>");
+      expect(claudeRunner).toContain("[--debug] '<broker-envelope-json>'");
+      expect(codexRunner).toContain("[--debug] '<broker-envelope-json>'");
       expect(claudeSkill).toContain("Route capability requests through skills-broker");
       expect(claudeSkill).toContain("do not independently substitute WebFetch");
       expect(claudeSkill).toContain("structured `capabilityQuery`");
@@ -43,6 +43,7 @@ describe("host shell installers", () => {
       expect(claudeSkill).toContain('"QA 这个网站"');
       expect(claudeSkill).toContain('"QA this website"');
       expect(claudeSkill).toContain('"check this website quality"');
+      expect(claudeSkill).toContain('--debug \'{"requestText":"测下这个网站的质量"');
       expect(claudeSkill).toContain("If the broker returns `UNSUPPORTED_REQUEST`, continue normally.");
       expect(claudeSkill).toContain("If the broker returns `AMBIGUOUS_REQUEST`, ask a clarifying question.");
       expect(claudeSkill).toContain("If the broker returns `NO_CANDIDATE`, offer capability discovery or install help.");
@@ -57,6 +58,7 @@ describe("host shell installers", () => {
       expect(codexSkill).toContain('"QA 这个网站"');
       expect(codexSkill).toContain('"QA this website"');
       expect(codexSkill).toContain('"check this website quality"');
+      expect(codexSkill).toContain('--debug \'{"requestText":"QA this website"');
       expect(codexSkill).toContain("If the broker returns `UNSUPPORTED_REQUEST`, continue normally.");
       expect(codexSkill).toContain("If the broker returns `AMBIGUOUS_REQUEST`, ask a clarifying question.");
       expect(codexSkill).toContain("If the broker returns `NO_CANDIDATE`, offer capability discovery or install help.");

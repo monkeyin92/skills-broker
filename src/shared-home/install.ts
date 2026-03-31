@@ -31,10 +31,19 @@ function buildRunnerScript(): string {
   return `#!/usr/bin/env bash
 set -euo pipefail
 
+CLI_ARGS=()
+INCLUDE_TRACE="\${BROKER_INCLUDE_TRACE:-false}"
+
+if [[ "\${1:-}" == "--debug" ]]; then
+  CLI_ARGS+=("--debug")
+  INCLUDE_TRACE="true"
+  shift
+fi
+
 BROKER_INPUT="\${1:-}"
 
-if [[ -z "\${BROKER_INPUT}" ]]; then
-  echo "usage: $0 '<broker-request-json>'" >&2
+if [[ -z "\${BROKER_INPUT}" || "\${#}" -ne 1 ]]; then
+  echo "usage: $0 [--debug] '<broker-request-json>'" >&2
   exit 1
 fi
 
@@ -50,28 +59,37 @@ fi
 mkdir -p "\${BROKER_HOME}/state"
 
 CACHE_FILE="\${BROKER_CACHE_FILE:-\${BROKER_HOME}/state/broker-cache.json}"
+CLI_ARGS+=("\${BROKER_INPUT}")
 
 BROKER_INPUT="\${BROKER_INPUT}" \\
 BROKER_CACHE_FILE="\${CACHE_FILE}" \\
-BROKER_HOST_CATALOG="\${BROKER_HOME}/config/host-skills.seed.json" \\
-BROKER_MCP_REGISTRY="\${BROKER_HOME}/config/mcp-registry.seed.json" \\
+BROKER_HOST_CATALOG="\${BROKER_HOST_CATALOG:-\${BROKER_HOME}/config/host-skills.seed.json}" \\
+BROKER_MCP_REGISTRY="\${BROKER_MCP_REGISTRY:-\${BROKER_HOME}/config/mcp-registry.seed.json}" \\
 BROKER_HOME_DIR="\${BROKER_HOME}" \\
 BROKER_NOW="\${BROKER_NOW:-}" \\
 BROKER_CURRENT_HOST="\${CURRENT_HOST}" \\
 BROKER_CLI_PATH="\${BROKER_HOME}/dist/cli.js" \\
+BROKER_INCLUDE_TRACE="\${INCLUDE_TRACE}" \\
 node --input-type=module <<'EOF'
 import { pathToFileURL } from "node:url";
 
 const { runBrokerCli } = await import(pathToFileURL(process.env.BROKER_CLI_PATH).href);
 const input = JSON.parse(process.env.BROKER_INPUT);
 const now = process.env.BROKER_NOW ? new Date(process.env.BROKER_NOW) : undefined;
+const includeTrace =
+  process.env.BROKER_INCLUDE_TRACE === "true" ||
+  /^(?:1|true|yes|trace)$/i.test(
+    process.env.BROKER_DEBUG ?? process.env.BROKER_TRACE ?? ""
+  );
 
 await runBrokerCli(input, {
   cacheFilePath: process.env.BROKER_CACHE_FILE,
   hostCatalogFilePath: process.env.BROKER_HOST_CATALOG,
   mcpRegistryFilePath: process.env.BROKER_MCP_REGISTRY,
+  brokerHomeDirectory: process.env.BROKER_HOME_DIR,
   currentHost: process.env.BROKER_CURRENT_HOST,
-  now
+  now,
+  includeTrace
 });
 EOF
 `;
