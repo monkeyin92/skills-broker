@@ -1,0 +1,69 @@
+name: Publish npm package
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+concurrency:
+  group: publish-npm-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          registry-url: https://registry.npmjs.org
+
+      - name: Capture package version
+        shell: bash
+        run: |
+          set -euo pipefail
+          package_name="$(node -p "require('./package.json').name")"
+          package_version="$(node -p "require('./package.json').version")"
+          echo "PACKAGE_NAME=${package_name}" >> "${GITHUB_ENV}"
+          echo "PACKAGE_VERSION=${package_version}" >> "${GITHUB_ENV}"
+
+          if [ "${GITHUB_REF_TYPE:-}" = "tag" ]; then
+            tag_version="${GITHUB_REF_NAME#v}"
+            if [ "${tag_version}" != "${package_version}" ]; then
+              echo "Tag version ${tag_version} does not match package.json ${package_version}." >&2
+              exit 1
+            fi
+          fi
+
+      - name: Ensure version is unpublished
+        shell: bash
+        run: |
+          set -euo pipefail
+          if npm view "${PACKAGE_NAME}@${PACKAGE_VERSION}" version >/dev/null 2>&1; then
+            echo "${PACKAGE_NAME}@${PACKAGE_VERSION} is already published." >&2
+            exit 1
+          fi
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build distributable runtime
+        run: npm run build
+
+      - name: Run test suite
+        run: npm test -- --run
+
+      - name: Publish package
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: npm publish --provenance --access public
