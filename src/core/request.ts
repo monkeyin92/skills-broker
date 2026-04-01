@@ -155,9 +155,38 @@ function hasIdeaWorkflowSignal(requestText: string): boolean {
   );
 }
 
+function hasIdeaBuildSignal(requestText: string): boolean {
+  return /(?:做一个|做个|弄一个|弄个|搞一个|搞个|加一个|加个|整一个|整个|来一个|来个)/i.test(
+    requestText
+  );
+}
+
+function hasIdeaProductSurfaceSignal(requestText: string): boolean {
+  return /(?:产品|工具|功能|体验|界面|入口|提示|进度|workflow|skill|mcp|插件|app\b|应用|客户端|桌面|mac\b|菜单栏|dock|cli\b|codex|claude code)/i.test(
+    requestText
+  );
+}
+
+function hasIdeaConceptSignal(requestText: string): boolean {
+  return /(?:如果|要是|假如|不如|就像|像.+一样|这样就|这样可以|就不用|不用再|省得)/i.test(
+    requestText
+  );
+}
+
 function hasOrdinaryTextTaskSignal(requestText: string): boolean {
   return /(?:\bsummar(?:ize|y)\b|\bexplain\b|\btranslate\b|\brewrite\b|总结|解释|翻译|改写)/i.test(
     requestText
+  );
+}
+
+function looksLikeIdeaWorkflowRequest(requestText: string): boolean {
+  return (
+    !hasOrdinaryTextTaskSignal(requestText) &&
+    (hasStrongIdeaSignal(requestText) ||
+      (hasWeakIdeaSignal(requestText) && hasIdeaWorkflowSignal(requestText)) ||
+      (hasIdeaBuildSignal(requestText) &&
+        hasIdeaProductSurfaceSignal(requestText) &&
+        (hasIdeaWorkflowSignal(requestText) || hasIdeaConceptSignal(requestText))))
   );
 }
 
@@ -455,7 +484,7 @@ function normalizeEnvelopeRequest(input: BrokerEnvelope): BrokerRequest {
     return buildBrokerRequest("capability_discovery_or_install");
   }
 
-  if (hasStrongIdeaSignal(requestText) || (hasWeakIdeaSignal(requestText) && hasIdeaWorkflowSignal(requestText))) {
+  if (looksLikeIdeaWorkflowRequest(requestText)) {
     return buildBrokerRequest(
       "capability_discovery_or_install",
       undefined,

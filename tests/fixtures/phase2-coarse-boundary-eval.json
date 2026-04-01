@@ -45,6 +45,20 @@
       }
     },
     {
+      "id": "broker-first-freeform-idea-workflow",
+      "mode": "host_runner",
+      "hosts": ["claude-code", "codex"],
+      "requestText": "如果在mac的摄像头遮挡处，弄一个codex或者claude code的进度提示，就像iPhone的胶囊岛一样的，这样就不用傻傻盯着cli了",
+      "now": "2026-03-31T10:12:00.000Z",
+      "expect": {
+        "hostDecision": "broker_first",
+        "resultCode": "WORKFLOW_STAGE_READY",
+        "normalizedBy": "raw_request_fallback",
+        "requestSurface": "raw_envelope",
+        "winnerId": "idea-to-ship"
+      }
+    },
+    {
       "id": "handle-normally-page-summary",
       "mode": "synthetic_host_skip",
       "hosts": ["claude-code", "codex"],

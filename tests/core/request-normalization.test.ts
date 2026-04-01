@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { normalizeRequest } from "../../src/core/request";
 
+const FREEFORM_IDEA_REQUEST =
+  "如果在mac的摄像头遮挡处，弄一个codex或者claude code的进度提示，就像iPhone的胶囊岛一样的，这样就不用傻傻盯着cli了";
+
 function expectRejected(
   input: Parameters<typeof normalizeRequest>[0],
   code: string
@@ -362,6 +365,32 @@ describe("normalizeRequest", () => {
     });
   });
 
+  it("normalizes free-form idea requests into the workflow discovery lane", () => {
+    const normalized = normalizeRequest({
+      requestText: FREEFORM_IDEA_REQUEST,
+      host: "codex"
+    });
+
+    expect(normalized.intent).toBe("capability_discovery_or_install");
+    expect(normalized.capabilityQuery).toMatchObject({
+      goal: "turn a product idea into a reviewed execution plan",
+      requestText: FREEFORM_IDEA_REQUEST,
+      jobFamilies: [
+        "idea_brainstorming",
+        "requirements_analysis",
+        "strategy_review",
+        "engineering_review"
+      ],
+      targets: [
+        {
+          type: "problem_statement",
+          value: FREEFORM_IDEA_REQUEST
+        }
+      ],
+      artifacts: ["design_doc", "analysis", "execution_plan"]
+    });
+  });
+
   it("asks to clarify weak idea phrasing instead of silently misrouting it", () => {
     expectRejected(
       {
@@ -369,6 +398,17 @@ describe("normalizeRequest", () => {
         host: "codex"
       },
       "AMBIGUOUS_REQUEST"
+    );
+  });
+
+  it("keeps ordinary explanation requests out of the idea workflow lane", () => {
+    expectRejected(
+      {
+        requestText:
+          "解释一下如果在mac的摄像头遮挡处弄一个codex进度提示要怎么写",
+        host: "claude-code"
+      },
+      "UNSUPPORTED_REQUEST"
     );
   });
 
