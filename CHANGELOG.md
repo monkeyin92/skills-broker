@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.8] - 2026-04-01
+
+### Fixed
+
+- Fixed workflow session persistence so each run is stored independently, which prevents one run from clobbering another during concurrent writes.
+- Fixed same-run resume races so long-running writes keep their lock alive and a stale duplicate confirmation now loses with a revision conflict instead of silently double-advancing.
+
 ## [0.1.7] - 2026-04-01
 
 ### Added

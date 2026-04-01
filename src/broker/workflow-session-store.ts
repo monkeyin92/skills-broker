@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
-import { open, rm, stat } from "node:fs/promises";
+import { mkdir, open, rm, stat } from "node:fs/promises";
+import { join } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import type { WorkflowSession } from "../core/workflow.js";
 import { readJsonFile, writeJsonFile } from "../shared-home/json-file.js";
@@ -16,6 +17,14 @@ function emptySessionFile(): WorkflowSessionFile {
 
 const SESSION_LOCK_RETRY_MS = 10;
 const SESSION_LOCK_STALE_MS = 5_000;
+const SESSION_LOCK_HEARTBEAT_MS = 1_000;
+
+type WorkflowSessionStoreOptions = {
+  lockRetryMs?: number;
+  lockStaleMs?: number;
+  lockHeartbeatMs?: number;
+  onBeforePersist?: (session: WorkflowSession) => Promise<void> | void;
+};
 
 function normalizeSession(session: WorkflowSession): WorkflowSession {
   return {
@@ -41,10 +50,13 @@ function normalizeSessionFile(
   };
 }
 
-async function lockIsStale(lockPath: string): Promise<boolean> {
+async function lockIsStale(
+  lockPath: string,
+  staleWindowMs: number
+): Promise<boolean> {
   try {
     const file = await stat(lockPath);
-    return Date.now() - file.mtimeMs > SESSION_LOCK_STALE_MS;
+    return Date.now() - file.mtimeMs > staleWindowMs;
   } catch (error) {
     const nodeError = error as NodeJS.ErrnoException;
 
@@ -72,24 +84,32 @@ export class WorkflowSessionConflictError extends Error {
 }
 
 export class WorkflowSessionStore {
-  constructor(private readonly filePath: string) {}
+  constructor(
+    private readonly filePath: string,
+    private readonly options: WorkflowSessionStoreOptions = {}
+  ) {}
 
   async read(runId: string): Promise<WorkflowSession | null> {
-    const file = normalizeSessionFile(
+    const session = await readJsonFile<WorkflowSession>(
+      this.sessionFilePath(runId)
+    );
+
+    if (session !== null) {
+      return normalizeSession(session);
+    }
+
+    const legacyFile = normalizeSessionFile(
       await readJsonFile<WorkflowSessionFile>(this.filePath)
     );
-    return file.sessions[runId] ?? null;
+    return legacyFile.sessions[runId] ?? null;
   }
 
   async write(
     session: WorkflowSession,
     options: { expectedRevision?: number | null } = {}
   ): Promise<WorkflowSession> {
-    return this.withFileLock(async () => {
-      const file = normalizeSessionFile(
-        await readJsonFile<WorkflowSessionFile>(this.filePath)
-      );
-      const currentSession = file.sessions[session.runId] ?? null;
+    return this.withFileLock(session.runId, async () => {
+      const currentSession = await this.read(session.runId);
       const expectedRevision = options.expectedRevision;
 
       if (expectedRevision === null && currentSession !== null) {
@@ -117,8 +137,8 @@ export class WorkflowSessionStore {
           currentSession === null ? 0 : currentSession.revision + 1
       });
 
-      file.sessions[session.runId] = storedSession;
-      await writeJsonFile(this.filePath, file);
+      await this.options.onBeforePersist?.(storedSession);
+      await writeJsonFile(this.sessionFilePath(session.runId), storedSession);
       return storedSession;
     });
   }
@@ -127,18 +147,38 @@ export class WorkflowSessionStore {
     return `${now.getTime().toString(36)}-${randomUUID().slice(0, 8)}`;
   }
 
+  private sessionFilePath(runId: string): string {
+    return join(this.sessionDirectoryPath(), `${encodeURIComponent(runId)}.json`);
+  }
+
+  private sessionDirectoryPath(): string {
+    return `${this.filePath}.d`;
+  }
+
   private async withFileLock<T>(
+    runId: string,
     operation: () => Promise<T>
   ): Promise<T> {
-    const lockPath = `${this.filePath}.lock`;
+    const lockPath = `${this.sessionFilePath(runId)}.lock`;
+    const retryMs = this.options.lockRetryMs ?? SESSION_LOCK_RETRY_MS;
+    const staleMs = this.options.lockStaleMs ?? SESSION_LOCK_STALE_MS;
+    const heartbeatMs =
+      this.options.lockHeartbeatMs ?? SESSION_LOCK_HEARTBEAT_MS;
+
+    await mkdir(this.sessionDirectoryPath(), { recursive: true });
 
     while (true) {
       try {
         const handle = await open(lockPath, "wx");
+        const heartbeat = setInterval(() => {
+          void handle.utimes(new Date(), new Date()).catch(() => undefined);
+        }, heartbeatMs);
+        heartbeat.unref?.();
 
         try {
           return await operation();
         } finally {
+          clearInterval(heartbeat);
           await handle.close();
           await rm(lockPath, { force: true });
         }
@@ -149,12 +189,12 @@ export class WorkflowSessionStore {
           throw error;
         }
 
-        if (await lockIsStale(lockPath)) {
+        if (await lockIsStale(lockPath, staleMs)) {
           await rm(lockPath, { force: true });
           continue;
         }
 
-        await delay(SESSION_LOCK_RETRY_MS);
+        await delay(retryMs);
       }
     }
   }

@@ -49,7 +49,7 @@ describe("Claude Code smoke", () => {
         const manifest = JSON.parse(await readFile(manifestPath, "utf8"));
         expect(manifest).toMatchObject({
           name: "skills-broker-claude-code",
-          version: "0.1.7"
+          version: "0.1.8"
         });
 
         const skillContents = await readFile(skillPath, "utf8");
