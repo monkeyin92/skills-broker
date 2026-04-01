@@ -9,6 +9,22 @@ import {
 } from "../../src/sources/host-skill-catalog";
 
 describe("loadHostSkillCandidates", () => {
+  it("loads all host skill candidates when no legacy intent filter is provided", async () => {
+    const fixturePath = join(
+      process.cwd(),
+      "tests",
+      "fixtures",
+      "host-skill-catalog.json"
+    );
+
+    const candidates = await loadHostSkillCandidates(undefined, fixturePath);
+
+    expect(candidates.map((candidate) => candidate.id)).toEqual([
+      "web-content-to-markdown",
+      "capability-discovery"
+    ]);
+  });
+
   it('filters the host catalog fixture to the matching "web_content_to_markdown" candidate', async () => {
     const fixturePath = join(
       process.cwd(),

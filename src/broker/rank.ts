@@ -77,7 +77,7 @@ function preferredCapabilityScore(
   return preferredNames.has(preferredCapability) ? 1 : 0;
 }
 
-function capabilityQueryScore(
+export function capabilityQueryScore(
   card: CapabilityCard,
   query: CapabilityQuery | undefined
 ): number {
@@ -91,6 +91,13 @@ function capabilityQueryScore(
     overlapScore(card.query.targetTypes, queryTargetTypes(query)) * 4 +
     overlapScore(card.query.artifacts, query.artifacts ?? []) * 3
   );
+}
+
+export function hasCapabilityQueryMatch(
+  card: CapabilityCard,
+  query: CapabilityQuery | undefined
+): boolean {
+  return capabilityQueryScore(card, query) > 0;
 }
 
 function compareCards(

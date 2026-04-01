@@ -196,6 +196,104 @@ describe("runBroker", () => {
     }
   });
 
+  it("uses structured capabilityQuery matching across host skills even when their legacy intent differs", async () => {
+    const runtime = await createRuntimePaths();
+    const hostCatalogFilePath = join(runtime.directory, "host.json");
+    const mcpRegistryFilePath = join(runtime.directory, "empty-mcp.json");
+
+    await writeFile(
+      hostCatalogFilePath,
+      JSON.stringify({
+        packages: [
+          {
+            packageId: "gstack",
+            label: "gstack",
+            installState: "installed",
+            acquisition: "local_skill_bundle"
+          }
+        ],
+        skills: [
+          {
+            id: "query-native-analysis",
+            kind: "skill",
+            label: "Query Native Analysis",
+            intent: "web_content_to_markdown",
+            package: {
+              packageId: "gstack"
+            },
+            leaf: {
+              capabilityId: "gstack.office-hours",
+              packageId: "gstack",
+              subskillId: "office-hours"
+            },
+            query: {
+              jobFamilies: ["requirements_analysis"],
+              targetTypes: ["problem_statement", "text"],
+              artifacts: ["design_doc", "analysis"],
+              examples: ["帮我做需求分析并产出设计文档"]
+            },
+            implementation: {
+              id: "gstack.office-hours",
+              type: "local_skill",
+              ownerSurface: "broker_owned_downstream"
+            }
+          }
+        ]
+      }),
+      "utf8"
+    );
+    await writeFile(mcpRegistryFilePath, JSON.stringify({ servers: [] }), "utf8");
+
+    try {
+      const result = await runBroker(
+        {
+          requestText: "帮我做需求分析并产出设计文档",
+          host: "claude-code",
+          capabilityQuery: {
+            kind: "capability_request",
+            goal: "analyze a product requirement and produce a design doc",
+            host: "claude-code",
+            requestText: "帮我做需求分析并产出设计文档",
+            jobFamilies: ["requirements_analysis"],
+            targets: [
+              {
+                type: "problem_statement",
+                value: "skills-broker capability query migration"
+              }
+            ],
+            artifacts: ["design_doc", "analysis"]
+          }
+        },
+        {
+          cacheFilePath: runtime.cacheFilePath,
+          hostCatalogFilePath,
+          mcpRegistryFilePath,
+          now: new Date("2026-04-01T08:00:00.000Z")
+        }
+      );
+
+      expect(result.ok).toBe(true);
+      expect(result.outcome.code).toBe("HANDOFF_READY");
+      expect(result.winner.id).toBe("query-native-analysis");
+      expect(result.handoff.request).toMatchObject({
+        intent: "capability_discovery_or_install",
+        capabilityQuery: {
+          jobFamilies: ["requirements_analysis"],
+          artifacts: ["design_doc", "analysis"]
+        }
+      });
+      expect(result.trace).toMatchObject({
+        hostDecision: "broker_first",
+        resultCode: "HANDOFF_READY",
+        normalizedBy: "structured_query",
+        requestSurface: "structured_query",
+        winnerId: "query-native-analysis"
+      });
+    } finally {
+      await rm(runtime.directory, { recursive: true, force: true });
+    }
+  });
+
   it("continues with MCP candidates when the host catalog fails", async () => {
     const runtime = await createRuntimePaths();
     const mcpRegistryFilePath = join(runtime.directory, "mcp.json");

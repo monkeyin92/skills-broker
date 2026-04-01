@@ -5,7 +5,10 @@ import { explainDecision } from "./explain.js";
 import { buildHandoffEnvelope } from "./handoff.js";
 import { hydratePackageAvailability } from "./package-availability.js";
 import { prepareCandidate } from "./prepare.js";
-import { rankCapabilities } from "./rank.js";
+import {
+  hasCapabilityQueryMatch,
+  rankCapabilities
+} from "./rank.js";
 import {
   type BrokerDebug,
   type BrokerFailureResult,
@@ -40,6 +43,7 @@ import type {
   BrokerHostAction,
   BrokerIntent,
   BrokerOutcomeCode,
+  CapabilityQuery,
   PackageAcquisitionHint
 } from "../core/types.js";
 import {
@@ -260,14 +264,24 @@ function isResumeEnvelope(
 }
 
 async function discoverCapabilityCards(
-  intent: BrokerIntent,
+  request: {
+    intent: BrokerIntent;
+    capabilityQuery?: CapabilityQuery;
+  },
   hostCatalogFilePath: string,
   mcpRegistryFilePath: string
 ): Promise<DiscoverySnapshot> {
+  const useBroadHostDiscovery = request.capabilityQuery !== undefined;
   const [hostResult, workflowResult, mcpResult] = await Promise.allSettled([
-    loadHostSkillCandidates(intent, hostCatalogFilePath),
-    loadHostWorkflowRecipes(intent, hostCatalogFilePath),
-    searchMcpRegistry(intent, mcpRegistryFilePath)
+    loadHostSkillCandidates(
+      useBroadHostDiscovery ? undefined : request.intent,
+      hostCatalogFilePath
+    ),
+    loadHostWorkflowRecipes(
+      useBroadHostDiscovery ? undefined : request.intent,
+      hostCatalogFilePath
+    ),
+    searchMcpRegistry(request.intent, mcpRegistryFilePath)
   ]);
 
   if (
@@ -294,7 +308,18 @@ async function discoverCapabilityCards(
       ...workflowRecipes.map((recipe) => workflowCandidate(recipe))
     ],
     mcpCandidates
-  ).map(toCapabilityCard);
+  )
+    .map(toCapabilityCard)
+    .filter((candidate) => {
+      if (request.capabilityQuery === undefined) {
+        return candidate.intent === request.intent;
+      }
+
+      return (
+        candidate.intent === request.intent ||
+        hasCapabilityQueryMatch(candidate, request.capabilityQuery)
+      );
+    });
 
   return {
     candidates: mergedCandidates,
@@ -510,7 +535,7 @@ async function runSingleStep(
   } else {
     try {
       const discovered = await discoverCapabilityCards(
-        request.intent,
+        request,
         hostCatalogFilePath,
         mcpRegistryFilePath
       );
@@ -596,7 +621,7 @@ async function runSingleStep(
 
     if (recipe === undefined) {
       const loadedRecipes = await loadHostWorkflowRecipes(
-        request.intent,
+        request.capabilityQuery === undefined ? request.intent : undefined,
         hostCatalogFilePath
       );
       recipe = loadedRecipes.find((candidate) => candidate.id === winner.id);
