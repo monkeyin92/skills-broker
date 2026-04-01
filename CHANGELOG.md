@@ -1,0 +1,18 @@
+# Changelog
+
+## [0.1.7] - 2026-04-01
+
+### Added
+
+- Added broker-first routing for requirements analysis, website QA, and investigation requests, with matching catalog metadata and smoke/eval coverage.
+- Added the first broker-owned `idea-to-ship` workflow, including stage recipes, persisted run state, and host-aligned resume semantics across Claude Code and Codex.
+
+### Changed
+
+- Changed broker discovery so workflow recipes rank alongside host skills and MCP candidates, and propagate workflow context through handoff and trace payloads.
+- Changed the project docs to describe the current broker-first lanes, workflow runtime, and artifact/gate contract.
+
+### Fixed
+
+- Fixed workflow resume so stages only advance with explicitly declared artifacts, and ship stays blocked until review and QA outputs are actually present.
+- Fixed workflow session persistence so concurrent resumes use file locking, compare-and-swap revision checks, and atomic JSON writes instead of lossy read-modify-write overwrites.

@@ -51,6 +51,10 @@ export type CapabilityQuery = {
 export type BrokerOutcomeCode =
   | "NO_CANDIDATE"
   | "HANDOFF_READY"
+  | "WORKFLOW_STAGE_READY"
+  | "WORKFLOW_BLOCKED"
+  | "WORKFLOW_COMPLETED"
+  | "WORKFLOW_FAILED"
   | "UNSUPPORTED_REQUEST"
   | "AMBIGUOUS_REQUEST"
   | "PREPARE_FAILED";

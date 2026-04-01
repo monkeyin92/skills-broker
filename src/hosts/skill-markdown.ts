@@ -8,6 +8,7 @@ const BROKER_FIRST_EXAMPLES = [
   "测下这个网站的质量：https://www.baidu.com",
   "QA 这个网站 https://example.com",
   "检查这个网站质量",
+  "我有一个想法：做一个自动串起评审和发版的工具",
   "帮我做需求分析并产出设计文档",
   "帮我看看这个需求有没有漏洞",
   "把这个页面转成 markdown: https://example.com/a",
@@ -76,10 +77,21 @@ export function buildHostShellSkillMarkdown(
       artifacts: ["design_doc"]
     }
   };
+  const workflowResumePayload = {
+    requestText: "继续这个 workflow",
+    host: options.host,
+    invocationMode: options.invocationMode,
+    workflowResume: {
+      runId: "run-123",
+      stageId: "office-hours",
+      decision: "confirm",
+      artifacts: ["design_doc", "analysis"]
+    }
+  };
 
   return `---
 name: "skills-broker"
-description: "Route capability requests through skills-broker. Use when the user wants a reusable skill, MCP, workflow, capability lookup, or external capability execution. Broker-first examples include '测下这个网站的质量', '帮我做需求分析并产出设计文档', 'convert this webpage to markdown https://example.com/a', and 'find a skill or MCP for website QA'. Handle ordinary chat, coding, translation, summarization, and drafting normally. If the request is underspecified, clarify before routing."
+description: "Route capability requests through skills-broker. Use when the user wants a reusable skill, MCP, workflow, capability lookup, or external capability execution. Broker-first examples include '我有一个想法：做一个自动串起评审和发版的工具', '测下这个网站的质量', '帮我做需求分析并产出设计文档', 'convert this webpage to markdown https://example.com/a', and 'find a skill or MCP for website QA'. Handle ordinary chat, coding, translation, summarization, and drafting normally. If the request is underspecified, clarify before routing."
 ---
 
 # Skills Broker
@@ -131,6 +143,7 @@ When this skill is loaded:
 5. if the request is ordinary model-native work, keep it in the host's normal flow
 6. if the request is too vague, ask a short clarifying question before brokering
 7. do not silently substitute a host-native fetch, browsing, or install path when broker routing should decide
+8. when resuming a broker-owned workflow stage that lists \`producesArtifacts\`, include only the artifacts actually produced in \`workflowResume.artifacts\`
 
 ## Capability Query Contract
 
@@ -149,6 +162,7 @@ If you are not confident, omit \`capabilityQuery\` and still send the raw envelo
 - If the broker returns \`UNSUPPORTED_REQUEST\`, continue normally.
 - If the broker returns \`AMBIGUOUS_REQUEST\`, ask a clarifying question.
 - If the broker returns \`NO_CANDIDATE\`, offer capability discovery or install help.
+- If the broker returns \`WORKFLOW_STAGE_READY\` or \`WORKFLOW_BLOCKED\`, keep following the broker-owned workflow contract instead of switching to a host-native plan.
 - If the broker returns \`PREPARE_FAILED\`, explain the failure clearly and do not silently substitute a native tool path.
 
 ## Runner Contract
@@ -158,5 +172,7 @@ ${renderCommand(options.runnerCommand, markdownPayload)}
 ${renderCommand(options.runnerCommand, debugPayload, true)}
 
 ${renderCommand(options.runnerCommand, structuredPayload)}
+
+${renderCommand(options.runnerCommand, workflowResumePayload)}
 `;
 }

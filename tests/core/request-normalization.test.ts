@@ -272,6 +272,106 @@ describe("normalizeRequest", () => {
     });
   });
 
+  it("normalizes raw requirements-analysis requests into a synthesized capability query", () => {
+    const normalized = normalizeRequest({
+      requestText: "帮我做需求分析并产出设计文档",
+      host: "claude-code"
+    });
+
+    expect(normalized.intent).toBe("capability_discovery_or_install");
+    expect(normalized.capabilityQuery).toMatchObject({
+      goal: "analyze a product requirement and produce a design doc",
+      requestText: "帮我做需求分析并产出设计文档",
+      jobFamilies: ["requirements_analysis"],
+      targets: [
+        {
+          type: "problem_statement",
+          value: "帮我做需求分析并产出设计文档"
+        }
+      ],
+      artifacts: ["design_doc", "analysis"]
+    });
+  });
+
+  it("normalizes raw requirement-gap review requests into a synthesized analysis query", () => {
+    const normalized = normalizeRequest({
+      requestText: "帮我看看这个需求有没有漏洞",
+      host: "codex"
+    });
+
+    expect(normalized.intent).toBe("capability_discovery_or_install");
+    expect(normalized.capabilityQuery).toMatchObject({
+      goal: "analyze a product requirement and identify gaps",
+      requestText: "帮我看看这个需求有没有漏洞",
+      jobFamilies: ["requirements_analysis"],
+      targets: [
+        {
+          type: "problem_statement",
+          value: "帮我看看这个需求有没有漏洞"
+        }
+      ],
+      artifacts: ["analysis"]
+    });
+  });
+
+  it("normalizes raw investigation requests into a synthesized capability query", () => {
+    const normalized = normalizeRequest({
+      requestText: "investigate this site failure with a reusable workflow",
+      host: "codex",
+      urls: ["https://example.com"]
+    });
+
+    expect(normalized.intent).toBe("capability_discovery_or_install");
+    expect(normalized.capabilityQuery).toMatchObject({
+      goal: "investigate a site failure and identify root cause",
+      requestText: "investigate this site failure with a reusable workflow",
+      jobFamilies: ["investigation"],
+      targets: [
+        {
+          type: "website",
+          value: "https://example.com"
+        }
+      ],
+      artifacts: ["analysis", "recommendation"]
+    });
+  });
+
+  it("normalizes raw idea requests into the workflow discovery lane", () => {
+    const normalized = normalizeRequest({
+      requestText: "我有一个想法：做一个自动串起评审和发版的工具",
+      host: "claude-code"
+    });
+
+    expect(normalized.intent).toBe("capability_discovery_or_install");
+    expect(normalized.capabilityQuery).toMatchObject({
+      goal: "turn a product idea into a reviewed execution plan",
+      requestText: "我有一个想法：做一个自动串起评审和发版的工具",
+      jobFamilies: [
+        "idea_brainstorming",
+        "requirements_analysis",
+        "strategy_review",
+        "engineering_review"
+      ],
+      targets: [
+        {
+          type: "problem_statement",
+          value: "我有一个想法：做一个自动串起评审和发版的工具"
+        }
+      ],
+      artifacts: ["design_doc", "analysis", "execution_plan"]
+    });
+  });
+
+  it("asks to clarify weak idea phrasing instead of silently misrouting it", () => {
+    expectRejected(
+      {
+        requestText: "我有个想法",
+        host: "codex"
+      },
+      "AMBIGUOUS_REQUEST"
+    );
+  });
+
   it("normalizes a structured capability query for webpage markdown into the web lane", () => {
     const normalized = normalizeRequest({
       requestText: "将这个页面转为markdown文件：https://example.com/post",

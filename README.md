@@ -87,7 +87,7 @@ That keeps the user focused on the outcome, not on the catalog.
 
 Current scope is intentionally narrow:
 
-> **A small first lake for the broker auto-router:** `web content -> markdown`, `social post -> markdown`, and explicit capability discovery/install requests.
+> **A small first lake for the broker auto-router:** markdown conversions, broker-first requirements / QA / investigation routing, and one broker-owned `idea-to-ship` workflow.
 
 v0 currently includes:
 
@@ -95,7 +95,11 @@ v0 currently includes:
 - broker-side normalization for:
   - `web_content_to_markdown`
   - `social_post_to_markdown`
+  - raw `requirements_analysis`
+  - raw website `qa`
+  - raw `investigation`
   - `capability_discovery_or_install`
+- broker-owned workflow start + resume for `idea-to-ship`
 - dual-source discovery
   - host skill catalog
   - MCP-backed capability candidates
@@ -103,8 +107,11 @@ v0 currently includes:
 - cache-first routing
 - daily first-use refresh plus hard TTL
 - deterministic ranking with explanations
-- prepare + handoff boundary
+- workflow runtime with `runId` + `stageId` + `decision`
+- explicit artifact and gate contracts for workflow stages
+- prepare + handoff for downstream capabilities, or persist + return stage state for broker-owned workflows
 - structured outcomes for unsupported, ambiguous, and no-candidate requests
+- structured workflow failures for stale stage, missing/invalid artifacts, install-required, and ship-gate blocks
 - relocatable Claude Code plugin package
 - published `npx skills-broker` lifecycle CLI
 - shared broker home install/update/remove/doctor flow
@@ -127,7 +134,9 @@ flowchart LR
   D --> K["Normalize into Capability Cards"]
   K --> R["Rank for the current host"]
   R --> P["Prepare winner"]
-  P --> H["Handoff and stop"]
+  P --> H["Handoff downstream capability"]
+  P --> W["Persist workflow session"]
+  W --> S["Return runId, stageId, and resume contract"]
 ```
 
 ## Shared Broker Home
@@ -289,7 +298,7 @@ This repository currently optimizes for:
 
 - a small first routed lake instead of broad open-domain coverage
 - two attached hosts first: Claude Code and Codex
-- two primary routed lanes plus one explicit discovery lane
+- a handful of explicit broker-first lanes: markdown conversion, requirements / QA / investigation, and the first workflow recipe
 - explicit fixture-backed local tests
 - small, inspectable routing logic
 
@@ -308,7 +317,8 @@ Likely next:
 - stronger broker-first hit rate in real Claude Code and Codex sessions
 - broader host support such as OpenCode
 - richer host-side observability around broker first-refusal decisions
-- more task families beyond the first markdown/discovery lake
+- more task families beyond the current markdown + requirements / QA / investigation lake
+- more broker-owned workflow recipes beyond the first `idea-to-ship` path
 - stronger live registry integration
 - richer attachment-aware normalization and clarifying-question flows
 

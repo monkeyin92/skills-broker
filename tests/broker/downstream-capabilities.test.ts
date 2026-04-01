@@ -75,7 +75,7 @@ describe("broker-owned downstream capabilities", () => {
     });
   });
 
-  it("loads requirements-analysis and qa capabilities from the discovery lane catalog", async () => {
+  it("loads requirements-analysis, qa, and investigation capabilities from the discovery lane catalog", async () => {
     const candidates = await loadHostSkillCandidates(
       "capability_discovery_or_install",
       "config/host-skills.seed.json"
@@ -84,6 +84,7 @@ describe("broker-owned downstream capabilities", () => {
 
     expect(cards.map((card) => card.id)).toContain("requirements-analysis");
     expect(cards.map((card) => card.id)).toContain("website-qa");
+    expect(cards.map((card) => card.id)).toContain("investigation");
     expect(
       cards.find((card) => card.id === "requirements-analysis")?.implementation.id
     ).toBe("gstack.office_hours");
@@ -108,5 +109,17 @@ describe("broker-owned downstream capabilities", () => {
     expect(
       cards.find((card) => card.id === "website-qa")?.leaf.subskillId
     ).toBe("qa");
+    expect(
+      cards.find((card) => card.id === "investigation")?.implementation.id
+    ).toBe("gstack.investigate");
+    expect(
+      cards.find((card) => card.id === "investigation")?.package.packageId
+    ).toBe("gstack");
+    expect(
+      cards.find((card) => card.id === "investigation")?.package.installState
+    ).toBe("installed");
+    expect(
+      cards.find((card) => card.id === "investigation")?.leaf.subskillId
+    ).toBe("investigate");
   });
 });

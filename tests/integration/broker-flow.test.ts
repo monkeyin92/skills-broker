@@ -678,6 +678,54 @@ describe("runBroker", () => {
     }
   });
 
+  it("routes raw requirements-analysis requests to office-hours", async () => {
+    const runtime = await createRuntimePaths();
+
+    try {
+      const result = await runBroker(
+        {
+          requestText: "帮我做需求分析并产出设计文档",
+          host: "claude-code"
+        },
+        {
+          ...runtime,
+          now: new Date("2026-03-30T08:15:00.000Z")
+        }
+      );
+
+      expect(result.ok).toBe(true);
+      expect(result.outcome.code).toBe("HANDOFF_READY");
+      expect(result.winner.id).toBe("requirements-analysis");
+      expect(result.handoff.chosenPackage.packageId).toBe("gstack");
+      expect(result.trace).toMatchObject({
+        host: "claude-code",
+        resultCode: "HANDOFF_READY",
+        missLayer: null,
+        normalizedBy: "raw_request_fallback",
+        requestSurface: "raw_envelope",
+        winnerId: "requirements-analysis",
+        winnerPackageId: "gstack"
+      });
+      expect(result.handoff.chosenLeafCapability.subskillId).toBe(
+        "office-hours"
+      );
+      expect(result.handoff.chosenImplementation.id).toBe("gstack.office_hours");
+      expect(result.handoff.request.capabilityQuery).toMatchObject({
+        goal: "analyze a product requirement and produce a design doc",
+        jobFamilies: ["requirements_analysis"],
+        targets: [
+          {
+            type: "problem_statement",
+            value: "帮我做需求分析并产出设计文档"
+          }
+        ],
+        artifacts: ["design_doc", "analysis"]
+      });
+    } finally {
+      await rm(runtime.directory, { recursive: true, force: true });
+    }
+  });
+
   it("routes qa capability queries to the qa downstream skill", async () => {
     const runtime = await createRuntimePaths();
 
@@ -761,6 +809,54 @@ describe("runBroker", () => {
     }
   });
 
+  it("routes raw investigation requests to the investigation downstream skill", async () => {
+    const runtime = await createRuntimePaths();
+
+    try {
+      const result = await runBroker(
+        {
+          requestText: "investigate this site failure with a reusable workflow",
+          host: "codex",
+          urls: ["https://example.com"]
+        },
+        {
+          ...runtime,
+          currentHost: "codex",
+          now: new Date("2026-03-30T08:50:00.000Z")
+        }
+      );
+
+      expect(result.ok).toBe(true);
+      expect(result.outcome.code).toBe("HANDOFF_READY");
+      expect(result.winner.id).toBe("investigation");
+      expect(result.handoff.chosenPackage.packageId).toBe("gstack");
+      expect(result.handoff.chosenLeafCapability.subskillId).toBe("investigate");
+      expect(result.handoff.chosenImplementation.id).toBe("gstack.investigate");
+      expect(result.trace).toMatchObject({
+        host: "codex",
+        resultCode: "HANDOFF_READY",
+        missLayer: null,
+        normalizedBy: "raw_request_fallback",
+        requestSurface: "raw_envelope",
+        winnerId: "investigation",
+        winnerPackageId: "gstack"
+      });
+      expect(result.handoff.request.capabilityQuery).toMatchObject({
+        goal: "investigate a site failure and identify root cause",
+        jobFamilies: ["investigation"],
+        targets: [
+          {
+            type: "website",
+            value: "https://example.com"
+          }
+        ],
+        artifacts: ["analysis", "recommendation"]
+      });
+    } finally {
+      await rm(runtime.directory, { recursive: true, force: true });
+    }
+  });
+
   it("does not reuse a generic discovery cache entry for a different capability-query family", async () => {
     const runtime = await createRuntimePaths();
 
@@ -779,15 +875,7 @@ describe("runBroker", () => {
       const secondResult = await runBroker(
         {
           requestText: "帮我做需求分析并产出设计文档",
-          host: "claude-code",
-          capabilityQuery: {
-            kind: "capability_request",
-            goal: "analyze a product requirement and produce a design doc",
-            host: "claude-code",
-            requestText: "帮我做需求分析并产出设计文档",
-            jobFamilies: ["requirements_analysis"],
-            artifacts: ["design_doc"]
-          }
+          host: "claude-code"
         },
         {
           ...runtime,
@@ -804,6 +892,61 @@ describe("runBroker", () => {
         "gstack.office_hours"
       );
       expect(secondResult.debug.cacheHit).toBe(false);
+    } finally {
+      await rm(runtime.directory, { recursive: true, force: true });
+    }
+  });
+
+  it("resumes the same workflow run instead of re-routing a fresh winner", async () => {
+    const runtime = await createRuntimePaths();
+
+    try {
+      const firstResult = await runBroker(
+        {
+          requestText: "我有一个想法：做一个自动串起评审和发版的工具",
+          host: "claude-code"
+        },
+        {
+          ...runtime,
+          now: new Date("2026-03-31T08:00:00.000Z")
+        }
+      );
+
+      expect(firstResult.ok).toBe(true);
+      expect(firstResult.outcome.code).toBe("WORKFLOW_STAGE_READY");
+      expect(firstResult.winner.id).toBe("idea-to-ship");
+      expect(firstResult.workflow.activeStageId).toBe("office-hours");
+      expect(firstResult.debug.cacheHit).toBe(false);
+
+      const secondResult = await runBroker(
+        {
+          requestText: "继续这个 workflow",
+          host: "claude-code",
+          workflowResume: {
+            runId: firstResult.workflow.runId,
+            stageId: "office-hours",
+            decision: "confirm",
+            artifacts: ["design_doc", "analysis"]
+          }
+        },
+        {
+          ...runtime,
+          now: new Date("2026-03-31T08:05:00.000Z")
+        }
+      );
+
+      expect(secondResult.ok).toBe(true);
+      expect(secondResult.outcome.code).toBe("WORKFLOW_STAGE_READY");
+      expect(secondResult.workflow.runId).toBe(firstResult.workflow.runId);
+      expect(secondResult.workflow.completedStageIds).toContain("office-hours");
+      expect(secondResult.stage.id).toBe("plan-ceo-review");
+      expect(secondResult.debug.decision).toBe("resume_existing_workflow");
+      expect(secondResult.trace).toMatchObject({
+        resultCode: "WORKFLOW_STAGE_READY",
+        workflowId: "idea-to-ship",
+        runId: firstResult.workflow.runId,
+        stageId: "plan-ceo-review"
+      });
     } finally {
       await rm(runtime.directory, { recursive: true, force: true });
     }

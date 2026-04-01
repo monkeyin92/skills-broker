@@ -3,6 +3,11 @@ import type { BrokerRequest } from "../core/types.js";
 
 export type HandoffContext = {
   currentHost: string;
+  workflow?: {
+    workflowId: string;
+    runId: string;
+    stageId: string;
+  };
 };
 
 export type HandoffEnvelope = {

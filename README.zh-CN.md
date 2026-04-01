@@ -93,15 +93,19 @@ broker 决定：
 
 当前版本故意做得很窄：
 
-> **先打穿 broker auto-router 的一个小湖：** `web content -> markdown`、`social post -> markdown`，以及显式的能力发现/安装请求。
+> **先打穿 broker auto-router 的一个小湖：** markdown 转换、broker-first 的需求分析 / QA / investigation 路由，以及第一条 broker 自管的 `idea-to-ship` workflow。
 
 v0 当前包含：
 
 - 一套跨宿主共享的 broker envelope
-- broker 侧的 3 类归一化能力：
+- broker 侧的归一化能力：
   - `web_content_to_markdown`
   - `social_post_to_markdown`
+  - 原始 `requirements_analysis`
+  - 原始网站 `qa`
+  - 原始 `investigation`
   - `capability_discovery_or_install`
+- `idea-to-ship` 的 broker 自管 workflow 启动与恢复
 - 双来源发现
   - host skill catalog
   - MCP-backed capability candidates
@@ -109,8 +113,11 @@ v0 当前包含：
 - cache-first 路由
 - 每日首次使用刷新 + 硬 TTL
 - 可解释、可复现的确定性排序
-- prepare + handoff 边界
+- `runId` + `stageId` + `decision` 的 workflow runtime
+- 显式的 stage artifact / gate contract
+- 对普通下游能力走 prepare + handoff，对 broker 自管 workflow 走持久化 session + 返回当前 stage 状态
 - `unsupported` / `ambiguous` / `no-candidate` 的结构化 outcome
+- `stale stage`、缺失/非法 artifacts、`install_required`、`ship gate` 阻塞等 workflow 失败结果
 - 可迁移的 Claude Code 插件安装产物
 - 已发布的 `npx skills-broker` lifecycle CLI
 - 共享 broker home 的 install / update / remove / doctor 链路
@@ -133,7 +140,9 @@ flowchart LR
   D --> K["统一归一化成 Capability Cards"]
   K --> R["按当前宿主进行排序"]
   R --> P["准备赢家"]
-  P --> H["handoff 并停止 broker"]
+  P --> H["handoff 给下游能力"]
+  P --> W["持久化 workflow session"]
+  W --> S["返回 runId、stageId 和 resume contract"]
 ```
 
 ## 共享 Broker Home
@@ -300,7 +309,7 @@ npx vitest run
 
 - 先打穿一个小而清楚的 routed lake，而不是一上来覆盖开放域
 - 先接两个宿主：Claude Code 和 Codex
-- 先支持两个主路由 lane 加一个显式 discovery lane
+- 先把几条显式 broker-first lane 做扎实：markdown 转换、需求分析 / QA / investigation，以及第一条 workflow recipe
 - 默认依赖 fixture 做稳定本地测试
 - 路由逻辑尽量保持小、明确、易审计
 
@@ -318,7 +327,8 @@ npx vitest run
 
 - 提升 Claude Code 和 Codex 真实会话里的 broker-first 命中率
 - 扩展到 OpenCode 等更多宿主
-- 增加更多任务族，而不只限于当前这组 markdown/discovery 小湖
+- 增加更多任务族，而不只限于当前这组 markdown + requirements / QA / investigation 小湖
+- 增加更多 broker 自管 workflow，而不只限于第一条 `idea-to-ship` 主链路
 - 接入更强的 live registry 能力
 - 增加更强的附件感知归一化和澄清式 follow-up
 
