@@ -5,6 +5,11 @@ import type { BrokerHostAction, BrokerOutcomeCode } from "../core/types.js";
 export const BROKER_TRACE_VERSION = "2026-03-31" as const;
 
 export type BrokerTraceResultCode = BrokerOutcomeCode | "HOST_SKIPPED_BROKER";
+export type BrokerTraceRoutingOutcome =
+  | "hit"
+  | "misroute"
+  | "fallback"
+  | "host_skipped";
 export type BrokerTraceHostDecision =
   | "broker_first"
   | "handle_normally"
@@ -31,6 +36,7 @@ export type BrokerRoutingTrace = {
   host: string;
   hostDecision: BrokerTraceHostDecision;
   resultCode: BrokerTraceResultCode;
+  routingOutcome: BrokerTraceRoutingOutcome;
   missLayer: BrokerTraceMissLayer | null;
   normalizedBy: BrokerTraceNormalizedBy | null;
   requestSurface: BrokerTraceRequestSurface | null;
@@ -43,6 +49,24 @@ export type BrokerRoutingTrace = {
   stageId: string | null;
   reasonCode: string | null;
   timestamp: string;
+};
+
+export type BrokerRoutingSurfaceSummary = {
+  requestSurface: BrokerTraceRequestSurface;
+  normalizedBy: BrokerTraceNormalizedBy;
+  observed: number;
+  hits: number;
+  misroutes: number;
+  fallbacks: number;
+  hitRate: number;
+  misrouteRate: number;
+  fallbackRate: number;
+};
+
+export type BrokerRoutingTraceSummary = {
+  observed: number;
+  syntheticHostSkips: number;
+  surfaces: BrokerRoutingSurfaceSummary[];
 };
 
 type RuntimeTraceOptions = {
@@ -119,6 +143,130 @@ function missLayerForResultCode(
   }
 }
 
+function routingOutcomeForResultCode(
+  resultCode: BrokerTraceResultCode
+): BrokerTraceRoutingOutcome {
+  switch (resultCode) {
+    case "HANDOFF_READY":
+    case "WORKFLOW_STAGE_READY":
+    case "WORKFLOW_BLOCKED":
+    case "WORKFLOW_COMPLETED":
+      return "hit";
+    case "UNSUPPORTED_REQUEST":
+    case "AMBIGUOUS_REQUEST":
+      return "misroute";
+    case "NO_CANDIDATE":
+    case "PREPARE_FAILED":
+    case "WORKFLOW_FAILED":
+      return "fallback";
+    case "HOST_SKIPPED_BROKER":
+      return "host_skipped";
+  }
+}
+
+function rate(numerator: number, denominator: number): number {
+  if (denominator === 0) {
+    return 0;
+  }
+
+  return numerator / denominator;
+}
+
+const REQUEST_SURFACE_ORDER: BrokerTraceRequestSurface[] = [
+  "structured_query",
+  "raw_envelope",
+  "legacy_task"
+];
+
+const REQUEST_SURFACE_NORMALIZATION: Record<
+  BrokerTraceRequestSurface,
+  BrokerTraceNormalizedBy
+> = {
+  structured_query: "structured_query",
+  raw_envelope: "raw_request_fallback",
+  legacy_task: "legacy_intent"
+};
+
+export function summarizeBrokerRoutingTraces(
+  traces: BrokerRoutingTrace[],
+  options?: {
+    since?: Date;
+  }
+): BrokerRoutingTraceSummary {
+  const filtered = traces.filter((trace) => {
+    if (options?.since === undefined) {
+      return true;
+    }
+
+    return new Date(trace.timestamp) >= options.since;
+  });
+  const perSurface = new Map<
+    BrokerTraceRequestSurface,
+    Omit<BrokerRoutingSurfaceSummary, "hitRate" | "misrouteRate" | "fallbackRate">
+  >();
+  let syntheticHostSkips = 0;
+
+  for (let index = 0; index < filtered.length; index += 1) {
+    const trace = filtered[index];
+
+    if (trace.routingOutcome === "host_skipped") {
+      syntheticHostSkips += 1;
+      continue;
+    }
+
+    if (trace.requestSurface === null || trace.normalizedBy === null) {
+      continue;
+    }
+
+    const surfaceSummary = perSurface.get(trace.requestSurface) ?? {
+      requestSurface: trace.requestSurface,
+      normalizedBy: trace.normalizedBy,
+      observed: 0,
+      hits: 0,
+      misroutes: 0,
+      fallbacks: 0
+    };
+
+    surfaceSummary.observed += 1;
+
+    switch (trace.routingOutcome) {
+      case "hit":
+        surfaceSummary.hits += 1;
+        break;
+      case "misroute":
+        surfaceSummary.misroutes += 1;
+        break;
+      case "fallback":
+        surfaceSummary.fallbacks += 1;
+        break;
+    }
+
+    perSurface.set(trace.requestSurface, surfaceSummary);
+  }
+
+  return {
+    observed: filtered.length,
+    syntheticHostSkips,
+    surfaces: REQUEST_SURFACE_ORDER.map((requestSurface) => {
+      const summary = perSurface.get(requestSurface) ?? {
+        requestSurface,
+        normalizedBy: REQUEST_SURFACE_NORMALIZATION[requestSurface],
+        observed: 0,
+        hits: 0,
+        misroutes: 0,
+        fallbacks: 0
+      };
+
+      return {
+        ...summary,
+        hitRate: rate(summary.hits, summary.observed),
+        misrouteRate: rate(summary.misroutes, summary.observed),
+        fallbackRate: rate(summary.fallbacks, summary.observed)
+      };
+    }).filter((surface) => surface.observed > 0)
+  };
+}
+
 export function createBrokerRoutingTrace(
   options: RuntimeTraceOptions
 ): BrokerRoutingTrace {
@@ -130,6 +278,7 @@ export function createBrokerRoutingTrace(
     host: options.currentHost,
     hostDecision: "broker_first",
     resultCode: options.resultCode,
+    routingOutcome: routingOutcomeForResultCode(options.resultCode),
     missLayer: missLayerForResultCode(options.resultCode),
     normalizedBy: normalization.normalizedBy,
     requestSurface: normalization.requestSurface,
@@ -154,6 +303,7 @@ export function createSyntheticHostSkippedBrokerTrace(
     host: options.host,
     hostDecision: options.hostDecision ?? "handle_normally",
     resultCode: "HOST_SKIPPED_BROKER",
+    routingOutcome: "host_skipped",
     missLayer: "host_selection",
     normalizedBy: null,
     requestSurface: null,

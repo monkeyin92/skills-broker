@@ -18,6 +18,7 @@ describe("toCapabilityCard", () => {
     const card = toCapabilityCard(skillFixture);
 
     expect(card.kind).toBe("skill");
+    expect(card.compatibilityIntent).toBe("web_content_to_markdown");
     expect(card.hosts.currentHostSupported).toBe(true);
     expect(card.query).toMatchObject({
       jobFamilies: ["content_acquisition", "web_content_conversion"],
@@ -68,6 +69,7 @@ describe("toCapabilityCard", () => {
     const card = toCapabilityCard(mcpFixture);
 
     expect(card.kind).toBe("mcp");
+    expect(card.compatibilityIntent).toBe("web_content_to_markdown");
     expect(card.hosts.currentHostSupported).toBe(true);
     expect(card.query).toMatchObject({
       jobFamilies: ["content_acquisition", "web_content_conversion"],
@@ -111,6 +113,7 @@ describe("toCapabilityCard", () => {
       artifacts: ["design_doc"],
       examples: ["帮我分析这个需求"]
     });
+    expect(card.compatibilityIntent).toBe("capability_discovery_or_install");
     expect(card.package).toMatchObject({
       packageId: "requirements-analysis",
       label: "requirements-analysis",

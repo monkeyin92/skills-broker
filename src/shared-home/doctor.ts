@@ -1,4 +1,6 @@
 import { access, readdir, stat } from "node:fs/promises";
+import { readBrokerRoutingTraces, routingTraceLogFilePath } from "../broker/trace-store.js";
+import { summarizeBrokerRoutingTraces } from "../broker/trace.js";
 import { resolveSharedBrokerHomeLayout } from "./install.js";
 import { readManagedShellManifest } from "./ownership.js";
 import { detectWritableDirectory } from "./detect.js";
@@ -14,6 +16,12 @@ export type DoctorLifecycleResult = {
   sharedHome: {
     path: string;
     exists: boolean;
+  };
+  routingMetrics: {
+    windowDays: number;
+    observed: number;
+    syntheticHostSkips: number;
+    surfaces: ReturnType<typeof summarizeBrokerRoutingTraces>["surfaces"];
   };
   hosts: Array<{
     name: "claude-code" | "codex";
@@ -35,6 +43,7 @@ export type DoctorSharedBrokerHomeOptions = {
   homeDirectory?: string;
   claudeCodeInstallDirectory?: string;
   codexInstallDirectory?: string;
+  now?: Date;
 };
 
 type DoctorHostEntry = DoctorLifecycleResult["hosts"][number];
@@ -203,12 +212,30 @@ export async function doctorSharedBrokerHome(
     codexDirOverride: options.codexInstallDirectory
   });
   const warnings: string[] = [];
+  const routingWindowDays = 7;
+  const routingSummary = summarizeBrokerRoutingTraces(
+    await readBrokerRoutingTraces(
+      routingTraceLogFilePath(options.brokerHomeDirectory)
+    ),
+    {
+      since: new Date(
+        (options.now ?? new Date()).getTime() -
+          routingWindowDays * 24 * 60 * 60 * 1000
+      )
+    }
+  );
 
   return {
     command: "doctor",
     sharedHome: {
       path: options.brokerHomeDirectory,
       exists: await pathExists(sharedHomeLayout.packageJsonPath)
+    },
+    routingMetrics: {
+      windowDays: routingWindowDays,
+      observed: routingSummary.observed,
+      syntheticHostSkips: routingSummary.syntheticHostSkips,
+      surfaces: routingSummary.surfaces
     },
     hosts: [
       await doctorHost(

@@ -517,7 +517,7 @@ export async function loadHostWorkflowRecipes(
       return {
         id: card.id,
         label: card.label,
-        intent: card.intent,
+        compatibilityIntent: card.compatibilityIntent,
         package: card.package,
         leaf: card.leaf,
         query: card.query,

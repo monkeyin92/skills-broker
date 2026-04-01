@@ -343,7 +343,7 @@ function stageCapabilityCard(
     id: `${recipe.id}:${stage.id}`,
     kind: "skill",
     label: stage.label,
-    intent: recipe.intent,
+    intent: recipe.compatibilityIntent,
     package: {
       ...stage.capability.package,
       packageId: stage.capability.packageId

@@ -10,7 +10,8 @@ function createCard(
     id: overrides.id,
     kind: overrides.kind ?? "skill",
     label: overrides.label,
-    intent: overrides.intent ?? "web_content_to_markdown",
+    compatibilityIntent:
+      overrides.compatibilityIntent ?? "web_content_to_markdown",
     package: overrides.package ?? {
       packageId: "test-package",
       label: "test-package",
@@ -109,7 +110,7 @@ describe("rankCapabilities", () => {
     const analysis = createCard({
       id: "analysis",
       label: "Requirements Analysis",
-      intent: "capability_discovery_or_install",
+      compatibilityIntent: "capability_discovery_or_install",
       query: {
         jobFamilies: ["requirements_analysis"],
         targetTypes: ["problem_statement", "text"],
@@ -120,7 +121,7 @@ describe("rankCapabilities", () => {
     const qa = createCard({
       id: "qa",
       label: "Website QA",
-      intent: "capability_discovery_or_install",
+      compatibilityIntent: "capability_discovery_or_install",
       query: {
         jobFamilies: ["quality_assurance"],
         targetTypes: ["website", "url"],
@@ -156,7 +157,7 @@ describe("rankCapabilities", () => {
     const officeHours = createCard({
       id: "office-hours",
       label: "Office Hours",
-      intent: "capability_discovery_or_install",
+      compatibilityIntent: "capability_discovery_or_install",
       query: {
         jobFamilies: ["requirements_analysis"],
         targetTypes: ["problem_statement", "text"],
@@ -176,7 +177,7 @@ describe("rankCapabilities", () => {
     const qa = createCard({
       id: "qa",
       label: "Website QA",
-      intent: "capability_discovery_or_install",
+      compatibilityIntent: "capability_discovery_or_install",
       query: {
         jobFamilies: ["quality_assurance"],
         targetTypes: ["website", "url"],
@@ -213,7 +214,7 @@ describe("rankCapabilities", () => {
     const discovery = createCard({
       id: "discovery",
       label: "Capability Discovery",
-      intent: "capability_discovery_or_install",
+      compatibilityIntent: "capability_discovery_or_install",
       query: {
         jobFamilies: ["capability_acquisition"],
         targetTypes: ["problem_statement", "text"],
@@ -224,7 +225,7 @@ describe("rankCapabilities", () => {
     const converter = createCard({
       id: "converter",
       label: "Web Content to Markdown",
-      intent: "web_content_to_markdown",
+      compatibilityIntent: "web_content_to_markdown",
       query: {
         jobFamilies: ["content_acquisition", "web_content_conversion"],
         targetTypes: ["url"],
@@ -305,6 +306,6 @@ describe("explainDecision", () => {
 
     expect(decision).toContain("current host");
     expect(decision).toContain("cache");
-    expect(decision).toContain("intent");
+    expect(decision).toContain("compatibility lane");
   });
 });

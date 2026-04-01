@@ -198,4 +198,133 @@ describe("doctor shared broker home", () => {
       await rm(runtimeDirectory, { recursive: true, force: true });
     }
   });
+
+  it("summarizes recent routing hit, misroute, and fallback rates from persisted traces", async () => {
+    const runtimeDirectory = await mkdtemp(join(tmpdir(), "skills-broker-doctor-traces-"));
+    const brokerHomeDirectory = join(runtimeDirectory, ".skills-broker");
+    const traceFilePath = join(brokerHomeDirectory, "state", "routing-traces.jsonl");
+
+    try {
+      await mkdir(join(brokerHomeDirectory, "state"), { recursive: true });
+      await writeFile(
+        traceFilePath,
+        [
+          JSON.stringify({
+            traceVersion: "2026-03-31",
+            requestText: "structured hit",
+            host: "codex",
+            hostDecision: "broker_first",
+            resultCode: "HANDOFF_READY",
+            routingOutcome: "hit",
+            missLayer: null,
+            normalizedBy: "structured_query",
+            requestSurface: "structured_query",
+            hostAction: null,
+            candidateCount: 1,
+            winnerId: "requirements-analysis",
+            winnerPackageId: "gstack",
+            workflowId: null,
+            runId: null,
+            stageId: null,
+            reasonCode: null,
+            timestamp: "2026-03-31T11:00:00.000Z"
+          }),
+          JSON.stringify({
+            traceVersion: "2026-03-31",
+            requestText: "raw miss",
+            host: "codex",
+            hostDecision: "broker_first",
+            resultCode: "UNSUPPORTED_REQUEST",
+            routingOutcome: "misroute",
+            missLayer: "broker_normalization",
+            normalizedBy: "raw_request_fallback",
+            requestSurface: "raw_envelope",
+            hostAction: "continue_normally",
+            candidateCount: 0,
+            winnerId: null,
+            winnerPackageId: null,
+            workflowId: null,
+            runId: null,
+            stageId: null,
+            reasonCode: null,
+            timestamp: "2026-03-31T11:05:00.000Z"
+          }),
+          JSON.stringify({
+            traceVersion: "2026-03-31",
+            requestText: "legacy fallback",
+            host: "claude-code",
+            hostDecision: "broker_first",
+            resultCode: "NO_CANDIDATE",
+            routingOutcome: "fallback",
+            missLayer: "retrieval",
+            normalizedBy: "legacy_intent",
+            requestSurface: "legacy_task",
+            hostAction: "offer_capability_discovery",
+            candidateCount: 0,
+            winnerId: null,
+            winnerPackageId: null,
+            workflowId: null,
+            runId: null,
+            stageId: null,
+            reasonCode: null,
+            timestamp: "2026-03-31T11:10:00.000Z"
+          })
+        ].join("\n"),
+        "utf8"
+      );
+
+      const result = await doctorSharedBrokerHome({
+        brokerHomeDirectory,
+        homeDirectory: runtimeDirectory,
+        now: new Date("2026-04-01T12:00:00.000Z")
+      });
+
+      expect(result.routingMetrics).toEqual({
+        windowDays: 7,
+        observed: 3,
+        syntheticHostSkips: 0,
+        surfaces: [
+          {
+            requestSurface: "structured_query",
+            normalizedBy: "structured_query",
+            observed: 1,
+            hits: 1,
+            misroutes: 0,
+            fallbacks: 0,
+            hitRate: 1,
+            misrouteRate: 0,
+            fallbackRate: 0
+          },
+          {
+            requestSurface: "raw_envelope",
+            normalizedBy: "raw_request_fallback",
+            observed: 1,
+            hits: 0,
+            misroutes: 1,
+            fallbacks: 0,
+            hitRate: 0,
+            misrouteRate: 1,
+            fallbackRate: 0
+          },
+          {
+            requestSurface: "legacy_task",
+            normalizedBy: "legacy_intent",
+            observed: 1,
+            hits: 0,
+            misroutes: 0,
+            fallbacks: 1,
+            hitRate: 0,
+            misrouteRate: 0,
+            fallbackRate: 1
+          }
+        ]
+      });
+
+      expect(formatLifecycleResult(result, "text")).toContain(
+        "Routing structured_query: observed=1, hit=1.00, misroute=0.00, fallback=0.00"
+      );
+    } finally {
+      await rm(runtimeDirectory, { recursive: true, force: true });
+    }
+  });
 });

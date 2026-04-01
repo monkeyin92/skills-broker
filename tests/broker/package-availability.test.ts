@@ -10,7 +10,7 @@ function createAvailableSkill(): CapabilityCard {
     id: "requirements-analysis",
     kind: "skill",
     label: "Requirements Analysis",
-    intent: "capability_discovery_or_install",
+    compatibilityIntent: "capability_discovery_or_install",
     package: {
       packageId: "gstack",
       label: "gstack",

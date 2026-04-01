@@ -1,8 +1,9 @@
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { runBroker } from "../../src/broker/run";
+import { routingTraceLogFilePath } from "../../src/broker/trace-store";
 
 const validUrlRequest = {
   task: "turn this webpage into markdown",
@@ -14,6 +15,7 @@ async function createRuntimePaths() {
 
   return {
     directory,
+    brokerHomeDirectory: join(directory, ".skills-broker"),
     cacheFilePath: join(directory, "broker-cache.json")
   };
 }
@@ -99,6 +101,36 @@ describe("runBroker", () => {
       expect(secondResult.winner.id).toBe(firstResult.winner.id);
       expect(secondResult.debug.cacheHit).toBe(true);
       expect(secondResult.debug.cachedCandidateId).toBe(firstResult.winner.id);
+    } finally {
+      await rm(runtime.directory, { recursive: true, force: true });
+    }
+  });
+
+  it("persists routing traces to the shared broker home when configured", async () => {
+    const runtime = await createRuntimePaths();
+
+    try {
+      const result = await runBroker(validUrlRequest, {
+        ...runtime,
+        now: new Date("2026-03-27T08:00:00.000Z")
+      });
+
+      expect(result.ok).toBe(true);
+
+      const traceLog = await readFile(
+        routingTraceLogFilePath(runtime.brokerHomeDirectory),
+        "utf8"
+      );
+      const persisted = traceLog
+        .trim()
+        .split("\n")
+        .map((line) => JSON.parse(line) as { requestSurface: string; routingOutcome: string });
+
+      expect(persisted).toHaveLength(1);
+      expect(persisted[0]).toMatchObject({
+        requestSurface: "legacy_task",
+        routingOutcome: "hit"
+      });
     } finally {
       await rm(runtime.directory, { recursive: true, force: true });
     }

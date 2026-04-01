@@ -6,6 +6,8 @@
 
 - Changed broker discovery so structured `capabilityQuery` requests can match host-catalog skills, MCP candidates, and broker workflows by query metadata even when their legacy `intent` does not exactly line up, keeping `intent` as a compatibility hint instead of a hard gate.
 - Changed request normalization so modern web, social, and capability-discovery inputs now synthesize `capabilityQuery` first and derive legacy `intent` from that query, leaving bare fixed-intent routing only as a legacy-task compatibility bridge.
+- Changed normalized capability cards and workflow recipes so their internal intent label is now treated as `compatibilityIntent`, making query metadata the primary internal routing semantics instead of pretending legacy intent is the main key.
+- Changed shared-home routing observability so broker traces now classify `hit`, `misroute`, and `fallback`, persist to broker home state, and roll up into `skills-broker doctor` by `structured_query`, `raw_envelope`, and `legacy_task` request surfaces.
 
 ### Fixed
 

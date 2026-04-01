@@ -7,7 +7,7 @@ function createWinner(): CapabilityCard {
     id: "winner",
     kind: "skill",
     label: "Winner",
-    intent: "web_content_to_markdown",
+    compatibilityIntent: "web_content_to_markdown",
     package: {
       packageId: "baoyu",
       label: "baoyu",

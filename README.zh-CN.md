@@ -126,6 +126,7 @@ v0 当前包含：
 - CI 和 live discovery smoke 覆盖
 - capability-query 主导的 host catalog / MCP / workflow 发现，所以结构化 broker 请求不再那么依赖 legacy `intent` 的严格相等
 - modern web / social / capability discovery 请求走 query-first 归一化，所以 `capabilityQuery` 现在承载主要 broker 语义，`intent` 更多只保留为兼容层标签
+- shared home 会持久化 routing trace，`skills-broker doctor` 现在会按 `structured_query`、`raw_envelope`、`legacy_task` 输出最近命中率 / 误路由率 / fallback 率汇总
 
 这一版也补宽了 free-form product idea 的命中面，所以用户用更自然的一句话描述产品想法时，更容易直接进入 broker 自管的 `idea-to-ship` workflow，而不是掉回 unsupported。
 
@@ -198,7 +199,7 @@ skills-broker update
 npx skills-broker update
 ```
 
-使用 `npx skills-broker update` 可以初始化或刷新共享 broker home，接上薄宿主壳，并让 Claude Code 和 Codex 复用同一份路由缓存。`npx skills-broker doctor` 用来只读诊断环境，`npx skills-broker remove` 默认只拆卸受管宿主壳而不删除共享历史，`npx skills-broker remove --purge` 会把共享 broker home 一起清掉。
+使用 `npx skills-broker update` 可以初始化或刷新共享 broker home，接上薄宿主壳，并让 Claude Code 和 Codex 复用同一份路由缓存。`npx skills-broker doctor` 用来只读诊断环境，如果 shared home 里已经有 routing trace，还会顺手汇总最近的 broker 命中率 / 误路由率 / fallback 率；`npx skills-broker remove` 默认只拆卸受管宿主壳而不删除共享历史，`npx skills-broker remove --purge` 会把共享 broker home 一起清掉。
 
 默认情况下，`update` 会先按官方根目录检测宿主，再决定是否写入：
 

@@ -93,7 +93,7 @@ function isExplicitCapabilityDiscoveryQuery(
 
 function capabilityDiscoveryAlignmentScore(card: CapabilityCard): number {
   return (
-    Number(card.intent === "capability_discovery_or_install") * 20 +
+    Number(card.compatibilityIntent === "capability_discovery_or_install") * 20 +
     overlapScore(card.query.jobFamilies, ["capability_acquisition"]) * 10 +
     overlapScore(card.query.artifacts, ["recommendation", "installation_plan"]) * 3
   );
@@ -154,8 +154,8 @@ function compareCards(
     return rightInstalled - leftInstalled;
   }
 
-  const leftIntentMatch = left.intent === input.requestIntent ? 1 : 0;
-  const rightIntentMatch = right.intent === input.requestIntent ? 1 : 0;
+  const leftIntentMatch = left.compatibilityIntent === input.requestIntent ? 1 : 0;
+  const rightIntentMatch = right.compatibilityIntent === input.requestIntent ? 1 : 0;
 
   if (leftIntentMatch !== rightIntentMatch) {
     return rightIntentMatch - leftIntentMatch;

@@ -50,7 +50,7 @@ export type WorkflowImplementation = {
 export type WorkflowRecipe = {
   id: string;
   label: string;
-  intent: BrokerIntent;
+  compatibilityIntent: BrokerIntent;
   package: CapabilityPackageRef;
   leaf: LeafCapabilityRef;
   query: CapabilityQueryMetadata;

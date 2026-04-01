@@ -19,6 +19,10 @@ import {
   createBrokerRoutingTrace,
   type BrokerRoutingTrace
 } from "./trace.js";
+import {
+  appendBrokerRoutingTrace,
+  routingTraceLogFilePath
+} from "./trace-store.js";
 import { WorkflowSessionStore } from "./workflow-session-store.js";
 import {
   resumeWorkflowRun,
@@ -111,6 +115,24 @@ function defaultWorkflowSessionFilePath(options: RunBrokerOptions): string {
   }
 
   return join(tmpdir(), "skills-broker-workflow-sessions.json");
+}
+
+async function persistTraceIfConfigured(
+  trace: BrokerRoutingTrace,
+  brokerHomeDirectory: string | undefined
+): Promise<void> {
+  if (brokerHomeDirectory === undefined) {
+    return;
+  }
+
+  try {
+    await appendBrokerRoutingTrace(
+      routingTraceLogFilePath(brokerHomeDirectory),
+      trace
+    );
+  } catch {
+    // Trace logging must never break broker routing.
+  }
 }
 
 function createNoCandidateResult(
@@ -243,7 +265,7 @@ function workflowCandidate(recipe: WorkflowRecipe): CapabilityCandidate {
     id: recipe.id,
     kind: "skill",
     label: recipe.label,
-    intent: recipe.intent,
+    intent: recipe.compatibilityIntent,
     package: recipe.package,
     leaf: recipe.leaf,
     query: recipe.query,
@@ -313,11 +335,11 @@ async function discoverCapabilityCards(
     .map(toCapabilityCard)
     .filter((candidate) => {
       if (request.capabilityQuery === undefined) {
-        return candidate.intent === request.intent;
+        return candidate.compatibilityIntent === request.intent;
       }
 
       return (
-        candidate.intent === request.intent ||
+        candidate.compatibilityIntent === request.intent ||
         hasCapabilityQueryMatch(candidate, request.capabilityQuery)
       );
     });
@@ -746,14 +768,20 @@ export async function runBroker(
     options.hostCatalogFilePath ?? defaultHostCatalogFilePath();
 
   if (isResumeEnvelope(input)) {
-    return runWorkflowResume(
+    const result = await runWorkflowResume(
       input,
       options,
       currentHost,
       now,
       hostCatalogFilePath
     );
+
+    await persistTraceIfConfigured(result.trace, options.brokerHomeDirectory);
+    return result;
   }
 
-  return runSingleStep(input, options, currentHost, now);
+  const result = await runSingleStep(input, options, currentHost, now);
+
+  await persistTraceIfConfigured(result.trace, options.brokerHomeDirectory);
+  return result;
 }

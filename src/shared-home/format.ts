@@ -18,6 +18,22 @@ export function formatLifecycleResult(
       `Shared home exists: ${result.sharedHome.exists ? "yes" : "no"}`
     ];
 
+    if (result.routingMetrics.observed === 0) {
+      lines.push(
+        `Routing metrics (last ${result.routingMetrics.windowDays}d): no traces recorded yet`
+      );
+    } else {
+      lines.push(
+        `Routing metrics (last ${result.routingMetrics.windowDays}d): ${result.routingMetrics.observed} traces, ${result.routingMetrics.syntheticHostSkips} host skips`
+      );
+
+      for (const surface of result.routingMetrics.surfaces) {
+        lines.push(
+          `Routing ${surface.requestSurface}: observed=${surface.observed}, hit=${surface.hitRate.toFixed(2)}, misroute=${surface.misrouteRate.toFixed(2)}, fallback=${surface.fallbackRate.toFixed(2)}`
+        );
+      }
+    }
+
     for (const host of result.hosts) {
       const suffix = host.reason ? ` (${host.reason})` : "";
       lines.push(`Host ${host.name}: ${host.status}${suffix}`);

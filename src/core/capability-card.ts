@@ -29,7 +29,7 @@ export type CapabilityCard = {
   id: string;
   kind: CapabilityCardKind;
   label: string;
-  intent: BrokerIntent;
+  compatibilityIntent: BrokerIntent;
   package: CapabilityPackageRef;
   leaf: LeafCapabilityRef;
   query: CapabilityQueryMetadata;
@@ -304,7 +304,7 @@ export function toCapabilityCard(candidate: CapabilityCandidate): CapabilityCard
     id: candidate.id,
     kind,
     label: candidate.label,
-    intent: candidate.intent,
+    compatibilityIntent: candidate.intent,
     package: {
       ...packageRef,
       probe: defaultPackageProbe(candidate, kind, packageRef.packageId)
