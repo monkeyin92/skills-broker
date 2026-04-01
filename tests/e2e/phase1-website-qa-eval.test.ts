@@ -162,63 +162,67 @@ async function runPrepareFailureEvalCase(
 }
 
 describe("Phase 1 website QA eval harness", () => {
-  it("attributes every maintained website QA miss to a Phase 1 routing layer", async () => {
-    const runtimeDirectory = await mkdtemp(join(tmpdir(), "skills-broker-phase1-qa-"));
-    const brokerHomeDirectory = join(runtimeDirectory, ".skills-broker");
-    const codexShellDirectory = join(
-      runtimeDirectory,
-      ".agents",
-      "skills",
-      "skills-broker"
-    );
+  it(
+    "attributes every maintained website QA miss to a Phase 1 routing layer",
+    async () => {
+      const runtimeDirectory = await mkdtemp(join(tmpdir(), "skills-broker-phase1-qa-"));
+      const brokerHomeDirectory = join(runtimeDirectory, ".skills-broker");
+      const codexShellDirectory = join(
+        runtimeDirectory,
+        ".agents",
+        "skills",
+        "skills-broker"
+      );
 
-    try {
-      const cases = await loadEvalFixture();
-      const emptyCatalogPath = await writeEmptyCatalog(runtimeDirectory);
-      const emptyRegistryPath = await writeEmptyRegistry(runtimeDirectory);
+      try {
+        const cases = await loadEvalFixture();
+        const emptyCatalogPath = await writeEmptyCatalog(runtimeDirectory);
+        const emptyRegistryPath = await writeEmptyRegistry(runtimeDirectory);
 
-      await installSharedBrokerHome({
-        brokerHomeDirectory,
-        projectRoot: process.cwd()
-      });
-      await installCodexHostShell({
-        installDirectory: codexShellDirectory,
-        brokerHomeDirectory
-      });
-
-      const observedLayers: string[] = [];
-
-      for (const testCase of cases) {
-        const trace =
-          testCase.mode === "synthetic_host_skip"
-            ? createSyntheticHostSkippedBrokerTrace({
-                requestText: testCase.requestText,
-                host: testCase.host,
-                now: new Date(testCase.now)
-              })
-            : testCase.mode === "host_runner"
-              ? await runHostRunnerEvalCase(
-                  testCase,
-                  codexShellDirectory,
-                  {
-                    emptyCatalogPath,
-                    emptyRegistryPath
-                  }
-                )
-              : await runPrepareFailureEvalCase(testCase);
-
-        expect(trace).toMatchObject({
-          requestText: testCase.requestText,
-          host: testCase.host,
-          resultCode: testCase.expect.resultCode,
-          missLayer: testCase.expect.missLayer
+        await installSharedBrokerHome({
+          brokerHomeDirectory,
+          projectRoot: process.cwd()
         });
-        observedLayers.push(trace.missLayer ?? "unknown");
-      }
+        await installCodexHostShell({
+          installDirectory: codexShellDirectory,
+          brokerHomeDirectory
+        });
 
-      expect(observedLayers.sort()).toEqual([...PHASE1_MISS_LAYERS].sort());
-    } finally {
-      await rm(runtimeDirectory, { recursive: true, force: true });
-    }
-  });
+        const observedLayers: string[] = [];
+
+        for (const testCase of cases) {
+          const trace =
+            testCase.mode === "synthetic_host_skip"
+              ? createSyntheticHostSkippedBrokerTrace({
+                  requestText: testCase.requestText,
+                  host: testCase.host,
+                  now: new Date(testCase.now)
+                })
+              : testCase.mode === "host_runner"
+                ? await runHostRunnerEvalCase(
+                    testCase,
+                    codexShellDirectory,
+                    {
+                      emptyCatalogPath,
+                      emptyRegistryPath
+                    }
+                  )
+                : await runPrepareFailureEvalCase(testCase);
+
+          expect(trace).toMatchObject({
+            requestText: testCase.requestText,
+            host: testCase.host,
+            resultCode: testCase.expect.resultCode,
+            missLayer: testCase.expect.missLayer
+          });
+          observedLayers.push(trace.missLayer ?? "unknown");
+        }
+
+        expect(observedLayers.sort()).toEqual([...PHASE1_MISS_LAYERS].sort());
+      } finally {
+        await rm(runtimeDirectory, { recursive: true, force: true });
+      }
+    },
+    15_000
+  );
 });
