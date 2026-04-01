@@ -345,6 +345,92 @@ describe("runBroker", () => {
     }
   });
 
+  it("prefers a query-specific MCP over generic discovery fallback for structured QA requests", async () => {
+    const runtime = await createRuntimePaths();
+    const hostCatalogFilePath = join(runtime.directory, "empty-host.json");
+    const mcpRegistryFilePath = join(runtime.directory, "mcp.json");
+
+    await writeFile(hostCatalogFilePath, JSON.stringify({ skills: [] }), "utf8");
+    await writeFile(
+      mcpRegistryFilePath,
+      JSON.stringify({
+        servers: [
+          {
+            server: {
+              name: "io.example/website-qa",
+              title: "Website QA",
+              description: "QA websites, audit quality, and produce a qa report."
+            }
+          },
+          {
+            server: {
+              name: "io.example/capability-discovery",
+              title: "Capability Discovery",
+              description:
+                "Find, discover, and install skills, MCP servers, plugins, and tools for a task."
+            }
+          }
+        ]
+      }),
+      "utf8"
+    );
+
+    try {
+      const result = await runBroker(
+        {
+          requestText: "测下这个网站的质量",
+          host: "claude-code",
+          capabilityQuery: {
+            kind: "capability_request",
+            goal: "qa a website",
+            host: "claude-code",
+            requestText: "测下这个网站的质量",
+            jobFamilies: ["quality_assurance"],
+            targets: [
+              {
+                type: "website",
+                value: "https://example.com"
+              }
+            ],
+            artifacts: ["qa_report"]
+          }
+        },
+        {
+          cacheFilePath: runtime.cacheFilePath,
+          hostCatalogFilePath,
+          mcpRegistryFilePath,
+          packageSearchRoots: [runtime.directory],
+          now: new Date("2026-04-01T09:00:00.000Z")
+        }
+      );
+
+      expect(result.ok).toBe(false);
+      expect(result.outcome.code).toBe("NO_CANDIDATE");
+      expect(result.acquisition).toMatchObject({
+        reason: "package_not_installed",
+        package: {
+          packageId: "io.example/website-qa",
+          installState: "available",
+          acquisition: "mcp_bundle"
+        },
+        leafCapability: {
+          capabilityId: "io.example/website-qa",
+          packageId: "io.example/website-qa",
+          subskillId: "website-qa"
+        }
+      });
+      expect(result.trace).toMatchObject({
+        hostDecision: "broker_first",
+        resultCode: "NO_CANDIDATE",
+        normalizedBy: "structured_query",
+        requestSurface: "structured_query",
+        winnerPackageId: "io.example/website-qa"
+      });
+    } finally {
+      await rm(runtime.directory, { recursive: true, force: true });
+    }
+  });
+
   it("returns a package-aware NO_CANDIDATE when the best leaf belongs to an uninstalled package", async () => {
     const runtime = await createRuntimePaths();
     const hostCatalogFilePath = join(runtime.directory, "host.json");

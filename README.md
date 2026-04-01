@@ -118,7 +118,7 @@ v0 currently includes:
 - Claude Code and Codex thin host shell support
 - cross-host cache reuse between Claude Code and Codex
 - CI and live discovery smoke coverage
-- capability-query-led host-catalog and workflow discovery, so structured broker requests are less tightly coupled to exact legacy `intent` equality
+- capability-query-led host-catalog, MCP, and workflow discovery, so structured broker requests are less tightly coupled to exact legacy `intent` equality
 
 This slice now also catches more free-form product-idea phrasing, so a natural sentence is more likely to start the broker-owned `idea-to-ship` workflow instead of falling through as unsupported.
 

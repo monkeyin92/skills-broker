@@ -281,7 +281,7 @@ async function discoverCapabilityCards(
       useBroadHostDiscovery ? undefined : request.intent,
       hostCatalogFilePath
     ),
-    searchMcpRegistry(request.intent, mcpRegistryFilePath)
+    searchMcpRegistry(request, mcpRegistryFilePath)
   ]);
 
   if (

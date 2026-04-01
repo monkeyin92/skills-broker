@@ -4,7 +4,7 @@
 
 ### Changed
 
-- Changed broker discovery so structured `capabilityQuery` requests can match host-catalog skills and broker workflows by query metadata even when their legacy `intent` does not exactly line up, keeping `intent` as a compatibility hint instead of a hard gate.
+- Changed broker discovery so structured `capabilityQuery` requests can match host-catalog skills, MCP candidates, and broker workflows by query metadata even when their legacy `intent` does not exactly line up, keeping `intent` as a compatibility hint instead of a hard gate.
 
 ### Fixed
 
