@@ -37,6 +37,19 @@
 
 **Shipped:** package-plus-leaf capability cards, package-aware acquisition hints, runtime manifest-based install detection, explicit `probe` contracts in the host catalog, catalog-load validation for those contracts, and MCP candidate alignment onto the same internal routing shape.
 
+### Expand the set of high-value routed lanes
+
+**What:** Add more clearly external-capability request families beyond the current markdown and discovery lanes.
+
+**Why:** The architecture is no longer the limiting factor. Product value now depends on whether the broker covers enough high-frequency workflows to become a habit.
+
+**Context:** The current three-lane set proves the model works, but it is still too narrow to establish `skills-broker` as the default external-capability brain.
+
+**Effort:** M
+**Priority:** P1
+**Depends on:** stable shared envelope, durable lane taxonomy, and host auto-routing boundaries staying tight
+**Completed:** v0.1.7 (2026-04-01)
+
 ## Next
 
 ### Replace fixed-intent routing with capability-query routing
@@ -74,18 +87,6 @@
 **Effort:** M
 **Priority:** P0
 **Depends on:** host-shell wording, broker normalization quality, and more real host-in-the-loop smoke coverage
-
-### Expand the set of high-value routed lanes
-
-**What:** Add more clearly external-capability request families beyond the current markdown and discovery lanes.
-
-**Why:** The architecture is no longer the limiting factor. Product value now depends on whether the broker covers enough high-frequency workflows to become a habit.
-
-**Context:** The current three-lane set proves the model works, but it is still too narrow to establish `skills-broker` as the default external-capability brain.
-
-**Effort:** M
-**Priority:** P1
-**Depends on:** stable shared envelope, durable lane taxonomy, and host auto-routing boundaries staying tight
 
 ### Turn discovery and install into a real flywheel
 
