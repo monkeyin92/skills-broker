@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.1.9] - 2026-04-01
+
+### Changed
+
+- Changed all GitHub Actions workflows to use `actions/checkout@v5` and `actions/setup-node@v5`, removing the Node 20 runtime deprecation warning from CI and npm publish runs.
+
 ## [0.1.8] - 2026-04-01
 
 ### Fixed
