@@ -334,7 +334,7 @@ describe("installed host-shell routing smoke", () => {
       now: new Date("2026-03-31T02:45:00.000Z")
     });
 
-    expect(trace).toEqual({
+    expect(trace).toMatchObject({
       traceVersion: "2026-03-31",
       requestText: "测下这个网站的质量：https://www.baidu.com",
       host: "codex",

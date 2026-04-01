@@ -336,6 +336,42 @@ describe("normalizeRequest", () => {
     });
   });
 
+  it("normalizes raw idea requests into the workflow discovery lane", () => {
+    const normalized = normalizeRequest({
+      requestText: "我有一个想法：做一个自动串起评审和发版的工具",
+      host: "claude-code"
+    });
+
+    expect(normalized.intent).toBe("capability_discovery_or_install");
+    expect(normalized.capabilityQuery).toMatchObject({
+      goal: "turn a product idea into a reviewed execution plan",
+      requestText: "我有一个想法：做一个自动串起评审和发版的工具",
+      jobFamilies: [
+        "idea_brainstorming",
+        "requirements_analysis",
+        "strategy_review",
+        "engineering_review"
+      ],
+      targets: [
+        {
+          type: "problem_statement",
+          value: "我有一个想法：做一个自动串起评审和发版的工具"
+        }
+      ],
+      artifacts: ["design_doc", "analysis", "execution_plan"]
+    });
+  });
+
+  it("asks to clarify weak idea phrasing instead of silently misrouting it", () => {
+    expectRejected(
+      {
+        requestText: "我有个想法",
+        host: "codex"
+      },
+      "AMBIGUOUS_REQUEST"
+    );
+  });
+
   it("normalizes a structured capability query for webpage markdown into the web lane", () => {
     const normalized = normalizeRequest({
       requestText: "将这个页面转为markdown文件：https://example.com/post",

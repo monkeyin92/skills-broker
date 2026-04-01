@@ -14,6 +14,7 @@ export type BrokerTraceMissLayer =
   | "broker_normalization"
   | "retrieval"
   | "prepare"
+  | "workflow_execution"
   | "unknown";
 export type BrokerTraceNormalizedBy =
   | "structured_query"
@@ -37,6 +38,10 @@ export type BrokerRoutingTrace = {
   candidateCount: number | null;
   winnerId: string | null;
   winnerPackageId: string | null;
+  workflowId: string | null;
+  runId: string | null;
+  stageId: string | null;
+  reasonCode: string | null;
   timestamp: string;
 };
 
@@ -48,6 +53,10 @@ type RuntimeTraceOptions = {
   hostAction: BrokerHostAction | null;
   candidateCount: number;
   winner?: Pick<CapabilityCard, "id" | "package">;
+  workflowId?: string;
+  runId?: string;
+  stageId?: string | null;
+  reasonCode?: string | null;
 };
 
 type SyntheticHostSkippedTraceOptions = {
@@ -99,6 +108,12 @@ function missLayerForResultCode(
       return "retrieval";
     case "PREPARE_FAILED":
       return "prepare";
+    case "WORKFLOW_FAILED":
+    case "WORKFLOW_BLOCKED":
+      return "workflow_execution";
+    case "WORKFLOW_STAGE_READY":
+    case "WORKFLOW_COMPLETED":
+      return null;
     case "HANDOFF_READY":
       return null;
   }
@@ -122,6 +137,10 @@ export function createBrokerRoutingTrace(
     candidateCount: options.candidateCount,
     winnerId: options.winner?.id ?? null,
     winnerPackageId: options.winner?.package.packageId ?? null,
+    workflowId: options.workflowId ?? null,
+    runId: options.runId ?? null,
+    stageId: options.stageId ?? null,
+    reasonCode: options.reasonCode ?? null,
     timestamp: options.now.toISOString()
   };
 }
@@ -142,6 +161,10 @@ export function createSyntheticHostSkippedBrokerTrace(
     candidateCount: null,
     winnerId: null,
     winnerPackageId: null,
+    workflowId: null,
+    runId: null,
+    stageId: null,
+    reasonCode: null,
     timestamp: options.now.toISOString()
   };
 }

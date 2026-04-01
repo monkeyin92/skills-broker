@@ -139,6 +139,28 @@ function hasRequirementSignal(requestText: string): boolean {
   );
 }
 
+function hasStrongIdeaSignal(requestText: string): boolean {
+  return /(?:我有一个想法[:：]|i have an idea[:：]|product idea[:：]|startup idea[:：]|想做一个产品|想做个产品|从想法到上线)/i.test(
+    requestText
+  );
+}
+
+function hasWeakIdeaSignal(requestText: string): boolean {
+  return /(?:\bidea\b|想法|点子)/i.test(requestText);
+}
+
+function hasIdeaWorkflowSignal(requestText: string): boolean {
+  return /(?:workflow|ship|launch|build|implement|plan|review|上线|落地|实现|评审|开发)/i.test(
+    requestText
+  );
+}
+
+function hasOrdinaryTextTaskSignal(requestText: string): boolean {
+  return /(?:\bsummar(?:ize|y)\b|\bexplain\b|\btranslate\b|\brewrite\b|总结|解释|翻译|改写)/i.test(
+    requestText
+  );
+}
+
 function hasInvestigationSignal(requestText: string): boolean {
   return /(?:\binvestigat(?:e|ing|ion)\b|\bdebug(?:ging)?\b|\broot cause\b|\btroubleshoot(?:ing)?\b|排查|调查|定位|根因|排障)/i.test(
     requestText
@@ -352,6 +374,30 @@ function buildInvestigationCapabilityQuery(
   };
 }
 
+function buildIdeaWorkflowCapabilityQuery(
+  input: BrokerEnvelope
+): CapabilityQuery {
+  return {
+    kind: "capability_request",
+    goal: "turn a product idea into a reviewed execution plan",
+    host: input.host,
+    requestText: input.requestText,
+    jobFamilies: [
+      "idea_brainstorming",
+      "requirements_analysis",
+      "strategy_review",
+      "engineering_review"
+    ],
+    targets: [
+      {
+        type: "problem_statement",
+        value: input.requestText
+      }
+    ],
+    artifacts: ["design_doc", "analysis", "execution_plan"]
+  };
+}
+
 function normalizeCapabilityQueryRequest(
   query: CapabilityQuery
 ): BrokerRequest {
@@ -409,6 +455,14 @@ function normalizeEnvelopeRequest(input: BrokerEnvelope): BrokerRequest {
     return buildBrokerRequest("capability_discovery_or_install");
   }
 
+  if (hasStrongIdeaSignal(requestText) || (hasWeakIdeaSignal(requestText) && hasIdeaWorkflowSignal(requestText))) {
+    return buildBrokerRequest(
+      "capability_discovery_or_install",
+      undefined,
+      buildIdeaWorkflowCapabilityQuery(input)
+    );
+  }
+
   if (looksLikeUnsupportedConversionTarget(requestText, url)) {
     throw new UnsupportedBrokerRequestError(
       `Unsupported broker request: ${input.requestText}`
@@ -448,6 +502,12 @@ function normalizeEnvelopeRequest(input: BrokerEnvelope): BrokerRequest {
   }
 
   if (looksAmbiguous(requestText)) {
+    throw new AmbiguousBrokerRequestError(
+      `Ambiguous broker request: ${input.requestText}`
+    );
+  }
+
+  if (hasWeakIdeaSignal(requestText) && !hasOrdinaryTextTaskSignal(requestText)) {
     throw new AmbiguousBrokerRequestError(
       `Ambiguous broker request: ${input.requestText}`
     );

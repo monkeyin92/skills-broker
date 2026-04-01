@@ -896,4 +896,59 @@ describe("runBroker", () => {
       await rm(runtime.directory, { recursive: true, force: true });
     }
   });
+
+  it("resumes the same workflow run instead of re-routing a fresh winner", async () => {
+    const runtime = await createRuntimePaths();
+
+    try {
+      const firstResult = await runBroker(
+        {
+          requestText: "我有一个想法：做一个自动串起评审和发版的工具",
+          host: "claude-code"
+        },
+        {
+          ...runtime,
+          now: new Date("2026-03-31T08:00:00.000Z")
+        }
+      );
+
+      expect(firstResult.ok).toBe(true);
+      expect(firstResult.outcome.code).toBe("WORKFLOW_STAGE_READY");
+      expect(firstResult.winner.id).toBe("idea-to-ship");
+      expect(firstResult.workflow.activeStageId).toBe("office-hours");
+      expect(firstResult.debug.cacheHit).toBe(false);
+
+      const secondResult = await runBroker(
+        {
+          requestText: "继续这个 workflow",
+          host: "claude-code",
+          workflowResume: {
+            runId: firstResult.workflow.runId,
+            stageId: "office-hours",
+            decision: "confirm",
+            artifacts: ["design_doc", "analysis"]
+          }
+        },
+        {
+          ...runtime,
+          now: new Date("2026-03-31T08:05:00.000Z")
+        }
+      );
+
+      expect(secondResult.ok).toBe(true);
+      expect(secondResult.outcome.code).toBe("WORKFLOW_STAGE_READY");
+      expect(secondResult.workflow.runId).toBe(firstResult.workflow.runId);
+      expect(secondResult.workflow.completedStageIds).toContain("office-hours");
+      expect(secondResult.stage.id).toBe("plan-ceo-review");
+      expect(secondResult.debug.decision).toBe("resume_existing_workflow");
+      expect(secondResult.trace).toMatchObject({
+        resultCode: "WORKFLOW_STAGE_READY",
+        workflowId: "idea-to-ship",
+        runId: firstResult.workflow.runId,
+        stageId: "plan-ceo-review"
+      });
+    } finally {
+      await rm(runtime.directory, { recursive: true, force: true });
+    }
+  });
 });

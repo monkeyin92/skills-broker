@@ -1,14 +1,24 @@
 import { readFile } from "node:fs/promises";
-import type { CapabilityCandidate } from "../core/capability-card.js";
+import {
+  toCapabilityCard,
+  type CapabilityCandidate
+} from "../core/capability-card.js";
+import type { WorkflowRecipe, WorkflowStage } from "../core/workflow.js";
 import {
   CAPABILITY_PACKAGE_LAYOUTS,
   type BrokerIntent,
   type CapabilityPackageRef
 } from "../core/types.js";
 
+type HostWorkflowRecipeEntry = CapabilityCandidate & {
+  startStageId: string;
+  stages: WorkflowStage[];
+};
+
 type HostSkillCatalog = {
   packages?: CapabilityPackageRef[];
   skills?: CapabilityCandidate[];
+  workflows?: HostWorkflowRecipeEntry[];
 };
 
 const PACKAGE_INSTALL_STATES = new Set(["installed", "available"]);
@@ -206,6 +216,183 @@ function validateSkillEntry(
   }
 }
 
+function validateWorkflowStageCapability(
+  filePath: string,
+  path: string,
+  value: unknown
+): void {
+  if (!isRecord(value)) {
+    fail(filePath, path, "expected an object");
+  }
+
+  for (const key of [
+    "packageId",
+    "capabilityId",
+    "subskillId",
+    "implementationId"
+  ] as const) {
+    if (typeof value[key] !== "string" || value[key].trim().length === 0) {
+      fail(filePath, `${path}.${key}`, "expected a non-empty string");
+    }
+  }
+
+  validateLeafProbe(filePath, `${path}.probe`, value.probe);
+}
+
+function validateWorkflowStage(
+  filePath: string,
+  path: string,
+  value: unknown
+): void {
+  if (!isRecord(value)) {
+    fail(filePath, path, "expected an object");
+  }
+
+  if (typeof value.id !== "string" || value.id.trim().length === 0) {
+    fail(filePath, `${path}.id`, "expected a non-empty string");
+  }
+
+  if (typeof value.label !== "string" || value.label.trim().length === 0) {
+    fail(filePath, `${path}.label`, "expected a non-empty string");
+  }
+
+  if (
+    typeof value.kind !== "string" ||
+    !["capability", "host_native"].includes(value.kind)
+  ) {
+    fail(filePath, `${path}.kind`, "expected capability or host_native");
+  }
+
+  if (
+    value.nextStageId !== undefined &&
+    value.nextStageId !== null &&
+    (typeof value.nextStageId !== "string" || value.nextStageId.trim().length === 0)
+  ) {
+    fail(filePath, `${path}.nextStageId`, "expected a non-empty string or null");
+  }
+
+  validateOptionalStringArray(
+    filePath,
+    `${path}.producesArtifacts`,
+    value.producesArtifacts
+  );
+  validateOptionalStringArray(
+    filePath,
+    `${path}.requiresArtifacts`,
+    value.requiresArtifacts
+  );
+  validateOptionalStringArray(
+    filePath,
+    `${path}.requiredCompletedStageIds`,
+    value.requiredCompletedStageIds
+  );
+
+  if (value.instructions !== undefined && typeof value.instructions !== "string") {
+    fail(filePath, `${path}.instructions`, "expected a string");
+  }
+
+  if (value.kind === "capability") {
+    validateWorkflowStageCapability(filePath, `${path}.capability`, value.capability);
+  }
+}
+
+function validateWorkflowTopology(
+  filePath: string,
+  path: string,
+  workflow: HostWorkflowRecipeEntry
+): void {
+  const stageIds = new Set<string>();
+  const artifactRefs = new Set<string>();
+
+  workflow.stages.forEach((stage, index) => {
+    if (stageIds.has(stage.id)) {
+      fail(filePath, `${path}.stages[${index}].id`, "duplicate stage id");
+    }
+
+    stageIds.add(stage.id);
+
+    for (const artifact of stage.producesArtifacts ?? []) {
+      artifactRefs.add(artifact);
+    }
+  });
+
+  if (!stageIds.has(workflow.startStageId)) {
+    fail(filePath, `${path}.startStageId`, "expected a known stage id");
+  }
+
+  workflow.stages.forEach((stage, index) => {
+    if (stage.nextStageId !== undefined && stage.nextStageId !== null) {
+      if (!stageIds.has(stage.nextStageId)) {
+        fail(
+          filePath,
+          `${path}.stages[${index}].nextStageId`,
+          "expected a known stage id"
+        );
+      }
+    }
+
+    stage.requiredCompletedStageIds?.forEach((stageId, requiredIndex) => {
+      if (!stageIds.has(stageId)) {
+        fail(
+          filePath,
+          `${path}.stages[${index}].requiredCompletedStageIds[${requiredIndex}]`,
+          "expected a known stage id"
+        );
+      }
+    });
+
+    stage.requiresArtifacts?.forEach((artifact, artifactIndex) => {
+      if (!artifactRefs.has(artifact)) {
+        fail(
+          filePath,
+          `${path}.stages[${index}].requiresArtifacts[${artifactIndex}]`,
+          "expected a known artifact ref"
+        );
+      }
+    });
+  });
+}
+
+function validateWorkflowEntry(
+  filePath: string,
+  path: string,
+  value: unknown
+): void {
+  validateSkillEntry(filePath, path, value);
+
+  if (!isRecord(value)) {
+    fail(filePath, path, "expected an object");
+  }
+
+  if (
+    !isRecord(value.implementation) ||
+    value.implementation.type !== "broker_workflow"
+  ) {
+    fail(
+      filePath,
+      `${path}.implementation.type`,
+      "expected broker_workflow"
+    );
+  }
+
+  if (
+    typeof value.startStageId !== "string" ||
+    value.startStageId.trim().length === 0
+  ) {
+    fail(filePath, `${path}.startStageId`, "expected a non-empty string");
+  }
+
+  if (!Array.isArray(value.stages) || value.stages.length === 0) {
+    fail(filePath, `${path}.stages`, "expected a non-empty array");
+  }
+
+  value.stages.forEach((stage, index) => {
+    validateWorkflowStage(filePath, `${path}.stages[${index}]`, stage);
+  });
+
+  validateWorkflowTopology(filePath, path, value as HostWorkflowRecipeEntry);
+}
+
 function validateHostSkillCatalog(
   filePath: string,
   value: unknown
@@ -231,6 +418,16 @@ function validateHostSkillCatalog(
 
     value.skills.forEach((entry, index) => {
       validateSkillEntry(filePath, `skills[${index}]`, entry);
+    });
+  }
+
+  if (value.workflows !== undefined) {
+    if (!Array.isArray(value.workflows)) {
+      fail(filePath, "workflows", "expected an array");
+    }
+
+    value.workflows.forEach((entry, index) => {
+      validateWorkflowEntry(filePath, `workflows[${index}]`, entry);
     });
   }
 
@@ -282,4 +479,64 @@ async function readHostSkillCatalog(
   const parsed = JSON.parse(raw) as unknown;
 
   return validateHostSkillCatalog(filePath, parsed);
+}
+
+export async function loadHostWorkflowRecipes(
+  intent: BrokerIntent | undefined,
+  catalogFilePath: string
+): Promise<WorkflowRecipe[]> {
+  const catalog = await readHostSkillCatalog(catalogFilePath);
+  const packageMap = new Map(
+    (catalog.packages ?? []).map((pkg) => [pkg.packageId, pkg] as const)
+  );
+
+  return (catalog.workflows ?? [])
+    .filter((workflow) => intent === undefined || workflow.intent === intent)
+    .map((workflow) => {
+      const packageId =
+        workflow.package?.packageId ??
+        (typeof workflow.sourceMetadata?.packageId === "string"
+          ? workflow.sourceMetadata.packageId
+          : undefined);
+      const mergedPackage =
+        packageId === undefined
+          ? workflow.package
+          : {
+              ...packageMap.get(packageId),
+              ...workflow.package
+            };
+      const card = toCapabilityCard({
+        ...workflow,
+        package: mergedPackage
+      });
+
+      return {
+        id: card.id,
+        label: card.label,
+        intent: card.intent,
+        package: card.package,
+        leaf: card.leaf,
+        query: card.query,
+        implementation: {
+          id: card.implementation.id,
+          type: "broker_workflow",
+          ownerSurface: card.implementation.ownerSurface
+        },
+        startStageId: workflow.startStageId,
+        stages: workflow.stages.map((stage) => ({
+          ...stage,
+          capability:
+            stage.capability === undefined
+              ? undefined
+              : {
+                  ...stage.capability,
+                  package: {
+                    ...packageMap.get(stage.capability.packageId),
+                    packageId: stage.capability.packageId
+                  }
+                }
+        })),
+        sourceMetadata: workflow.sourceMetadata
+      };
+    });
 }

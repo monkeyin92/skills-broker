@@ -54,4 +54,40 @@ describe("parseBrokerEnvelope", () => {
       /Expected broker envelope\.capabilityQuery\.requestText to match broker envelope\.requestText\./
     );
   });
+
+  it("accepts a workflow resume payload", () => {
+    const envelope = parseBrokerEnvelope({
+      requestText: "继续这个 workflow",
+      host: "codex",
+      workflowResume: {
+        runId: "run-123",
+        stageId: "office-hours",
+        decision: "confirm",
+        artifacts: ["design_doc"]
+      }
+    });
+
+    expect(envelope.workflowResume).toEqual({
+      runId: "run-123",
+      stageId: "office-hours",
+      decision: "confirm",
+      artifacts: ["design_doc"]
+    });
+  });
+
+  it("rejects a workflow resume payload with an unknown decision", () => {
+    expect(() =>
+      parseBrokerEnvelope({
+        requestText: "继续这个 workflow",
+        host: "codex",
+        workflowResume: {
+          runId: "run-123",
+          stageId: "office-hours",
+          decision: "skip"
+        }
+      })
+    ).toThrow(
+      /Expected broker envelope\.workflowResume\.decision to be one of confirm\./
+    );
+  });
 });

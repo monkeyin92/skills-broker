@@ -238,5 +238,160 @@
         "skillName": "investigate"
       }
     }
+  ],
+  "workflows": [
+    {
+      "id": "idea-to-ship",
+      "kind": "skill",
+      "label": "Idea to Ship",
+      "intent": "capability_discovery_or_install",
+      "package": {
+        "packageId": "skills_broker"
+      },
+      "leaf": {
+        "capabilityId": "skills_broker.idea-to-ship",
+        "packageId": "skills_broker",
+        "subskillId": "idea-to-ship",
+        "probe": {
+          "manifestNames": ["skills-broker"],
+          "aliases": ["idea-to-ship"]
+        }
+      },
+      "query": {
+        "jobFamilies": [
+          "idea_brainstorming",
+          "strategy_review",
+          "engineering_review"
+        ],
+        "targetTypes": ["text", "problem_statement"],
+        "artifacts": ["design_doc", "analysis", "execution_plan", "qa_report"],
+        "examples": [
+          "我有一个想法：做一个帮团队管理发布流程的工具",
+          "I have an idea: turn this product idea into a shipped plan"
+        ]
+      },
+      "implementation": {
+        "id": "skills_broker.idea_to_ship",
+        "type": "broker_workflow",
+        "ownerSurface": "broker_owned_downstream"
+      },
+      "startStageId": "office-hours",
+      "stages": [
+        {
+          "id": "office-hours",
+          "label": "Shape the idea",
+          "kind": "capability",
+          "capability": {
+            "packageId": "gstack",
+            "capabilityId": "gstack.office-hours",
+            "subskillId": "office-hours",
+            "implementationId": "gstack.office_hours",
+            "probe": {
+              "manifestNames": ["office-hours"],
+              "aliases": ["gstack-office-hours"]
+            }
+          },
+          "producesArtifacts": ["design_doc", "analysis"],
+          "nextStageId": "plan-ceo-review",
+          "requiresConfirmation": true
+        },
+        {
+          "id": "plan-ceo-review",
+          "label": "Challenge the product direction",
+          "kind": "capability",
+          "capability": {
+            "packageId": "gstack",
+            "capabilityId": "gstack.plan-ceo-review",
+            "subskillId": "plan-ceo-review",
+            "implementationId": "gstack.plan_ceo_review",
+            "probe": {
+              "manifestNames": ["plan-ceo-review"],
+              "aliases": ["gstack-plan-ceo-review"]
+            }
+          },
+          "requiresArtifacts": ["design_doc"],
+          "producesArtifacts": ["ceo_review"],
+          "nextStageId": "plan-eng-review",
+          "requiresConfirmation": true
+        },
+        {
+          "id": "plan-eng-review",
+          "label": "Lock the execution plan",
+          "kind": "capability",
+          "capability": {
+            "packageId": "gstack",
+            "capabilityId": "gstack.plan-eng-review",
+            "subskillId": "plan-eng-review",
+            "implementationId": "gstack.plan_eng_review",
+            "probe": {
+              "manifestNames": ["plan-eng-review"],
+              "aliases": ["gstack-plan-eng-review"]
+            }
+          },
+          "requiresArtifacts": ["design_doc", "ceo_review"],
+          "producesArtifacts": ["execution_plan"],
+          "nextStageId": "coding",
+          "requiresConfirmation": true
+        },
+        {
+          "id": "coding",
+          "label": "Implement in the host",
+          "kind": "host_native",
+          "instructions": "Implement the approved execution plan in the current workspace.",
+          "requiresArtifacts": ["execution_plan"],
+          "producesArtifacts": ["code_change"],
+          "nextStageId": "review",
+          "requiresConfirmation": true
+        },
+        {
+          "id": "review",
+          "label": "Review the change",
+          "kind": "capability",
+          "capability": {
+            "packageId": "gstack",
+            "capabilityId": "gstack.review",
+            "subskillId": "review",
+            "implementationId": "gstack.review",
+            "probe": {
+              "manifestNames": ["review"],
+              "aliases": ["gstack-review"]
+            }
+          },
+          "requiresArtifacts": ["code_change"],
+          "producesArtifacts": ["review_approved"],
+          "nextStageId": "qa",
+          "requiresConfirmation": true
+        },
+        {
+          "id": "qa",
+          "label": "QA the change",
+          "kind": "capability",
+          "capability": {
+            "packageId": "gstack",
+            "capabilityId": "gstack.qa",
+            "subskillId": "qa",
+            "implementationId": "gstack.qa",
+            "probe": {
+              "manifestNames": ["qa"],
+              "aliases": ["gstack-qa"]
+            }
+          },
+          "requiresArtifacts": ["code_change"],
+          "producesArtifacts": ["qa_report"],
+          "nextStageId": "ship",
+          "requiresConfirmation": true
+        },
+        {
+          "id": "ship",
+          "label": "Ship the reviewed build",
+          "kind": "host_native",
+          "instructions": "Ship only after review and QA are complete.",
+          "requiresArtifacts": ["review_approved", "qa_report"],
+          "requiredCompletedStageIds": ["review", "qa"],
+          "requiresConfirmation": true,
+          "nextStageId": null
+        }
+      ]
+    }
   ]
 }

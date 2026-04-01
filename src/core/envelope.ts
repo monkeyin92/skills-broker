@@ -1,5 +1,10 @@
 import { parseCapabilityQuery } from "./capability-query.js";
 import {
+  WORKFLOW_DECISIONS,
+  type WorkflowDecision,
+  type WorkflowResume
+} from "./workflow.js";
+import {
   BROKER_HOSTS,
   type BrokerHost,
   type CapabilityQuery
@@ -16,6 +21,7 @@ export type BrokerEnvelope = {
   attachments?: string[];
   metadata?: Record<string, string>;
   capabilityQuery?: CapabilityQuery;
+  workflowResume?: WorkflowResume;
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -47,6 +53,46 @@ function isStringRecord(
     isRecord(value) &&
     Object.values(value).every((item) => typeof item === "string")
   );
+}
+
+function parseWorkflowResume(value: unknown): WorkflowResume {
+  if (!isRecord(value)) {
+    throw new Error("Expected broker envelope.workflowResume to be an object.");
+  }
+
+  if (typeof value.runId !== "string" || value.runId.trim() === "") {
+    throw new Error(
+      "Expected broker envelope.workflowResume.runId to be a non-empty string."
+    );
+  }
+
+  if (typeof value.stageId !== "string" || value.stageId.trim() === "") {
+    throw new Error(
+      "Expected broker envelope.workflowResume.stageId to be a non-empty string."
+    );
+  }
+
+  if (
+    typeof value.decision !== "string" ||
+    !WORKFLOW_DECISIONS.includes(value.decision as WorkflowDecision)
+  ) {
+    throw new Error(
+      `Expected broker envelope.workflowResume.decision to be one of ${WORKFLOW_DECISIONS.join(", ")}.`
+    );
+  }
+
+  if (value.artifacts !== undefined && !isStringArray(value.artifacts)) {
+    throw new Error(
+      "Expected broker envelope.workflowResume.artifacts to be an array of strings."
+    );
+  }
+
+  return {
+    runId: value.runId,
+    stageId: value.stageId,
+    decision: value.decision as WorkflowDecision,
+    artifacts: value.artifacts
+  };
 }
 
 export function parseBrokerEnvelope(value: unknown): BrokerEnvelope {
@@ -101,6 +147,10 @@ export function parseBrokerEnvelope(value: unknown): BrokerEnvelope {
     value.capabilityQuery !== undefined
       ? parseCapabilityQuery(value.capabilityQuery)
       : undefined;
+  const workflowResume =
+    value.workflowResume !== undefined
+      ? parseWorkflowResume(value.workflowResume)
+      : undefined;
 
   if (
     capabilityQuery !== undefined &&
@@ -125,6 +175,7 @@ export function parseBrokerEnvelope(value: unknown): BrokerEnvelope {
     urls: value.urls,
     attachments: value.attachments,
     metadata: value.metadata,
-    capabilityQuery
+    capabilityQuery,
+    workflowResume
   };
 }

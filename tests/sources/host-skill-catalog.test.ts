@@ -4,7 +4,8 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   HostSkillCatalogValidationError,
-  loadHostSkillCandidates
+  loadHostSkillCandidates,
+  loadHostWorkflowRecipes
 } from "../../src/sources/host-skill-catalog";
 
 describe("loadHostSkillCandidates", () => {
@@ -159,6 +160,179 @@ describe("loadHostSkillCandidates", () => {
       ).rejects.toThrow(
         `Invalid host skill catalog at ${fixturePath} (skills[0].leaf.probe.aliases[0])`
       );
+    } finally {
+      await rm(runtimeDirectory, { recursive: true, force: true });
+    }
+  });
+
+  it("loads the idea-to-ship workflow recipe from the real catalog", async () => {
+    const workflows = await loadHostWorkflowRecipes(
+      "capability_discovery_or_install",
+      "config/host-skills.seed.json"
+    );
+    const workflow = workflows.find((candidate) => candidate.id === "idea-to-ship");
+
+    expect(workflow).toMatchObject({
+      id: "idea-to-ship",
+      implementation: {
+        id: "skills_broker.idea_to_ship",
+        type: "broker_workflow"
+      },
+      startStageId: "office-hours"
+    });
+    expect(workflow?.stages.map((stage) => stage.id)).toEqual([
+      "office-hours",
+      "plan-ceo-review",
+      "plan-eng-review",
+      "coding",
+      "review",
+      "qa",
+      "ship"
+    ]);
+  });
+
+  it("rejects workflow recipes with duplicate stage ids", async () => {
+    const runtimeDirectory = await mkdtemp(
+      join(tmpdir(), "skills-broker-invalid-workflow-dup-stage-")
+    );
+    const fixturePath = join(runtimeDirectory, "invalid-host.json");
+
+    await writeFile(
+      fixturePath,
+      JSON.stringify({
+        packages: [],
+        workflows: [
+          {
+            id: "idea-to-ship",
+            kind: "skill",
+            label: "Idea to Ship",
+            intent: "capability_discovery_or_install",
+            implementation: {
+              id: "skills_broker.idea_to_ship",
+              type: "broker_workflow",
+              ownerSurface: "broker_owned_downstream"
+            },
+            startStageId: "office-hours",
+            stages: [
+              {
+                id: "office-hours",
+                label: "First",
+                kind: "host_native",
+                nextStageId: "office-hours"
+              },
+              {
+                id: "office-hours",
+                label: "Duplicate",
+                kind: "host_native"
+              }
+            ]
+          }
+        ]
+      }),
+      "utf8"
+    );
+
+    try {
+      await expect(
+        loadHostWorkflowRecipes("capability_discovery_or_install", fixturePath)
+      ).rejects.toThrow(/duplicate stage id/);
+    } finally {
+      await rm(runtimeDirectory, { recursive: true, force: true });
+    }
+  });
+
+  it("rejects workflow recipes with bad transition targets", async () => {
+    const runtimeDirectory = await mkdtemp(
+      join(tmpdir(), "skills-broker-invalid-workflow-transition-")
+    );
+    const fixturePath = join(runtimeDirectory, "invalid-host.json");
+
+    await writeFile(
+      fixturePath,
+      JSON.stringify({
+        packages: [],
+        workflows: [
+          {
+            id: "idea-to-ship",
+            kind: "skill",
+            label: "Idea to Ship",
+            intent: "capability_discovery_or_install",
+            implementation: {
+              id: "skills_broker.idea_to_ship",
+              type: "broker_workflow",
+              ownerSurface: "broker_owned_downstream"
+            },
+            startStageId: "office-hours",
+            stages: [
+              {
+                id: "office-hours",
+                label: "First",
+                kind: "host_native",
+                nextStageId: "missing-stage"
+              }
+            ]
+          }
+        ]
+      }),
+      "utf8"
+    );
+
+    try {
+      await expect(
+        loadHostWorkflowRecipes("capability_discovery_or_install", fixturePath)
+      ).rejects.toThrow(/expected a known stage id/);
+    } finally {
+      await rm(runtimeDirectory, { recursive: true, force: true });
+    }
+  });
+
+  it("rejects workflow recipes with bad artifact refs", async () => {
+    const runtimeDirectory = await mkdtemp(
+      join(tmpdir(), "skills-broker-invalid-workflow-artifact-")
+    );
+    const fixturePath = join(runtimeDirectory, "invalid-host.json");
+
+    await writeFile(
+      fixturePath,
+      JSON.stringify({
+        packages: [],
+        workflows: [
+          {
+            id: "idea-to-ship",
+            kind: "skill",
+            label: "Idea to Ship",
+            intent: "capability_discovery_or_install",
+            implementation: {
+              id: "skills_broker.idea_to_ship",
+              type: "broker_workflow",
+              ownerSurface: "broker_owned_downstream"
+            },
+            startStageId: "office-hours",
+            stages: [
+              {
+                id: "office-hours",
+                label: "First",
+                kind: "host_native",
+                producesArtifacts: ["design_doc"],
+                nextStageId: "review"
+              },
+              {
+                id: "review",
+                label: "Review",
+                kind: "host_native",
+                requiresArtifacts: ["missing_artifact"]
+              }
+            ]
+          }
+        ]
+      }),
+      "utf8"
+    );
+
+    try {
+      await expect(
+        loadHostWorkflowRecipes("capability_discovery_or_install", fixturePath)
+      ).rejects.toThrow(/expected a known artifact ref/);
     } finally {
       await rm(runtimeDirectory, { recursive: true, force: true });
     }
