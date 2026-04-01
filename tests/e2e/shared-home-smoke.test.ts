@@ -87,9 +87,11 @@ describe("shared broker home smoke", () => {
         const codexSkillContents = await readFile(codexSkillPath, "utf8");
         expect(codexSkillContents).toContain("# Skills Broker");
         expect(codexSkillContents).toContain("Use this skill only at the coarse broker boundary.");
-        expect(codexSkillContents).toContain("## Broker-First");
-        expect(codexSkillContents).toContain("## Handle Normally");
-        expect(codexSkillContents).toContain("## Clarify Before Broker");
+        expect(codexSkillContents).toContain("The host decides only one of these boundary outcomes:");
+        expect(codexSkillContents).toContain("## Broker-First (`broker_first`)");
+        expect(codexSkillContents).toContain("## Handle Normally (`handle_normally`)");
+        expect(codexSkillContents).toContain("## Clarify Before Broker (`clarify_before_broker`)");
+        expect(codexSkillContents).toContain("do not pick a package, workflow family, skill, or MCP at the host layer");
         expect(codexSkillContents).toContain("If the broker returns `UNSUPPORTED_REQUEST`, continue normally.");
         expect(codexSkillContents).toContain("If the broker returns `AMBIGUOUS_REQUEST`, ask a clarifying question.");
         expect(codexSkillContents).toContain("If the broker returns `NO_CANDIDATE`, offer capability discovery or install help.");

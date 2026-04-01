@@ -91,14 +91,22 @@ export function buildHostShellSkillMarkdown(
 
   return `---
 name: "skills-broker"
-description: "Route capability requests through skills-broker. Use when the user wants a reusable skill, MCP, workflow, capability lookup, or external capability execution. Broker-first examples include '我有一个想法：做一个自动串起评审和发版的工具', '测下这个网站的质量', '帮我做需求分析并产出设计文档', 'convert this webpage to markdown https://example.com/a', and 'find a skill or MCP for website QA'. Handle ordinary chat, coding, translation, summarization, and drafting normally. If the request is underspecified, clarify before routing."
+description: "Route coarse capability-boundary decisions through skills-broker. Use when the host should decide between broker_first, handle_normally, and clarify_before_broker for reusable workflows, capability lookup, or external capability execution. The host decides only the boundary; the broker chooses the package, workflow, skill, or MCP. Handle ordinary chat, coding, translation, summarization, and drafting normally."
 ---
 
 # Skills Broker
 
 Use this skill only at the coarse broker boundary.
 
-## Broker-First
+The host decides only one of these boundary outcomes:
+
+- \`broker_first\`
+- \`handle_normally\`
+- \`clarify_before_broker\`
+
+Do not decide whether the request is QA, markdown conversion, requirements analysis, investigation, or capability discovery at the host layer. That selection belongs to the broker after handoff.
+
+## Broker-First (\`broker_first\`)
 
 Use the broker first when the user is asking for:
 
@@ -110,7 +118,7 @@ Examples:
 
 ${renderExamples(BROKER_FIRST_EXAMPLES)}
 
-## Handle Normally
+## Handle Normally (\`handle_normally\`)
 
 Keep the request in the host when it is ordinary model-native work, such as:
 
@@ -124,7 +132,7 @@ Examples:
 
 ${renderExamples(HANDLE_NORMALLY_EXAMPLES)}
 
-## Clarify Before Broker
+## Clarify Before Broker (\`clarify_before_broker\`)
 
 Do not silently broker vague phrases. Ask a short clarifying question first when the request is missing workflow shape, target, or artifact clues.
 
@@ -137,13 +145,15 @@ ${renderExamples(CLARIFY_BEFORE_BROKER_EXAMPLES)}
 When this skill is loaded:
 
 1. preserve the user's original wording
-2. if the request looks broker-first, build a broker envelope with raw request text plus safe hints
-3. when confident, optionally include a structured \`capabilityQuery\`
-4. forward that envelope to the local broker runner
-5. if the request is ordinary model-native work, keep it in the host's normal flow
-6. if the request is too vague, ask a short clarifying question before brokering
-7. do not silently substitute a host-native fetch, browsing, or install path when broker routing should decide
-8. when resuming a broker-owned workflow stage that lists \`producesArtifacts\`, include only the artifacts actually produced in \`workflowResume.artifacts\`
+2. choose only \`broker_first\`, \`handle_normally\`, or \`clarify_before_broker\`
+3. do not pick a package, workflow family, skill, or MCP at the host layer
+4. if the request looks broker-first, build a broker envelope with raw request text plus safe hints
+5. when confident, optionally include a structured \`capabilityQuery\`
+6. forward that envelope to the local broker runner
+7. if the request is ordinary model-native work, keep it in the host's normal flow
+8. if the request is too vague, ask a short clarifying question before brokering
+9. do not silently substitute a host-native fetch, browsing, or install path when broker routing should decide
+10. when resuming a broker-owned workflow stage that lists \`producesArtifacts\`, include only the artifacts actually produced in \`workflowResume.artifacts\`
 
 ## Capability Query Contract
 

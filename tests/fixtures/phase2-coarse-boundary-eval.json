@@ -59,6 +59,20 @@
       }
     },
     {
+      "id": "broker-first-capability-discovery",
+      "mode": "host_runner",
+      "hosts": ["claude-code", "codex"],
+      "requestText": "find a skill or MCP for website QA",
+      "now": "2026-03-31T10:13:00.000Z",
+      "expect": {
+        "hostDecision": "broker_first",
+        "resultCode": "HANDOFF_READY",
+        "normalizedBy": "raw_request_fallback",
+        "requestSurface": "raw_envelope",
+        "winnerId": "capability-discovery"
+      }
+    },
+    {
       "id": "handle-normally-page-summary",
       "mode": "synthetic_host_skip",
       "hosts": ["claude-code", "codex"],
