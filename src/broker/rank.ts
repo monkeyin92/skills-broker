@@ -77,6 +77,28 @@ function preferredCapabilityScore(
   return preferredNames.has(preferredCapability) ? 1 : 0;
 }
 
+function isExplicitCapabilityDiscoveryQuery(
+  query: CapabilityQuery | undefined
+): boolean {
+  if (query === undefined) {
+    return false;
+  }
+
+  return (
+    query.preferredCapability !== undefined ||
+    query.jobFamilies?.includes("capability_acquisition") === true ||
+    query.artifacts?.includes("installation_plan") === true
+  );
+}
+
+function capabilityDiscoveryAlignmentScore(card: CapabilityCard): number {
+  return (
+    Number(card.intent === "capability_discovery_or_install") * 20 +
+    overlapScore(card.query.jobFamilies, ["capability_acquisition"]) * 10 +
+    overlapScore(card.query.artifacts, ["recommendation", "installation_plan"]) * 3
+  );
+}
+
 export function capabilityQueryScore(
   card: CapabilityCard,
   query: CapabilityQuery | undefined
@@ -107,6 +129,15 @@ function compareCards(
 ): number {
   if (left.hosts.currentHostSupported !== right.hosts.currentHostSupported) {
     return left.hosts.currentHostSupported ? -1 : 1;
+  }
+
+  if (isExplicitCapabilityDiscoveryQuery(input.requestCapabilityQuery)) {
+    const leftDiscoveryScore = capabilityDiscoveryAlignmentScore(left);
+    const rightDiscoveryScore = capabilityDiscoveryAlignmentScore(right);
+
+    if (leftDiscoveryScore !== rightDiscoveryScore) {
+      return rightDiscoveryScore - leftDiscoveryScore;
+    }
   }
 
   const leftQueryScore = capabilityQueryScore(left, input.requestCapabilityQuery);

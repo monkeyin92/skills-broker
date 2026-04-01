@@ -41,7 +41,21 @@ describe("runBroker", () => {
       expect(result.handoff.request).toEqual({
         intent: "web_content_to_markdown",
         outputMode: "markdown_only",
-        url: validUrlRequest.url
+        url: validUrlRequest.url,
+        capabilityQuery: {
+          kind: "capability_request",
+          goal: "convert web content to markdown",
+          host: "claude-code",
+          requestText: "turn this webpage into markdown",
+          jobFamilies: ["content_acquisition", "web_content_conversion"],
+          targets: [
+            {
+              type: "url",
+              value: validUrlRequest.url
+            }
+          ],
+          artifacts: ["markdown"]
+        }
       });
       expect(result.debug.cacheHit).toBe(false);
       expect(result.trace).toMatchObject({

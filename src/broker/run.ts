@@ -40,6 +40,7 @@ import {
 } from "../core/request.js";
 import type { WorkflowRecipe } from "../core/workflow.js";
 import type {
+  BrokerHost,
   BrokerHostAction,
   BrokerIntent,
   BrokerOutcomeCode,
@@ -74,7 +75,7 @@ export type RunBrokerOptions = {
   workflowSessionFilePath?: string;
   hostCatalogFilePath?: string;
   mcpRegistryFilePath?: string;
-  currentHost?: string;
+  currentHost?: BrokerHost;
   brokerHomeDirectory?: string;
   packageSearchRoots?: string[];
   now?: Date;
@@ -331,7 +332,7 @@ async function writeWinnerCache(
   cacheStore: FileBackedCacheStore<BrokerCacheRecord>,
   winner: CapabilityCard,
   cachedCard: BrokerCacheRecord | null,
-  currentHost: string,
+  currentHost: BrokerHost,
   request: { intent: BrokerIntent },
   requestCacheKey: string,
   now: Date
@@ -354,7 +355,7 @@ async function runWorkflowResume(
     workflowResume: NonNullable<BrokerEnvelope["workflowResume"]>;
   },
   options: RunBrokerOptions,
-  currentHost: string,
+  currentHost: BrokerHost,
   now: Date,
   hostCatalogFilePath: string
 ): Promise<RunBrokerResult> {
@@ -449,7 +450,7 @@ async function runWorkflowResume(
 async function runSingleStep(
   input: NormalizeRequestInput,
   options: RunBrokerOptions,
-  currentHost: string,
+  currentHost: BrokerHost,
   now: Date
 ): Promise<RunBrokerResult> {
   const cacheStore = new FileBackedCacheStore<BrokerCacheRecord>(
@@ -462,7 +463,7 @@ async function runSingleStep(
   let request;
 
   try {
-    request = normalizeRequest(input);
+    request = normalizeRequest(input, currentHost);
   } catch (error) {
     if (error instanceof UnsupportedBrokerRequestError) {
       return createFailureResult(

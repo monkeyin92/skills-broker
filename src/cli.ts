@@ -6,6 +6,7 @@ import {
 import { fileURLToPath } from "node:url";
 import { delimiter, resolve } from "node:path";
 import { parseBrokerEnvelope, type BrokerEnvelope } from "./core/envelope.js";
+import { BROKER_HOSTS, type BrokerHost } from "./core/types.js";
 
 export type RunBrokerCliInput = BrokerEnvelope;
 
@@ -66,6 +67,11 @@ function directRunOptions(includeTraceOverride = false): RunBrokerCliOptions {
   const includeTraceFromEnvironment = shouldIncludeTrace(
     process.env.BROKER_DEBUG ?? process.env.BROKER_TRACE
   );
+  const currentHost =
+    process.env.BROKER_CURRENT_HOST !== undefined &&
+    BROKER_HOSTS.includes(process.env.BROKER_CURRENT_HOST as BrokerHost)
+      ? (process.env.BROKER_CURRENT_HOST as BrokerHost)
+      : undefined;
 
   return {
     cacheFilePath: process.env.BROKER_CACHE_FILE,
@@ -74,7 +80,7 @@ function directRunOptions(includeTraceOverride = false): RunBrokerCliOptions {
     brokerHomeDirectory: process.env.BROKER_HOME_DIR,
     packageSearchRoots:
       process.env.BROKER_PACKAGE_SEARCH_ROOTS?.split(delimiter).filter(Boolean),
-    currentHost: process.env.BROKER_CURRENT_HOST,
+    currentHost,
     now: process.env.BROKER_NOW ? new Date(process.env.BROKER_NOW) : undefined,
     includeTrace: includeTraceOverride || includeTraceFromEnvironment
   };

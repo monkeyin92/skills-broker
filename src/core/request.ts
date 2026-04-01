@@ -1,5 +1,10 @@
 import type { BrokerEnvelope } from "./envelope.js";
-import type { BrokerRequest, CapabilityQuery } from "./types.js";
+import type {
+  BrokerHost,
+  BrokerRequest,
+  CapabilityQuery,
+  QueryBackedBrokerRequest
+} from "./types.js";
 
 type LegacyNormalizeRequestInput = {
   task: string;
@@ -28,6 +33,11 @@ export class AmbiguousBrokerRequestError extends Error {
   }
 }
 
+type QuerySynthesisInput = {
+  host: BrokerHost;
+  requestText: string;
+};
+
 function isLegacyInput(
   input: NormalizeRequestInput
 ): input is LegacyNormalizeRequestInput {
@@ -36,6 +46,34 @@ function isLegacyInput(
 
 function normalizeText(text: string): string {
   return text.trim().toLowerCase();
+}
+
+function mergeUniqueStrings(
+  ...collections: Array<string[] | undefined>
+): string[] | undefined {
+  const seen = new Set<string>();
+  const merged: string[] = [];
+
+  for (let index = 0; index < collections.length; index += 1) {
+    const collection = collections[index];
+
+    if (collection === undefined) {
+      continue;
+    }
+
+    for (let valueIndex = 0; valueIndex < collection.length; valueIndex += 1) {
+      const value = collection[valueIndex];
+
+      if (seen.has(value)) {
+        continue;
+      }
+
+      seen.add(value);
+      merged.push(value);
+    }
+  }
+
+  return merged.length === 0 ? undefined : merged;
 }
 
 function firstUrl(urls: string[] | undefined): string | undefined {
@@ -104,7 +142,7 @@ function looksLikeSocialPost(
 }
 
 function hasWebContentSignal(requestText: string): boolean {
-  return /(?:\bwebpage\b|\bweb page\b|\bwebsite\b|\bweb content\b|\barticle\b|\burl\b)/i.test(
+  return /(?:\bwebpages?\b|\bweb page\b|\bwebsite\b|\bweb content\b|\barticles?\b|\burls?\b)/i.test(
     requestText
   );
 }
@@ -289,6 +327,15 @@ function looksAmbiguous(requestText: string): boolean {
 
 function buildBrokerRequest(
   intent: BrokerRequest["intent"],
+  url: string | undefined,
+  capabilityQuery: CapabilityQuery
+): QueryBackedBrokerRequest;
+function buildBrokerRequest(
+  intent: BrokerRequest["intent"],
+  url?: string
+): BrokerRequest;
+function buildBrokerRequest(
+  intent: BrokerRequest["intent"],
   url?: string,
   capabilityQuery?: CapabilityQuery
 ): BrokerRequest {
@@ -311,6 +358,52 @@ function hasQueryFamily(query: CapabilityQuery, family: string): boolean {
 
 function hasQueryArtifact(query: CapabilityQuery, artifact: string): boolean {
   return query.artifacts?.includes(artifact) ?? false;
+}
+
+function buildWebContentCapabilityQuery(
+  input: QuerySynthesisInput,
+  url: string | undefined
+): CapabilityQuery {
+  return {
+    kind: "capability_request",
+    goal: "convert web content to markdown",
+    host: input.host,
+    requestText: input.requestText,
+    jobFamilies: ["content_acquisition", "web_content_conversion"],
+    targets:
+      url === undefined
+        ? undefined
+        : [
+            {
+              type: "url",
+              value: url
+            }
+          ],
+    artifacts: ["markdown"]
+  };
+}
+
+function buildSocialPostCapabilityQuery(
+  input: QuerySynthesisInput,
+  url: string | undefined
+): CapabilityQuery {
+  return {
+    kind: "capability_request",
+    goal: "convert social post to markdown",
+    host: input.host,
+    requestText: input.requestText,
+    jobFamilies: ["content_acquisition", "social_content_conversion"],
+    targets:
+      url === undefined
+        ? undefined
+        : [
+            {
+              type: "url",
+              value: url
+            }
+          ],
+    artifacts: ["markdown"]
+  };
 }
 
 function buildWebsiteQaCapabilityQuery(
@@ -427,17 +520,70 @@ function buildIdeaWorkflowCapabilityQuery(
   };
 }
 
+function buildCapabilityDiscoveryCapabilityQuery(
+  input: BrokerEnvelope,
+  url: string | undefined
+): CapabilityQuery {
+  const requestText = normalizeText(input.requestText);
+  let taskQuery: CapabilityQuery | undefined;
+
+  if (looksLikeSocialPost(requestText, url)) {
+    taskQuery = buildSocialPostCapabilityQuery(input, url);
+  } else if (looksLikeWebContent(requestText, url)) {
+    taskQuery = buildWebContentCapabilityQuery(input, url);
+  } else if (looksLikeRequirementsAnalysisRequest(requestText)) {
+    taskQuery = buildRequirementsAnalysisCapabilityQuery(input);
+  } else if (looksLikeInvestigationRequest(requestText, url)) {
+    taskQuery = buildInvestigationCapabilityQuery(input, url);
+  } else if (looksLikeWebsiteQaRequest(requestText, url)) {
+    taskQuery = buildWebsiteQaCapabilityQuery(input, url);
+  } else if (looksLikeIdeaWorkflowRequest(requestText)) {
+    taskQuery = buildIdeaWorkflowCapabilityQuery(input);
+  }
+
+  return {
+    kind: "capability_request",
+    goal:
+      taskQuery === undefined
+        ? "discover or install a capability for the requested task"
+        : `discover or install a capability to ${taskQuery.goal}`,
+    host: input.host,
+    requestText: input.requestText,
+    jobFamilies: mergeUniqueStrings(
+      ["capability_acquisition"],
+      taskQuery?.jobFamilies
+    ),
+    targets: taskQuery?.targets ?? [
+      {
+        type: "problem_statement",
+        value: input.requestText
+      }
+    ],
+    artifacts: mergeUniqueStrings(
+      ["recommendation", "installation_plan"],
+      taskQuery?.artifacts
+    )
+  };
+}
+
 function normalizeCapabilityQueryRequest(
   query: CapabilityQuery
-): BrokerRequest {
+): QueryBackedBrokerRequest {
   const url = firstQueryUrl(query);
   const capabilityWorkflowFamilies = [
-    "capability_acquisition",
     "requirements_analysis",
     "idea_brainstorming",
     "quality_assurance",
     "investigation"
   ];
+  const explicitCapabilityDiscovery =
+    query.preferredCapability !== undefined ||
+    hasQueryFamily(query, "capability_acquisition") ||
+    hasQueryArtifact(query, "installation_plan");
+
+  if (explicitCapabilityDiscovery) {
+    return buildBrokerRequest("capability_discovery_or_install", undefined, query);
+  }
 
   if (
     hasQueryArtifact(query, "markdown") &&
@@ -472,7 +618,9 @@ function normalizeCapabilityQueryRequest(
   );
 }
 
-function normalizeEnvelopeRequest(input: BrokerEnvelope): BrokerRequest {
+function normalizeEnvelopeRequest(
+  input: BrokerEnvelope
+): QueryBackedBrokerRequest {
   if (input.capabilityQuery !== undefined) {
     return normalizeCapabilityQueryRequest(input.capabilityQuery);
   }
@@ -481,13 +629,13 @@ function normalizeEnvelopeRequest(input: BrokerEnvelope): BrokerRequest {
   const url = firstUrl(input.urls);
 
   if (looksLikeCapabilityDiscovery(requestText)) {
-    return buildBrokerRequest("capability_discovery_or_install");
+    return normalizeCapabilityQueryRequest(
+      buildCapabilityDiscoveryCapabilityQuery(input, url)
+    );
   }
 
   if (looksLikeIdeaWorkflowRequest(requestText)) {
-    return buildBrokerRequest(
-      "capability_discovery_or_install",
-      undefined,
+    return normalizeCapabilityQueryRequest(
       buildIdeaWorkflowCapabilityQuery(input)
     );
   }
@@ -499,33 +647,31 @@ function normalizeEnvelopeRequest(input: BrokerEnvelope): BrokerRequest {
   }
 
   if (looksLikeSocialPost(requestText, url)) {
-    return buildBrokerRequest("social_post_to_markdown", url);
+    return normalizeCapabilityQueryRequest(
+      buildSocialPostCapabilityQuery(input, url)
+    );
   }
 
   if (looksLikeWebContent(requestText, url)) {
-    return buildBrokerRequest("web_content_to_markdown", url);
+    return normalizeCapabilityQueryRequest(
+      buildWebContentCapabilityQuery(input, url)
+    );
   }
 
   if (looksLikeRequirementsAnalysisRequest(requestText)) {
-    return buildBrokerRequest(
-      "capability_discovery_or_install",
-      undefined,
+    return normalizeCapabilityQueryRequest(
       buildRequirementsAnalysisCapabilityQuery(input)
     );
   }
 
   if (looksLikeInvestigationRequest(requestText, url)) {
-    return buildBrokerRequest(
-      "capability_discovery_or_install",
-      undefined,
+    return normalizeCapabilityQueryRequest(
       buildInvestigationCapabilityQuery(input, url)
     );
   }
 
   if (looksLikeWebsiteQaRequest(requestText, url)) {
-    return buildBrokerRequest(
-      "capability_discovery_or_install",
-      undefined,
+    return normalizeCapabilityQueryRequest(
       buildWebsiteQaCapabilityQuery(input, url)
     );
   }
@@ -548,7 +694,19 @@ function normalizeEnvelopeRequest(input: BrokerEnvelope): BrokerRequest {
 }
 
 export function normalizeRequest(
-  input: NormalizeRequestInput
+  input: BrokerEnvelope
+): QueryBackedBrokerRequest;
+export function normalizeRequest(
+  input: LegacyNormalizeRequestInput,
+  fallbackHost: BrokerHost
+): QueryBackedBrokerRequest;
+export function normalizeRequest(
+  input: NormalizeRequestInput,
+  fallbackHost?: BrokerHost
+): BrokerRequest;
+export function normalizeRequest(
+  input: NormalizeRequestInput,
+  fallbackHost?: BrokerHost
 ): BrokerRequest {
   if (isLegacyInput(input)) {
     const normalizedTask = input.task.trim();
@@ -556,6 +714,18 @@ export function normalizeRequest(
     if (normalizedTask !== "turn this webpage into markdown") {
       throw new UnsupportedBrokerRequestError(
         `Unsupported broker task: ${input.task}`
+      );
+    }
+
+    if (fallbackHost !== undefined) {
+      return normalizeCapabilityQueryRequest(
+        buildWebContentCapabilityQuery(
+          {
+            host: fallbackHost,
+            requestText: normalizedTask
+          },
+          input.url
+        )
       );
     }
 

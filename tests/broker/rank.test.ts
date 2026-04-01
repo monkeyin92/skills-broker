@@ -209,6 +209,57 @@ describe("rankCapabilities", () => {
     expect(ranked.map((card) => card.id)[0]).toBe("office-hours");
   });
 
+  it("prefers discovery-capable candidates when the query explicitly asks to find or install a capability", () => {
+    const discovery = createCard({
+      id: "discovery",
+      label: "Capability Discovery",
+      intent: "capability_discovery_or_install",
+      query: {
+        jobFamilies: ["capability_acquisition"],
+        targetTypes: ["problem_statement", "text"],
+        artifacts: ["recommendation", "installation_plan"],
+        examples: ["find a skill to save webpages as markdown"]
+      }
+    });
+    const converter = createCard({
+      id: "converter",
+      label: "Web Content to Markdown",
+      intent: "web_content_to_markdown",
+      query: {
+        jobFamilies: ["content_acquisition", "web_content_conversion"],
+        targetTypes: ["url"],
+        artifacts: ["markdown"],
+        examples: ["turn this webpage into markdown"]
+      }
+    });
+
+    const ranked = rankCapabilities({
+      currentHost: "claude-code",
+      requestIntent: "capability_discovery_or_install",
+      requestCapabilityQuery: {
+        kind: "capability_request",
+        goal: "discover or install a capability to convert web content to markdown",
+        host: "claude-code",
+        requestText: "find a skill to save webpages as markdown",
+        jobFamilies: [
+          "capability_acquisition",
+          "content_acquisition",
+          "web_content_conversion"
+        ],
+        targets: [
+          {
+            type: "problem_statement",
+            value: "find a skill to save webpages as markdown"
+          }
+        ],
+        artifacts: ["recommendation", "installation_plan", "markdown"]
+      },
+      candidates: [converter, discovery]
+    });
+
+    expect(ranked.map((card) => card.id)[0]).toBe("discovery");
+  });
+
   it("prefers installed packages when query strength is otherwise equal", () => {
     const installed = createCard({
       id: "installed",

@@ -125,9 +125,20 @@ export type PackageAcquisitionHint = {
   leafCapability: LeafCapabilityRef;
 };
 
-export type BrokerRequest = {
+export type QueryBackedBrokerRequest = {
   intent: BrokerIntent;
   outputMode: BrokerOutputMode;
   url?: string;
-  capabilityQuery?: CapabilityQuery;
+  capabilityQuery: CapabilityQuery;
 };
+
+export type LegacyIntentBrokerRequest = {
+  intent: BrokerIntent;
+  outputMode: BrokerOutputMode;
+  url?: string;
+  capabilityQuery?: undefined;
+};
+
+export type BrokerRequest =
+  | QueryBackedBrokerRequest
+  | LegacyIntentBrokerRequest;

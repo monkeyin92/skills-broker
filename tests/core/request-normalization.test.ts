@@ -27,6 +27,18 @@ describe("normalizeRequest", () => {
     expect(normalized.intent).toBe("web_content_to_markdown");
     expect(normalized.outputMode).toBe("markdown_only");
     expect(normalized.url).toBe("https://example.com/post");
+    expect(normalized.capabilityQuery).toMatchObject({
+      goal: "convert web content to markdown",
+      requestText: "turn this webpage into markdown: https://example.com/post",
+      jobFamilies: ["content_acquisition", "web_content_conversion"],
+      targets: [
+        {
+          type: "url",
+          value: "https://example.com/post"
+        }
+      ],
+      artifacts: ["markdown"]
+    });
   });
 
   it("normalizes social post requests to social_post_to_markdown", () => {
@@ -38,6 +50,18 @@ describe("normalizeRequest", () => {
 
     expect(normalized.intent).toBe("social_post_to_markdown");
     expect(normalized.outputMode).toBe("markdown_only");
+    expect(normalized.capabilityQuery).toMatchObject({
+      goal: "convert social post to markdown",
+      requestText: "save this X post as markdown: https://x.com/example/status/1",
+      jobFamilies: ["content_acquisition", "social_content_conversion"],
+      targets: [
+        {
+          type: "url",
+          value: "https://x.com/example/status/1"
+        }
+      ],
+      artifacts: ["markdown"]
+    });
   });
 
   it("normalizes capability discovery requests to capability_discovery_or_install", () => {
@@ -48,6 +72,22 @@ describe("normalizeRequest", () => {
 
     expect(normalized.intent).toBe("capability_discovery_or_install");
     expect(normalized.outputMode).toBe("markdown_only");
+    expect(normalized.capabilityQuery).toMatchObject({
+      goal: "discover or install a capability to convert web content to markdown",
+      requestText: "find a skill to save webpages as markdown",
+      jobFamilies: [
+        "capability_acquisition",
+        "content_acquisition",
+        "web_content_conversion"
+      ],
+      targets: [
+        {
+          type: "problem_statement",
+          value: "find a skill to save webpages as markdown"
+        }
+      ],
+      artifacts: ["recommendation", "installation_plan", "markdown"]
+    });
   });
 
   it("normalizes social url requests to social_post_to_markdown", () => {
@@ -59,6 +99,18 @@ describe("normalizeRequest", () => {
 
     expect(normalized.intent).toBe("social_post_to_markdown");
     expect(normalized.outputMode).toBe("markdown_only");
+    expect(normalized.capabilityQuery).toMatchObject({
+      goal: "convert social post to markdown",
+      requestText: "convert this page to markdown",
+      jobFamilies: ["content_acquisition", "social_content_conversion"],
+      targets: [
+        {
+          type: "url",
+          value: "https://x.com/example/status/1"
+        }
+      ],
+      artifacts: ["markdown"]
+    });
   });
 
   it("maps legacy webpage markdown tasks to web_content_to_markdown", () => {
@@ -70,6 +122,32 @@ describe("normalizeRequest", () => {
     expect(normalized.intent).toBe("web_content_to_markdown");
     expect(normalized.outputMode).toBe("markdown_only");
     expect(normalized.url).toBe("https://example.com/article");
+  });
+
+  it("maps legacy webpage markdown tasks into a synthesized capability query when a fallback host is available", () => {
+    const normalized = normalizeRequest(
+      {
+        task: "turn this webpage into markdown",
+        url: "https://example.com/article"
+      },
+      "codex"
+    );
+
+    expect(normalized.intent).toBe("web_content_to_markdown");
+    expect(normalized.outputMode).toBe("markdown_only");
+    expect(normalized.url).toBe("https://example.com/article");
+    expect(normalized.capabilityQuery).toMatchObject({
+      goal: "convert web content to markdown",
+      requestText: "turn this webpage into markdown",
+      jobFamilies: ["content_acquisition", "web_content_conversion"],
+      targets: [
+        {
+          type: "url",
+          value: "https://example.com/article"
+        }
+      ],
+      artifacts: ["markdown"]
+    });
   });
 
   it("rejects ordinary model-native requests as unsupported", () => {
@@ -250,6 +328,41 @@ describe("normalizeRequest", () => {
     expect(normalized.capabilityQuery).toMatchObject({
       jobFamilies: ["requirements_analysis"],
       artifacts: ["design_doc"]
+    });
+  });
+
+  it("keeps explicit capability-acquisition queries in the discovery lane even when they also describe markdown conversion", () => {
+    const normalized = normalizeRequest({
+      requestText: "find a skill to save webpages as markdown",
+      host: "codex",
+      capabilityQuery: {
+        kind: "capability_request",
+        goal: "discover or install a capability to convert web content to markdown",
+        host: "codex",
+        requestText: "find a skill to save webpages as markdown",
+        jobFamilies: [
+          "capability_acquisition",
+          "content_acquisition",
+          "web_content_conversion"
+        ],
+        targets: [
+          {
+            type: "problem_statement",
+            value: "find a skill to save webpages as markdown"
+          }
+        ],
+        artifacts: ["recommendation", "installation_plan", "markdown"]
+      }
+    });
+
+    expect(normalized.intent).toBe("capability_discovery_or_install");
+    expect(normalized.capabilityQuery).toMatchObject({
+      jobFamilies: [
+        "capability_acquisition",
+        "content_acquisition",
+        "web_content_conversion"
+      ],
+      artifacts: ["recommendation", "installation_plan", "markdown"]
     });
   });
 

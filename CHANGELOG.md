@@ -5,6 +5,7 @@
 ### Changed
 
 - Changed broker discovery so structured `capabilityQuery` requests can match host-catalog skills, MCP candidates, and broker workflows by query metadata even when their legacy `intent` does not exactly line up, keeping `intent` as a compatibility hint instead of a hard gate.
+- Changed request normalization so modern web, social, and capability-discovery inputs now synthesize `capabilityQuery` first and derive legacy `intent` from that query, leaving bare fixed-intent routing only as a legacy-task compatibility bridge.
 
 ### Fixed
 
