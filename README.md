@@ -119,6 +119,8 @@ v0 currently includes:
 - cross-host cache reuse between Claude Code and Codex
 - CI and live discovery smoke coverage
 
+This slice now also catches more free-form product-idea phrasing, so a natural sentence is more likely to start the broker-owned `idea-to-ship` workflow instead of falling through as unsupported.
+
 This is deliberately not "solve everything."  
 The point of v0 is to prove that a broker can pick and prepare the right capability better than a human manually browsing skills.
 

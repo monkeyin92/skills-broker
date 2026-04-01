@@ -125,6 +125,8 @@ v0 当前包含：
 - Claude Code 和 Codex 之间的跨宿主 cache 复用
 - CI 和 live discovery smoke 覆盖
 
+这一版也补宽了 free-form product idea 的命中面，所以用户用更自然的一句话描述产品想法时，更容易直接进入 broker 自管的 `idea-to-ship` workflow，而不是掉回 unsupported。
+
 这不是为了“什么都支持”。  
 v0 的目标是证明：在一个具体任务上，broker 可以比人手动翻 skills 更准确地选到并准备好正确能力。
 
