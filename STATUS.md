@@ -9,7 +9,7 @@ This file is the repo-native execution board for `skills-broker`.
 ## Human Summary
 
 - Compatibility-intent routing metrics are shipped on `origin/main`.
-- The coarse broker-first host boundary tightening is landed locally on `main`, but not shipped remotely yet.
+- The coarse broker-first host boundary tightening is now shipped on the active shipping ref.
 - The Phase 2 / Phase 3 query-compiler migration is still delayed behind the remaining compiler and eval artifacts.
 
 <!-- skills-broker-status:start -->
@@ -39,7 +39,7 @@ This file is the repo-native execution board for `skills-broker`.
       "id": "coarse-broker-first-boundary",
       "title": "Coarse broker-first host boundary tightening",
       "summary": "Hosts stay at the coarse broker-first boundary instead of trying to decide subskills at the entry surface.",
-      "status": "shipped_local",
+      "status": "shipped_remote",
       "proofs": [
         {
           "type": "commit",

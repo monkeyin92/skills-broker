@@ -23,6 +23,9 @@
 - Fixed broker normalization so free-form product idea requests are more likely to route into the broker-owned `idea-to-ship` workflow instead of falling through as unsupported.
 - Fixed `skills-broker doctor` so running outside a git repo, or inside a git repo without a canonical `STATUS.md`, now skips repo-scoped status evaluation instead of surfacing strict repo-target failures.
 - Fixed strict status evaluation so a shipping ref is only required when a status item actually needs remote truth, and detached-head environments now fall back to `origin/HEAD`, `origin/main`, or `origin/master`.
+- Fixed installed Claude Code, Codex, and shared-home manifest versions so release bumps now follow package metadata instead of stale hardcoded version strings.
+- Fixed the repo-native `STATUS.md` board so the coarse broker-first boundary now matches its shipped-remote proof state and keeps strict doctor CI green.
+- Fixed the workflow session store concurrency regression test so its artificial stale-lock timing stays deterministic in CI.
 
 ## [0.1.9] - 2026-04-01
 
