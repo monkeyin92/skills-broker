@@ -26,6 +26,7 @@
 - Fixed installed Claude Code, Codex, and shared-home manifest versions so release bumps now follow package metadata instead of stale hardcoded version strings.
 - Fixed the repo-native `STATUS.md` board so the coarse broker-first boundary now matches its shipped-remote proof state and keeps strict doctor CI green.
 - Fixed the workflow session store concurrency regression test so its artificial stale-lock timing stays deterministic in CI.
+- Fixed the CI status-doctor workflow so pull-request runs compare against the active branch shipping ref instead of falling back to the wrong remote baseline.
 
 ## [0.1.9] - 2026-04-01
 

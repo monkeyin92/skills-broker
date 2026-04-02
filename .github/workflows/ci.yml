@@ -49,4 +49,8 @@ jobs:
         run: npm run build
 
       - name: Run strict status doctor
-        run: node dist/bin/skills-broker.js doctor --strict --refresh-remote --repo-root "$GITHUB_WORKSPACE"
+        shell: bash
+        run: |
+          set -euo pipefail
+          ship_ref="origin/${GITHUB_HEAD_REF:-${GITHUB_REF_NAME}}"
+          node dist/bin/skills-broker.js doctor --strict --refresh-remote --repo-root "$GITHUB_WORKSPACE" --ship-ref "$ship_ref"
