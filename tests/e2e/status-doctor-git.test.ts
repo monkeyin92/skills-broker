@@ -124,6 +124,70 @@ describe("status doctor git integration", () => {
     }
   }, 20_000);
 
+  it("falls back to the remote default branch when strict doctor runs on detached HEAD", async () => {
+    const remoteDirectory = await mkdtemp(join(tmpdir(), "skills-broker-status-e2e-detached-remote-"));
+    const repoDirectory = await mkdtemp(join(tmpdir(), "skills-broker-status-e2e-detached-local-"));
+    const scriptPath = resolve("src/bin/skills-broker.ts");
+
+    try {
+      await initBareGitRepo(remoteDirectory);
+      await cloneGitRepo(remoteDirectory, repoDirectory);
+
+      await writeFile(join(repoDirectory, "remote-proof.txt"), "remote proof\n", "utf8");
+      const remoteCommit = await commitAll(repoDirectory, "add remote proof");
+      await runGit(repoDirectory, ["push", "-u", "origin", "main"]);
+
+      await writeFile(join(repoDirectory, "local-proof.txt"), "local proof\n", "utf8");
+      const localCommit = await commitAll(repoDirectory, "add local proof");
+      await writeFile(
+        join(repoDirectory, "STATUS.md"),
+        renderStatusBoard(remoteCommit, localCommit),
+        "utf8"
+      );
+      await commitAll(repoDirectory, "add status board");
+      await runGit(repoDirectory, ["checkout", "--detach", "HEAD"]);
+
+      const { stdout } = await execFileAsync("node", [
+        "--loader",
+        tsNodeLoaderPath,
+        scriptPath,
+        "doctor",
+        "--json",
+        "--strict",
+        "--refresh-remote",
+        "--repo-root",
+        repoDirectory
+      ], {
+        env: process.env,
+        encoding: "utf8"
+      });
+
+      const result = JSON.parse(stdout.trim()) as {
+        status: {
+          shippingRef?: string;
+          issues: unknown[];
+          items: Array<{ id: string; evaluatedStatus: string }>;
+        };
+      };
+
+      expect(result.status.shippingRef).toBe("origin/main");
+      expect(result.status.issues).toEqual([]);
+      expect(result.status.items).toEqual([
+        expect.objectContaining({
+          id: "remote-item",
+          evaluatedStatus: "shipped_remote"
+        }),
+        expect.objectContaining({
+          id: "local-item",
+          evaluatedStatus: "shipped_local"
+        })
+      ]);
+    } finally {
+      await rm(repoDirectory, { recursive: true, force: true });
+      await rm(remoteDirectory, { recursive: true, force: true });
+    }
+  }, 20_000);
+
   it("fails strict doctor when remote refresh breaks but still preserves local diagnostics", async () => {
     const repoDirectory = await mkdtemp(join(tmpdir(), "skills-broker-status-e2e-refresh-fail-"));
     const scriptPath = resolve("src/bin/skills-broker.ts");

@@ -51,6 +51,47 @@ describe("evaluateStatusBoard", () => {
     }
   });
 
+  it("skips status evaluation outside a git repo when repo resolution is optional", async () => {
+    const runtimeDirectory = await mkdtemp(join(tmpdir(), "skills-broker-status-skip-"));
+
+    try {
+      const result = await evaluateStatusBoard({
+        cwd: runtimeDirectory,
+        allowMissingRepoTarget: true
+      });
+
+      expect(result.skipped).toBe(true);
+      expect(result.hasStrictIssues).toBe(false);
+      expect(result.issues).toEqual([]);
+      expect(result.items).toEqual([]);
+      expect(result.skipReason).toContain("No git repo detected");
+    } finally {
+      await rm(runtimeDirectory, { recursive: true, force: true });
+    }
+  });
+
+  it("skips implicit status evaluation for git repos that do not define STATUS.md", async () => {
+    const repoDirectory = await mkdtemp(join(tmpdir(), "skills-broker-status-skip-git-"));
+
+    try {
+      await initGitRepo(repoDirectory);
+      await writeFile(join(repoDirectory, "README.md"), "# repo\n", "utf8");
+      await commitAll(repoDirectory, "init repo");
+
+      const result = await evaluateStatusBoard({
+        cwd: repoDirectory,
+        allowMissingRepoTarget: true
+      });
+
+      expect(result.skipped).toBe(true);
+      expect(result.hasStrictIssues).toBe(false);
+      expect(result.issues).toEqual([]);
+      expect(result.skipReason).toContain("does not define STATUS.md");
+    } finally {
+      await rm(repoDirectory, { recursive: true, force: true });
+    }
+  });
+
   it("fails closed when STATUS.md is missing the canonical block", async () => {
     const repoDirectory = await mkdtemp(join(tmpdir(), "skills-broker-status-missing-"));
 
@@ -273,6 +314,46 @@ describe("evaluateStatusBoard", () => {
       expect(result.issues).toContainEqual(
         expect.objectContaining({
           code: "STATUS_REMOTE_REFRESH_FAILED"
+        })
+      );
+    } finally {
+      await rm(repoDirectory, { recursive: true, force: true });
+    }
+  });
+
+  it("does not require a shipping ref when no item needs remote truth", async () => {
+    const repoDirectory = await mkdtemp(join(tmpdir(), "skills-broker-status-no-upstream-"));
+
+    try {
+      await initGitRepo(repoDirectory);
+      await writeFile(join(repoDirectory, "README.md"), "# repo\n", "utf8");
+      await writeFile(
+        join(repoDirectory, "STATUS.md"),
+        renderStatusBoard([
+          {
+            id: "wip-item",
+            title: "WIP item",
+            status: "in_progress",
+            proofs: [{ type: "file", path: "README.md" }]
+          }
+        ]),
+        "utf8"
+      );
+      await commitAll(repoDirectory, "add local-only board");
+
+      const result = await evaluateStatusBoard({
+        repoRootOverride: repoDirectory
+      });
+
+      expect(result.skipped).toBe(false);
+      expect(result.shippingRef).toBeUndefined();
+      expect(result.hasStrictIssues).toBe(false);
+      expect(result.issues).toEqual([]);
+      expect(result.items).toContainEqual(
+        expect.objectContaining({
+          id: "wip-item",
+          declaredStatus: "in_progress",
+          evaluatedStatus: "in_progress"
         })
       );
     } finally {

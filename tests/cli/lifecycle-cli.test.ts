@@ -191,8 +191,54 @@ describe("lifecycle cli", () => {
         )
       ).rejects.toMatchObject({
         code: 1,
-        stdout: expect.stringContaining("Status issue STATUS_DECLARED_EVALUATED_MISMATCH")
+        stdout: expect.stringContaining("Status issue STATUS_SHIP_REF_UNRESOLVED")
       });
+    } finally {
+      await rm(runtimeDirectory, { recursive: true, force: true });
+    }
+  });
+
+  it("keeps doctor --strict green when no status item needs remote truth", async () => {
+    const scriptPath = resolve("src/bin/skills-broker.ts");
+    const runtimeDirectory = await mkdtemp(resolve(tmpdir(), "skills-broker-cli-doctor-local-only-"));
+    const repoDirectory = resolve(runtimeDirectory, "repo");
+
+    try {
+      await initGitRepo(repoDirectory);
+      await writeFile(resolve(repoDirectory, "README.md"), "# repo\n", "utf8");
+      await writeFile(resolve(repoDirectory, "STATUS.md"), renderStatusBoard("in_progress"), "utf8");
+      await commitAll(repoDirectory, "add local-only status board");
+
+      const { stdout } = await execFileAsync(
+        "node",
+        [
+          "--loader",
+          tsNodeLoaderPath,
+          scriptPath,
+          "doctor",
+          "--strict",
+          "--json",
+          "--repo-root",
+          repoDirectory
+        ],
+        {
+          env: {
+            ...process.env,
+            HOME: runtimeDirectory
+          },
+          encoding: "utf8"
+        }
+      );
+
+      const result = JSON.parse(stdout.trim()) as {
+        status: {
+          issues: Array<{ code: string }>;
+          hasStrictIssues: boolean;
+        };
+      };
+
+      expect(result.status.hasStrictIssues).toBe(false);
+      expect(result.status.issues).toEqual([]);
     } finally {
       await rm(runtimeDirectory, { recursive: true, force: true });
     }
@@ -300,12 +346,16 @@ describe("lifecycle cli", () => {
   });
 
   it("uses official default host directories for doctor when no overrides are passed", async () => {
-    const scriptPath = resolve("src/bin/skills-broker.ts");
+    const scriptPath = resolve("dist/bin/skills-broker.js");
     const runtimeDirectory = await mkdtemp(resolve(tmpdir(), "skills-broker-cli-doctor-defaults-"));
     const brokerHomeDirectory = resolve(runtimeDirectory, ".skills-broker");
     const codexInstallDirectory = resolve(runtimeDirectory, ".agents", "skills", "skills-broker");
 
     try {
+      await execNpm(["run", "build"], {
+        cwd: process.cwd(),
+        encoding: "utf8"
+      });
       await mkdir(resolve(runtimeDirectory, ".codex"), { recursive: true });
       await mkdir(codexInstallDirectory, { recursive: true });
       await writeManagedShellManifest(codexInstallDirectory, {
@@ -315,13 +365,8 @@ describe("lifecycle cli", () => {
         brokerHome: brokerHomeDirectory
       });
 
-      const { stdout } = await execFileAsync("node", [
-        "--loader",
-        tsNodeLoaderPath,
-        scriptPath,
-        "doctor",
-        "--json"
-      ], {
+      const { stdout } = await execFileAsync("node", [scriptPath, "doctor", "--json"], {
+        cwd: runtimeDirectory,
         env: {
           ...process.env,
           HOME: runtimeDirectory
@@ -334,6 +379,10 @@ describe("lifecycle cli", () => {
       expect(result.sharedHome).toEqual({
         path: brokerHomeDirectory,
         exists: false
+      });
+      expect(result.status).toMatchObject({
+        skipped: true,
+        issues: []
       });
       expect(result.hosts).toContainEqual({
         name: "codex",

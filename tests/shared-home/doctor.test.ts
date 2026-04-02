@@ -48,6 +48,7 @@ describe("doctor shared broker home", () => {
       const result = await doctorSharedBrokerHome({
         brokerHomeDirectory,
         homeDirectory: runtimeDirectory,
+        cwd: runtimeDirectory,
         codexInstallDirectory: missingCodexDirectory
       });
 
@@ -86,6 +87,7 @@ describe("doctor shared broker home", () => {
       const result = await doctorSharedBrokerHome({
         brokerHomeDirectory,
         homeDirectory: runtimeDirectory,
+        cwd: runtimeDirectory,
         codexInstallDirectory
       });
 
@@ -125,6 +127,7 @@ describe("doctor shared broker home", () => {
       const result = await doctorSharedBrokerHome({
         brokerHomeDirectory,
         homeDirectory: runtimeDirectory,
+        cwd: runtimeDirectory,
         codexInstallDirectory
       });
 
@@ -146,7 +149,8 @@ describe("doctor shared broker home", () => {
     try {
       const result = await doctorSharedBrokerHome({
         brokerHomeDirectory,
-        homeDirectory: runtimeDirectory
+        homeDirectory: runtimeDirectory,
+        cwd: runtimeDirectory
       });
 
       const rendered = formatLifecycleResult(result, "json");
@@ -154,6 +158,8 @@ describe("doctor shared broker home", () => {
 
       expect(parsed.command).toBe("doctor");
       expect(parsed.sharedHome.exists).toBe(false);
+      expect(parsed.status.skipped).toBe(true);
+      expect(parsed.status.issues).toEqual([]);
       expect(parsed.hosts).toEqual([
         {
           name: "claude-code",
@@ -210,6 +216,27 @@ describe("doctor shared broker home", () => {
     }
   });
 
+  it("skips repo-scoped status checks when doctor runs outside a git repo", async () => {
+    const runtimeDirectory = await mkdtemp(join(tmpdir(), "skills-broker-doctor-status-skip-"));
+    const brokerHomeDirectory = join(runtimeDirectory, ".skills-broker");
+
+    try {
+      const result = await doctorSharedBrokerHome({
+        brokerHomeDirectory,
+        homeDirectory: runtimeDirectory,
+        cwd: runtimeDirectory
+      });
+      const rendered = formatLifecycleResult(result, "text");
+
+      expect(result.status.skipped).toBe(true);
+      expect(result.status.issues).toEqual([]);
+      expect(rendered).toContain("Status board: skipped");
+      expect(rendered).toContain("Status issues: none");
+    } finally {
+      await rm(runtimeDirectory, { recursive: true, force: true });
+    }
+  });
+
   it("renders status issues in doctor text output without duplicating them into warnings", async () => {
     const runtimeDirectory = await mkdtemp(join(tmpdir(), "skills-broker-doctor-status-text-"));
     const brokerHomeDirectory = join(runtimeDirectory, ".skills-broker");
@@ -233,12 +260,12 @@ describe("doctor shared broker home", () => {
       const rendered = formatLifecycleResult(result, "text");
 
       expect(result.warnings).not.toContain(
-        expect.stringContaining("STATUS_DECLARED_EVALUATED_MISMATCH")
+        expect.stringContaining("STATUS_SHIP_REF_UNRESOLVED")
       );
       expect(rendered).toContain("Status board:");
-      expect(rendered).toContain("Status status-board-proof-rails: declared=shipped_remote, evaluated=shipped_local");
-      expect(rendered).toContain("Status issue STATUS_DECLARED_EVALUATED_MISMATCH");
-      expect(rendered).not.toContain("Warning: STATUS_DECLARED_EVALUATED_MISMATCH");
+      expect(rendered).toContain("Status status-board-proof-rails: declared=shipped_remote, evaluated=shipped_remote");
+      expect(rendered).toContain("Status issue STATUS_SHIP_REF_UNRESOLVED");
+      expect(rendered).not.toContain("Warning: STATUS_SHIP_REF_UNRESOLVED");
     } finally {
       await rm(runtimeDirectory, { recursive: true, force: true });
     }

@@ -81,6 +81,8 @@ export type StatusItemResult = {
 };
 
 export type DoctorStatusResult = {
+  skipped: boolean;
+  skipReason?: string;
   boardPath: string;
   repoTarget?: string;
   shippingRef?: string;
@@ -98,6 +100,7 @@ export type EvaluateStatusBoardOptions = {
   refreshRemote?: boolean;
   repoRootOverride?: string;
   shipRefOverride?: string;
+  allowMissingRepoTarget?: boolean;
 };
 
 type ParsedBoard =
@@ -123,6 +126,7 @@ type RepoTargetResolution =
 type ShipRefResolution = {
   shippingRef?: string;
   issue?: StatusIssue;
+  attemptedRef?: string;
 };
 
 type RepoSnapshot = {
@@ -222,6 +226,24 @@ async function resolveRepoTarget(
       issue
     };
   }
+}
+
+function buildSkippedStatusResult(
+  boardPath: string,
+  skipReason: string
+): DoctorStatusResult {
+  return {
+    skipped: true,
+    skipReason,
+    boardPath,
+    remoteFreshness: {
+      state: "unknown",
+      detail: "status board skipped"
+    },
+    issues: [],
+    items: [],
+    hasStrictIssues: false
+  };
 }
 
 function invalidCanonicalIssue(
@@ -389,48 +411,84 @@ async function parseCanonicalStatusBoard(boardPath: string): Promise<ParsedBoard
   }
 }
 
+async function shouldSkipImplicitStatusBoard(
+  boardPath: string,
+  options: EvaluateStatusBoardOptions
+): Promise<string | undefined> {
+  if (options.repoRootOverride !== undefined) {
+    return undefined;
+  }
+
+  try {
+    const contents = await readFile(boardPath, "utf8");
+    if (!CANONICAL_BLOCK_PATTERN.test(contents)) {
+      return "Current repo does not opt into the canonical STATUS.md contract";
+    }
+  } catch {
+    return "Current repo does not define STATUS.md";
+  }
+
+  return undefined;
+}
+
 async function resolveShippingRef(
   repoTarget: string,
   shipRefOverride: string | undefined
 ): Promise<ShipRefResolution> {
-  const shippingRef =
-    shipRefOverride ??
-    (await runGit(repoTarget, ["rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}"]).catch(
+  if (shipRefOverride !== undefined) {
+    try {
+      await runGit(repoTarget, ["rev-parse", "--verify", `${shipRefOverride}^{commit}`]);
+      return {
+        shippingRef: shipRefOverride,
+        attemptedRef: shipRefOverride
+      };
+    } catch (error) {
+      return {
+        attemptedRef: shipRefOverride,
+        issue: {
+          code: "STATUS_SHIP_REF_UNRESOLVED",
+          severity: "error",
+          strict: true,
+          message:
+            error instanceof Error
+              ? `Could not resolve --ship-ref ${shipRefOverride}: ${error.message}`
+              : `Could not resolve --ship-ref ${shipRefOverride}`,
+          evidenceRefs: [shipRefOverride]
+        }
+      };
+    }
+  }
+
+  const rawCandidates = [
+    await runGit(repoTarget, ["rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}"]).catch(
       () => undefined
-    ));
+    ),
+    await runGit(repoTarget, ["symbolic-ref", "refs/remotes/origin/HEAD"]).catch(() => undefined),
+    "origin/main",
+    "origin/master"
+  ];
 
-  if (shippingRef === undefined || shippingRef.length === 0) {
-    return {
-      issue: {
-        code: "STATUS_SHIP_REF_UNRESOLVED",
-        severity: "error",
-        strict: true,
-        message:
-          shipRefOverride === undefined
-            ? "Could not auto-resolve a shipping ref from the current branch upstream"
-            : `Could not resolve --ship-ref ${shipRefOverride}`,
-        evidenceRefs: [shipRefOverride ?? "@{u}"]
-      }
-    };
+  const candidates = rawCandidates
+    .map((candidate) => candidate?.replace(/^refs\/remotes\//, ""))
+    .filter((candidate, index, items): candidate is string => {
+      return candidate !== undefined && candidate.length > 0 && items.indexOf(candidate) === index;
+    });
+
+  for (const candidate of candidates) {
+    try {
+      await runGit(repoTarget, ["rev-parse", "--verify", `${candidate}^{commit}`]);
+      return {
+        shippingRef: candidate,
+        attemptedRef: candidate
+      };
+    } catch {
+      // Keep trying fallbacks until one resolves.
+    }
   }
 
-  try {
-    await runGit(repoTarget, ["rev-parse", "--verify", `${shippingRef}^{commit}`]);
-    return { shippingRef };
-  } catch (error) {
-    return {
-      issue: {
-        code: "STATUS_SHIP_REF_UNRESOLVED",
-        severity: "error",
-        strict: true,
-        message:
-          error instanceof Error
-            ? `Could not resolve shipping ref ${shippingRef}: ${error.message}`
-            : `Could not resolve shipping ref ${shippingRef}`,
-        evidenceRefs: [shippingRef]
-      }
-    };
-  }
+  return {
+    attemptedRef: "@{u}"
+  };
 }
 
 function inferRemoteName(shippingRef: string | undefined): string | undefined {
@@ -454,7 +512,7 @@ async function buildRepoSnapshot(
   const issues: StatusIssue[] = [];
   const remoteName = inferRemoteName(shippingRef);
   let remoteFreshness: DoctorStatusResult["remoteFreshness"] = {
-    state: "local_tracking_ref",
+    state: shippingRef === undefined ? "unknown" : "local_tracking_ref",
     detail:
       shippingRef === undefined
         ? "shipping ref unavailable"
@@ -593,7 +651,15 @@ function evaluateDeclaredStatus(
   }
 
   if (declaredStatus === "shipped_remote") {
-    return remoteProofsValid === true ? "shipped_remote" : "shipped_local";
+    if (remoteProofsValid === true) {
+      return "shipped_remote";
+    }
+
+    if (remoteProofsValid === false) {
+      return "shipped_local";
+    }
+
+    return "shipped_remote";
   }
 
   if (declaredStatus === "shipped_local") {
@@ -610,7 +676,15 @@ export async function evaluateStatusBoard(
   const repoTargetResolution = await resolveRepoTarget(options);
 
   if (!repoTargetResolution.ok) {
+    if (options.allowMissingRepoTarget === true) {
+      return buildSkippedStatusResult(
+        boardPath,
+        `No git repo detected from ${resolve(options.cwd ?? process.cwd())}`
+      );
+    }
+
     return {
+      skipped: false,
       boardPath,
       remoteFreshness: {
         state: "unknown",
@@ -623,10 +697,17 @@ export async function evaluateStatusBoard(
   }
 
   const repoTarget = repoTargetResolution.repoTarget;
-  const parsedBoard = await parseCanonicalStatusBoard(join(repoTarget, "STATUS.md"));
+  const resolvedBoardPath = join(repoTarget, "STATUS.md");
+  const skipReason = await shouldSkipImplicitStatusBoard(resolvedBoardPath, options);
+  if (skipReason !== undefined) {
+    return buildSkippedStatusResult(resolvedBoardPath, skipReason);
+  }
+
+  const parsedBoard = await parseCanonicalStatusBoard(resolvedBoardPath);
   if (!parsedBoard.ok) {
     return {
-      boardPath: join(repoTarget, "STATUS.md"),
+      skipped: false,
+      boardPath: resolvedBoardPath,
       repoTarget,
       remoteFreshness: {
         state: "local_tracking_ref",
@@ -640,7 +721,22 @@ export async function evaluateStatusBoard(
 
   const shipRefResolution = await resolveShippingRef(repoTarget, options.shipRefOverride);
   const shippingRef = shipRefResolution.shippingRef;
-  const shipRefIssues = shipRefResolution.issue === undefined ? [] : [shipRefResolution.issue];
+  const requiresShippingRef =
+    options.shipRefOverride !== undefined ||
+    parsedBoard.board.items.some((item) => item.status === "shipped_remote");
+  const shipRefIssues =
+    shipRefResolution.issue === undefined
+      ? []
+      : [shipRefResolution.issue];
+  if (requiresShippingRef && shippingRef === undefined && shipRefResolution.issue === undefined) {
+    shipRefIssues.push({
+      code: "STATUS_SHIP_REF_UNRESOLVED",
+      severity: "error",
+      strict: true,
+      message: "Could not auto-resolve a shipping ref from the current branch or origin defaults",
+      evidenceRefs: [shipRefResolution.attemptedRef ?? "@{u}"]
+    });
+  }
   const { snapshot, issues: snapshotIssues } = await buildRepoSnapshot(
     repoTarget,
     shippingRef,
@@ -707,7 +803,8 @@ export async function evaluateStatusBoard(
   }
 
   return {
-    boardPath: join(repoTarget, "STATUS.md"),
+    skipped: false,
+    boardPath: resolvedBoardPath,
     repoTarget,
     shippingRef,
     remoteFreshness: snapshot.remoteFreshness,

@@ -263,7 +263,8 @@ export async function doctorSharedBrokerHome(
       cwd: options.cwd,
       refreshRemote: options.refreshRemote,
       repoRootOverride: options.repoRootOverride,
-      shipRefOverride: options.shipRefOverride
+      shipRefOverride: options.shipRefOverride,
+      allowMissingRepoTarget: options.repoRootOverride === undefined
     }),
     warnings
   };
