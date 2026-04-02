@@ -1,11 +1,8 @@
 import { access, mkdtemp, rm } from "node:fs/promises";
-import { execFile } from "node:child_process";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { promisify } from "node:util";
 import { describe, expect, it } from "vitest";
-
-const execFileAsync = promisify(execFile);
+import { execNpm } from "../helpers/npm";
 
 describe("published package smoke", () => {
   it("installs shared-home runtime assets from the packed npm artifact", async () => {
@@ -23,13 +20,13 @@ describe("published package smoke", () => {
     let tarballPath: string | undefined;
 
     try {
-      await execFileAsync("npm", ["run", "build"], {
+      await execNpm(["run", "build"], {
         cwd: process.cwd(),
         env,
         encoding: "utf8"
       });
 
-      const { stdout: packOutput } = await execFileAsync("npm", ["pack", "--json"], {
+      const { stdout: packOutput } = await execNpm(["pack", "--json"], {
         cwd: process.cwd(),
         env,
         encoding: "utf8"
@@ -37,7 +34,7 @@ describe("published package smoke", () => {
       const packResult = JSON.parse(packOutput) as Array<{ filename: string }>;
       tarballPath = resolve(process.cwd(), packResult[0].filename);
 
-      const { stdout } = await execFileAsync("npm", [
+      const { stdout } = await execNpm([
         "exec",
         "--yes",
         "--package",

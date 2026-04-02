@@ -121,6 +121,7 @@ v0 currently includes:
 - capability-query-led host-catalog, MCP, and workflow discovery, so structured broker requests are less tightly coupled to exact legacy `intent` equality
 - query-first normalization for modern web, social, and capability-discovery requests, so `capabilityQuery` now carries the primary broker semantics and `intent` mainly remains as a compatibility lane
 - shared-home routing trace persistence plus `skills-broker doctor` rollups for hit / misroute / fallback rates across `structured_query`, `raw_envelope`, and `legacy_task` request surfaces
+- repo-scoped canonical `STATUS.md` proof checks in `skills-broker doctor`, including strict shipped-local versus shipped-remote evaluation for CI or release gates
 
 This slice now also catches more free-form product-idea phrasing, so a natural sentence is more likely to start the broker-owned `idea-to-ship` workflow instead of falling through as unsupported.
 
@@ -192,7 +193,7 @@ That distinction matters because the hardest part is not storing tools. The hard
 npx skills-broker update
 ```
 
-Use `npx skills-broker update` to initialize or refresh the shared broker home, attach thin host shells, and reuse the same routing cache across Claude Code and Codex. `npx skills-broker doctor` inspects the environment without writing and now summarizes recent broker hit / misroute / fallback rates when shared-home routing traces exist, `npx skills-broker remove` detaches only the managed host shells by default, and `npx skills-broker remove --purge` fully removes the shared broker home.
+Use `npx skills-broker update` to initialize or refresh the shared broker home, attach thin host shells, and reuse the same routing cache across Claude Code and Codex. `npx skills-broker doctor` inspects the environment without writing, summarizes recent broker hit / misroute / fallback rates when shared-home routing traces exist, and, inside repos that opt into a canonical `STATUS.md`, can also validate shipped-local versus shipped-remote proof state for strict CI gates. `npx skills-broker remove` detaches only the managed host shells by default, and `npx skills-broker remove --purge` fully removes the shared broker home.
 
 By default, `update` detects official host roots before it writes anything:
 

@@ -7,9 +7,37 @@ import { access, chmod, mkdtemp, mkdir, rm, symlink, writeFile } from "node:fs/p
 import { tmpdir } from "node:os";
 import { installSharedBrokerHome } from "../../src/shared-home/install";
 import { writeManagedShellManifest } from "../../src/shared-home/ownership";
+import { commitAll, initGitRepo } from "../helpers/git";
+import { execNpm } from "../helpers/npm";
 
 const execFileAsync = promisify(execFile);
 const tsNodeLoaderPath = resolve("node_modules/ts-node/esm.mjs");
+
+function renderStatusBoard(status: string): string {
+  return `# STATUS
+
+<!-- skills-broker-status:start -->
+\`\`\`json
+{
+  "schemaVersion": 1,
+  "items": [
+    {
+      "id": "status-board-proof-rails",
+      "title": "Status board proof rails",
+      "status": "${status}",
+      "proofs": [
+        {
+          "type": "file",
+          "path": "README.md"
+        }
+      ]
+    }
+  ]
+}
+\`\`\`
+<!-- skills-broker-status:end -->
+`;
+}
 
 describe("lifecycle cli", () => {
   it("dispatches update --dry-run --json", async () => {
@@ -64,6 +92,24 @@ describe("lifecycle cli", () => {
     expect(result.outputMode).toBe("json");
   });
 
+  it("recognizes strict status flags for doctor", async () => {
+    const result = await runLifecycleCli([
+      "doctor",
+      "--strict",
+      "--refresh-remote",
+      "--repo-root",
+      "/tmp/repo",
+      "--ship-ref",
+      "origin/main"
+    ]);
+
+    expect(result.command).toBe("doctor");
+    expect(result.strict).toBe(true);
+    expect(result.refreshRemote).toBe(true);
+    expect(result.repoRootOverride).toBe("/tmp/repo");
+    expect(result.shipRefOverride).toBe("origin/main");
+  });
+
   it("prints doctor result as JSON when --json is passed", async () => {
     const scriptPath = resolve("src/bin/skills-broker.ts");
     const runtimeDirectory = await mkdtemp(resolve(tmpdir(), "skills-broker-cli-doctor-json-"));
@@ -112,6 +158,92 @@ describe("lifecycle cli", () => {
     }
   });
 
+  it("exits non-zero when doctor --strict sees a strict status issue", async () => {
+    const scriptPath = resolve("src/bin/skills-broker.ts");
+    const runtimeDirectory = await mkdtemp(resolve(tmpdir(), "skills-broker-cli-doctor-strict-"));
+    const repoDirectory = resolve(runtimeDirectory, "repo");
+
+    try {
+      await initGitRepo(repoDirectory);
+      await writeFile(resolve(repoDirectory, "README.md"), "# repo\n", "utf8");
+      await writeFile(resolve(repoDirectory, "STATUS.md"), renderStatusBoard("shipped_remote"), "utf8");
+      await commitAll(repoDirectory, "add mismatched status board");
+
+      await expect(
+        execFileAsync(
+          "node",
+          [
+            "--loader",
+            tsNodeLoaderPath,
+            scriptPath,
+            "doctor",
+            "--strict",
+            "--repo-root",
+            repoDirectory
+          ],
+          {
+            env: {
+              ...process.env,
+              HOME: runtimeDirectory
+            },
+            encoding: "utf8"
+          }
+        )
+      ).rejects.toMatchObject({
+        code: 1,
+        stdout: expect.stringContaining("Status issue STATUS_SHIP_REF_UNRESOLVED")
+      });
+    } finally {
+      await rm(runtimeDirectory, { recursive: true, force: true });
+    }
+  });
+
+  it("keeps doctor --strict green when no status item needs remote truth", async () => {
+    const scriptPath = resolve("src/bin/skills-broker.ts");
+    const runtimeDirectory = await mkdtemp(resolve(tmpdir(), "skills-broker-cli-doctor-local-only-"));
+    const repoDirectory = resolve(runtimeDirectory, "repo");
+
+    try {
+      await initGitRepo(repoDirectory);
+      await writeFile(resolve(repoDirectory, "README.md"), "# repo\n", "utf8");
+      await writeFile(resolve(repoDirectory, "STATUS.md"), renderStatusBoard("in_progress"), "utf8");
+      await commitAll(repoDirectory, "add local-only status board");
+
+      const { stdout } = await execFileAsync(
+        "node",
+        [
+          "--loader",
+          tsNodeLoaderPath,
+          scriptPath,
+          "doctor",
+          "--strict",
+          "--json",
+          "--repo-root",
+          repoDirectory
+        ],
+        {
+          env: {
+            ...process.env,
+            HOME: runtimeDirectory
+          },
+          encoding: "utf8"
+        }
+      );
+
+      const result = JSON.parse(stdout.trim()) as {
+        status: {
+          issues: Array<{ code: string }>;
+          hasStrictIssues: boolean;
+        };
+      };
+
+      expect(result.status.hasStrictIssues).toBe(false);
+      expect(result.status.issues).toEqual([]);
+    } finally {
+      await rm(runtimeDirectory, { recursive: true, force: true });
+    }
+  });
+
   it("prints remove result as JSON when --json is passed", async () => {
     const scriptPath = resolve("src/bin/skills-broker.ts");
     const runtimeDirectory = await mkdtemp(resolve(tmpdir(), "skills-broker-cli-remove-json-"));
@@ -134,7 +266,7 @@ describe("lifecycle cli", () => {
         `${JSON.stringify({
           managedBy: "skills-broker",
           host: "codex",
-          version: "0.1.9",
+          version: "test-version",
           brokerHome: brokerHomeDirectory
         }, null, 2)}\n`,
         "utf8"
@@ -214,28 +346,27 @@ describe("lifecycle cli", () => {
   });
 
   it("uses official default host directories for doctor when no overrides are passed", async () => {
-    const scriptPath = resolve("src/bin/skills-broker.ts");
+    const scriptPath = resolve("dist/bin/skills-broker.js");
     const runtimeDirectory = await mkdtemp(resolve(tmpdir(), "skills-broker-cli-doctor-defaults-"));
     const brokerHomeDirectory = resolve(runtimeDirectory, ".skills-broker");
     const codexInstallDirectory = resolve(runtimeDirectory, ".agents", "skills", "skills-broker");
 
     try {
+      await execNpm(["run", "build"], {
+        cwd: process.cwd(),
+        encoding: "utf8"
+      });
       await mkdir(resolve(runtimeDirectory, ".codex"), { recursive: true });
       await mkdir(codexInstallDirectory, { recursive: true });
       await writeManagedShellManifest(codexInstallDirectory, {
         managedBy: "skills-broker",
         host: "codex",
-        version: "0.1.9",
+        version: "test-version",
         brokerHome: brokerHomeDirectory
       });
 
-      const { stdout } = await execFileAsync("node", [
-        "--loader",
-        tsNodeLoaderPath,
-        scriptPath,
-        "doctor",
-        "--json"
-      ], {
+      const { stdout } = await execFileAsync("node", [scriptPath, "doctor", "--json"], {
+        cwd: runtimeDirectory,
         env: {
           ...process.env,
           HOME: runtimeDirectory
@@ -248,6 +379,10 @@ describe("lifecycle cli", () => {
       expect(result.sharedHome).toEqual({
         path: brokerHomeDirectory,
         exists: false
+      });
+      expect(result.status).toMatchObject({
+        skipped: true,
+        issues: []
       });
       expect(result.hosts).toContainEqual({
         name: "codex",
@@ -266,6 +401,21 @@ describe("lifecycle cli", () => {
   it("rejects flags that are missing a value", async () => {
     await expect(runLifecycleCli(["update", "--codex-dir", "--json"])).rejects.toThrow(
       "Missing value for --codex-dir"
+    );
+  });
+
+  it("rejects unknown flags instead of ignoring them", async () => {
+    await expect(runLifecycleCli(["doctor", "--bogus-flag"])).rejects.toThrow(
+      "Unknown flag: --bogus-flag"
+    );
+  });
+
+  it("rejects doctor-only flags on update and remove", async () => {
+    await expect(runLifecycleCli(["update", "--strict"])).rejects.toThrow(
+      "Flag --strict is not valid for update"
+    );
+    await expect(runLifecycleCli(["remove", "--repo-root", "/tmp/repo"])).rejects.toThrow(
+      "Flag --repo-root is not valid for remove"
     );
   });
 
@@ -415,7 +565,7 @@ describe("lifecycle cli", () => {
       await writeManagedShellManifest(codexInstallDirectory, {
         managedBy: "skills-broker",
         host: "codex",
-        version: "0.1.9",
+        version: "test-version",
         brokerHome: brokerHomeDirectory
       });
 
@@ -482,7 +632,7 @@ describe("lifecycle cli", () => {
   });
 
   it("finds shared-home resources when executed from a non-repo cwd", async () => {
-    await execFileAsync("npm", ["run", "build"], {
+    await execNpm(["run", "build"], {
       env: process.env,
       encoding: "utf8"
     });
@@ -641,7 +791,7 @@ describe("lifecycle cli", () => {
   });
 
   it("runs when the published bin is executed via symlink", async () => {
-    await execFileAsync("npm", ["run", "build"], {
+    await execNpm(["run", "build"], {
       env: process.env,
       encoding: "utf8"
     });
@@ -656,7 +806,8 @@ describe("lifecycle cli", () => {
     const runtimeDirectory = await mkdtemp(resolve(tmpdir(), "skills-broker-bin-runtime-"));
 
     try {
-      const { stdout } = await execFileAsync(symlinkPath, [
+      const { stdout } = await execFileAsync(process.execPath, [
+        symlinkPath,
         "update",
         "--broker-home",
         resolve(runtimeDirectory, ".skills-broker"),

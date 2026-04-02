@@ -38,8 +38,8 @@ describe("workflow session store", () => {
     let delayed = false;
     const store = new WorkflowSessionStore(filePath, {
       lockRetryMs: 1,
-      lockStaleMs: 5,
-      lockHeartbeatMs: 1,
+      lockStaleMs: 100,
+      lockHeartbeatMs: 10,
       onBeforePersist: async (session) => {
         if (session.runId === "run-a" && !delayed) {
           delayed = true;
@@ -73,8 +73,8 @@ describe("workflow session store", () => {
     let delayed = false;
     const store = new WorkflowSessionStore(filePath, {
       lockRetryMs: 1,
-      lockStaleMs: 5,
-      lockHeartbeatMs: 1,
+      lockStaleMs: 100,
+      lockHeartbeatMs: 10,
       onBeforePersist: async (session) => {
         if (session.runId === "run-a" && session.revision === 1 && !delayed) {
           delayed = true;

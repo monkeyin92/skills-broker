@@ -2,16 +2,31 @@
 
 ## [Unreleased]
 
+## [0.1.10] - 2026-04-02
+
 ### Changed
 
 - Changed broker discovery so structured `capabilityQuery` requests can match host-catalog skills, MCP candidates, and broker workflows by query metadata even when their legacy `intent` does not exactly line up, keeping `intent` as a compatibility hint instead of a hard gate.
 - Changed request normalization so modern web, social, and capability-discovery inputs now synthesize `capabilityQuery` first and derive legacy `intent` from that query, leaving bare fixed-intent routing only as a legacy-task compatibility bridge.
 - Changed normalized capability cards and workflow recipes so their internal intent label is now treated as `compatibilityIntent`, making query metadata the primary internal routing semantics instead of pretending legacy intent is the main key.
 - Changed shared-home routing observability so broker traces now classify `hit`, `misroute`, and `fallback`, persist to broker home state, and roll up into `skills-broker doctor` by `structured_query`, `raw_envelope`, and `legacy_task` request surfaces.
+- Changed Claude Code and Codex host-shell guidance so hosts only choose `broker_first`, `handle_normally`, or `clarify_before_broker`, leaving capability-family selection to the broker.
+- Changed the roadmap and migration tracker to reflect the current broker-first host-boundary and shared-home rollout state.
+
+### Added
+
+- Added repo-scoped canonical `STATUS.md` evaluation to `skills-broker doctor`, including shipped-local versus shipped-remote proof checks and end-to-end git coverage.
+- Added a dedicated CI status job that builds the published CLI and runs `doctor --strict --refresh-remote` against the repository root.
 
 ### Fixed
 
 - Fixed broker normalization so free-form product idea requests are more likely to route into the broker-owned `idea-to-ship` workflow instead of falling through as unsupported.
+- Fixed `skills-broker doctor` so running outside a git repo, or inside a git repo without a canonical `STATUS.md`, now skips repo-scoped status evaluation instead of surfacing strict repo-target failures.
+- Fixed strict status evaluation so a shipping ref is only required when a status item actually needs remote truth, and detached-head environments now fall back to `origin/HEAD`, `origin/main`, or `origin/master`.
+- Fixed installed Claude Code, Codex, and shared-home manifest versions so release bumps now follow package metadata instead of stale hardcoded version strings.
+- Fixed the repo-native `STATUS.md` board so the coarse broker-first boundary now matches its shipped-remote proof state and keeps strict doctor CI green.
+- Fixed the workflow session store concurrency regression test so its artificial stale-lock timing stays deterministic in CI.
+- Fixed the CI status-doctor workflow so pull-request runs compare against the active branch shipping ref instead of falling back to the wrong remote baseline.
 
 ## [0.1.9] - 2026-04-01
 

@@ -148,7 +148,8 @@ async function installHostShell(
 
   return installCodexHostShell({
     installDirectory,
-    brokerHomeDirectory
+    brokerHomeDirectory,
+    projectRoot
   });
 }
 

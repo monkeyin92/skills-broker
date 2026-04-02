@@ -1,6 +1,6 @@
 {
   "name": "skills-broker",
-  "version": "0.1.9",
+  "version": "0.1.10",
   "description": "Install-once shared broker runtime for routing skills and MCP capabilities across Claude Code and Codex.",
   "type": "module",
   "license": "MIT",
@@ -31,8 +31,8 @@
     "LICENSE"
   ],
   "scripts": {
-    "build": "tsc -p tsconfig.build.json && node -e \"const fs=require('fs');const file='dist/bin/skills-broker.js';const content=fs.readFileSync(file,'utf8');if(!content.startsWith('#!'))fs.writeFileSync(file,'#!/usr/bin/env node\\n'+content);\"",
-    "test": "vitest"
+    "build": "node ./node_modules/typescript/bin/tsc -p tsconfig.build.json && node -e \"const fs=require('fs');const file='dist/bin/skills-broker.js';const content=fs.readFileSync(file,'utf8');if(!content.startsWith('#!'))fs.writeFileSync(file,'#!/usr/bin/env node\\n'+content);\"",
+    "test": "node ./node_modules/vitest/vitest.mjs"
   },
   "devDependencies": {
     "@types/node": "^22.5.3",

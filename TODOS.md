@@ -50,31 +50,23 @@
 **Depends on:** stable shared envelope, durable lane taxonomy, and host auto-routing boundaries staying tight
 **Completed:** v0.1.7 (2026-04-01)
 
+### Shifted broker routing foundations toward query-first capability semantics
+
+**What:** Move discovery, normalization, and ranking away from pure legacy `intent` equality and toward structured `capabilityQuery` metadata.
+
+**Why:** This turns capability-query routing from a design direction into a live migration path, so new capability families stop depending on enum growth first.
+
+**Shipped:** capability-query-led host-catalog / MCP / workflow discovery, query-first normalization for modern broker-first requests, `compatibilityIntent` internal routing labels, and shared-home routing metrics for hit / misroute / fallback across maintained request surfaces.
+
+### Landed the first broker-owned downstream and host-surface migration slice
+
+**What:** Start moving concrete routed abilities behind the broker instead of letting them stay host-visible peer choices.
+
+**Why:** This removes the structural conflict where the host can choose a concrete downstream skill before `skills-broker` gets first refusal.
+
+**Shipped:** package-aware and leaf-aware handoff fields, downstream ownership surface metadata, validated probe contracts, competing peer-skill detection/remediation, and broker-managed host-surface migration for the first markdown competitors.
+
 ## Next
-
-### Replace fixed-intent routing with capability-query routing
-
-**What:** Move broker request understanding from a hardcoded intent enum toward structured capability queries produced by the host model and matched against richer capability metadata.
-
-**Why:** The current three-intent router proved the first lake, but it will not scale to cross-language requests or broader reusable workflows like requirements analysis, QA, and investigation.
-
-**Context:** The broker already supports structured `capabilityQuery`, richer capability metadata, package-versus-leaf identity, and package-aware probing. The remaining gap is at the top boundary: `/Users/monkeyin/projects/skills-broker/src/core/request.ts` and `/Users/monkeyin/projects/skills-broker/src/core/types.ts` still use the legacy fixed `intent` enum as the coarse lane gate.
-
-**Effort:** L
-**Priority:** P0
-**Depends on:** host-model normalization contract, richer capability-card metadata, and an incremental migration path from the current intent-based router
-
-### Separate package lifecycle from routed subskills
-
-**What:** Introduce a two-layer catalog where packages such as `gstack` or `baoyu` are the acquisition and lifecycle unit, while subskills such as `qa`, `office-hours`, or `url-to-markdown` are the routed leaf capabilities.
-
-**Why:** The current proof path can route to concrete winners, but it still flattens package and subskill identity into one implementation id. That will not scale once packages expose many subskills or multiple packages compete for the same job family.
-
-**Context:** The core package-aware model is now in `main`: `/Users/monkeyin/projects/skills-broker/config/host-skills.seed.json`, `/Users/monkeyin/projects/skills-broker/src/core/capability-card.ts`, `/Users/monkeyin/projects/skills-broker/src/broker/run.ts`, and `/Users/monkeyin/projects/skills-broker/src/broker/package-availability.ts` already distinguish packages from routed leaf capabilities. The remaining work is to keep expanding the package catalog, reduce legacy compatibility bridges, and broaden package-aware acquisition behavior.
-
-**Effort:** M
-**Priority:** P0
-**Depends on:** capability-query routing foundations, richer seed/catalog modeling, and package-aware handoff plus acquisition behavior
 
 ### Improve real host auto-routing hit rate
 
@@ -82,11 +74,35 @@
 
 **Why:** The install and runtime skeleton is done. The next product bottleneck is whether the broker is actually chosen in real workflows often enough to matter.
 
-**Context:** The auto-router contract is in `main`, but real-world host prompting, lane detection quality, and structured fallback behavior still need product polishing.
+**Context:** Phase 1 foundations are already in `main`: host-shell wording is stronger, structured decline behavior is stable, routing traces persist into the shared home, and `skills-broker doctor` can roll up hit / misroute / fallback by request surface. The remaining gap is that host entry still depends too much on family-shaped examples instead of a truly coarse broker-first boundary.
 
 **Effort:** M
 **Priority:** P0
-**Depends on:** host-shell wording, broker normalization quality, and more real host-in-the-loop smoke coverage
+**Depends on:** durable host-shell boundary guidance, maintained coarse-boundary evals, and continued real host-in-the-loop smoke coverage
+
+### Finish the capability-query migration and retire the legacy intent gate
+
+**What:** Introduce a broker-owned raw-request query compiler and reduce the remaining fixed-intent path to a compatibility shim that can eventually disappear.
+
+**Why:** Query-first foundations are already live, but the top boundary still relies on handwritten legacy intent branches. That blocks scaling to more natural phrasing and more families without router surgery.
+
+**Context:** Query-led discovery is already in `main` for host catalog, MCP, and workflow sources, and modern web / social / discovery requests already normalize query-first. The remaining gap is that `/Users/monkeyin/projects/skills-broker/src/core/request.ts` and `/Users/monkeyin/projects/skills-broker/src/core/types.ts` still keep `BrokerIntent` at the top boundary, and the broker still lacks a maintained bilingual raw-request compiler path for non-markdown families.
+
+**Effort:** L
+**Priority:** P0
+**Depends on:** coarse broker-first host boundary, broker-owned query compilation, and bilingual eval coverage for new families
+
+### Finish the package lifecycle vs routed subskill migration
+
+**What:** Finish moving from flattened implementation ids to a two-layer model where packages are the lifecycle unit and leaf capabilities are the routing unit.
+
+**Why:** The foundations shipped, but flattening still survives in compatibility bridges. That will become product drag once packages expose more sibling subskills or multiple packages compete for the same job family.
+
+**Context:** Explicit package / leaf identity, package-aware probing, package-aware handoff and acquisition hints, MCP alignment, and broker-owned downstream ownership are already in `main`. The remaining work is to keep removing flattened compatibility bridges, broaden package-aware acquisition behavior, and continue shrinking the host-visible peer surface.
+
+**Effort:** M
+**Priority:** P0
+**Depends on:** capability-query migration tail, richer seed/catalog modeling, and package-aware acquisition / handoff cleanup
 
 ### Turn discovery and install into a real flywheel
 

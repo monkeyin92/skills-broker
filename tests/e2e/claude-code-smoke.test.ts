@@ -34,7 +34,7 @@ describe("Claude Code smoke", () => {
       );
 
       try {
-        await execFileAsync(installScriptPath, [installDirectory], {
+        await execFileAsync("bash", [installScriptPath, installDirectory], {
           cwd: process.cwd()
         });
 
@@ -46,20 +46,25 @@ describe("Claude Code smoke", () => {
         await expect(access(runnerPath)).resolves.toBeUndefined();
         await expect(access(distCliPath)).resolves.toBeUndefined();
 
+        const installedPackage = JSON.parse(await readFile(packageJsonPath, "utf8")) as {
+          version: string;
+        };
         const manifest = JSON.parse(await readFile(manifestPath, "utf8"));
         expect(manifest).toMatchObject({
           name: "skills-broker-claude-code",
-          version: "0.1.9"
+          version: installedPackage.version
         });
 
         const skillContents = await readFile(skillPath, "utf8");
         expect(skillContents).toContain("# Skills Broker");
-        expect(skillContents).toContain("Route capability requests through skills-broker");
+        expect(skillContents).toContain("Route coarse capability-boundary decisions through skills-broker");
         expect(skillContents).toContain("Use this skill only at the coarse broker boundary.");
-        expect(skillContents).toContain("## Broker-First");
-        expect(skillContents).toContain("## Handle Normally");
-        expect(skillContents).toContain("## Clarify Before Broker");
+        expect(skillContents).toContain("The host decides only one of these boundary outcomes:");
+        expect(skillContents).toContain("## Broker-First (`broker_first`)");
+        expect(skillContents).toContain("## Handle Normally (`handle_normally`)");
+        expect(skillContents).toContain("## Clarify Before Broker (`clarify_before_broker`)");
         expect(skillContents).toContain("build a broker envelope with raw request text plus safe hints");
+        expect(skillContents).toContain("do not pick a package, workflow family, skill, or MCP at the host layer");
         expect(skillContents).toContain("structured `capabilityQuery`");
         expect(skillContents).toContain("If the broker returns `UNSUPPORTED_REQUEST`, continue normally.");
         expect(skillContents).toContain("If the broker returns `AMBIGUOUS_REQUEST`, ask a clarifying question.");
@@ -93,8 +98,9 @@ describe("Claude Code smoke", () => {
         expect(result.handoff.request.url).toBe("https://example.com/article");
 
         const { stdout } = await execFileAsync(
-          relocatedRunnerPath,
+          "bash",
           [
+            relocatedRunnerPath,
             "--debug",
             JSON.stringify({
               requestText: "测下这个网站的质量",
