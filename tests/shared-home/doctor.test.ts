@@ -119,7 +119,7 @@ describe("doctor shared broker home", () => {
       await writeManagedShellManifest(codexInstallDirectory, {
         managedBy: "skills-broker",
         host: "codex",
-        version: "0.1.9",
+        version: "test-version",
         brokerHome: brokerHomeDirectory
       });
       await chmod(codexInstallDirectory, 0o555);
@@ -293,7 +293,7 @@ describe("doctor shared broker home", () => {
         JSON.stringify({
           managedBy: "skills-broker",
           host: "codex",
-          version: "0.1.9",
+          version: "test-version",
           brokerHome: brokerHomeDirectory
         }),
         "utf8"

@@ -1,5 +1,6 @@
-import { chmod, copyFile, cp, mkdir, readFile, writeFile } from "node:fs/promises";
+import { chmod, copyFile, cp, mkdir, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
+import { readPackageVersion } from "./version.js";
 
 export type InstallSharedBrokerHomeOptions = {
   brokerHomeDirectory: string;
@@ -15,7 +16,6 @@ export type InstallSharedBrokerHomeResult = {
   runnerPath: string;
 };
 
-const DEFAULT_VERSION = "0.1.9";
 const RUNTIME_PACKAGE_NAME = "skills-broker-home";
 
 function buildRuntimePackageJson(version: string) {
@@ -93,22 +93,6 @@ await runBrokerCli(input, {
 });
 EOF
 `;
-}
-
-async function readPackageVersion(projectRoot?: string): Promise<string> {
-  if (projectRoot === undefined) {
-    return DEFAULT_VERSION;
-  }
-
-  try {
-    const packageJson = JSON.parse(
-      await readFile(join(projectRoot, "package.json"), "utf8")
-    ) as { version?: string };
-
-    return packageJson.version ?? DEFAULT_VERSION;
-  } catch {
-    return DEFAULT_VERSION;
-  }
 }
 
 export function resolveSharedBrokerHomeLayout(

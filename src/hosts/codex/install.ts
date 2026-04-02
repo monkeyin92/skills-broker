@@ -2,10 +2,12 @@ import { chmod, mkdir, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { buildHostShellSkillMarkdown } from "../skill-markdown.js";
 import { writeManagedShellManifest } from "../../shared-home/ownership.js";
+import { readPackageVersion } from "../../shared-home/version.js";
 
 export type InstallCodexHostShellOptions = {
   installDirectory: string;
   brokerHomeDirectory: string;
+  projectRoot?: string;
 };
 
 export type InstallCodexHostShellResult = {
@@ -15,7 +17,6 @@ export type InstallCodexHostShellResult = {
 };
 
 const RUNNER_FILE_NAME = "run-broker";
-const DEFAULT_VERSION = "0.1.9";
 
 function buildSkillMarkdown(installDirectory: string): string {
   return buildHostShellSkillMarkdown({
@@ -53,6 +54,7 @@ export async function installCodexHostShell(
   options: InstallCodexHostShellOptions
 ): Promise<InstallCodexHostShellResult> {
   const brokerHomeDirectory = resolve(options.brokerHomeDirectory);
+  const version = await readPackageVersion(options.projectRoot);
   const skillPath = join(options.installDirectory, "SKILL.md");
   const runnerPath = join(options.installDirectory, "bin", RUNNER_FILE_NAME);
 
@@ -64,7 +66,7 @@ export async function installCodexHostShell(
   await writeManagedShellManifest(options.installDirectory, {
     managedBy: "skills-broker",
     host: "codex",
-    version: DEFAULT_VERSION,
+    version,
     brokerHome: brokerHomeDirectory
   });
 

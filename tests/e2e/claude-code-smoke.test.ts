@@ -46,10 +46,13 @@ describe("Claude Code smoke", () => {
         await expect(access(runnerPath)).resolves.toBeUndefined();
         await expect(access(distCliPath)).resolves.toBeUndefined();
 
+        const installedPackage = JSON.parse(await readFile(packageJsonPath, "utf8")) as {
+          version: string;
+        };
         const manifest = JSON.parse(await readFile(manifestPath, "utf8"));
         expect(manifest).toMatchObject({
           name: "skills-broker-claude-code",
-          version: "0.1.9"
+          version: installedPackage.version
         });
 
         const skillContents = await readFile(skillPath, "utf8");

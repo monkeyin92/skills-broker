@@ -1,7 +1,8 @@
-import { chmod, copyFile, cp, mkdir, readFile, writeFile } from "node:fs/promises";
+import { chmod, copyFile, cp, mkdir, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { buildHostShellSkillMarkdown } from "../skill-markdown.js";
 import { writeManagedShellManifest } from "../../shared-home/ownership.js";
+import { readPackageVersion } from "../../shared-home/version.js";
 
 export type InstallClaudeCodePluginOptions = {
   installDirectory: string;
@@ -25,7 +26,6 @@ export type InstallClaudeCodePluginResult = {
   runnerPath: string;
 };
 
-const DEFAULT_VERSION = "0.1.9";
 const PLUGIN_NAME = "skills-broker-claude-code";
 const SKILL_DIRECTORY = "skills-broker";
 const RUNNER_FILE_NAME = "run-broker";
@@ -138,22 +138,6 @@ await runBrokerCli(input, {
 });
 EOF
 `;
-}
-
-async function readPackageVersion(projectRoot?: string): Promise<string> {
-  if (projectRoot === undefined) {
-    return DEFAULT_VERSION;
-  }
-
-  try {
-    const packageJson = JSON.parse(
-      await readFile(join(projectRoot, "package.json"), "utf8")
-    ) as { version?: string };
-
-    return packageJson.version ?? DEFAULT_VERSION;
-  } catch {
-    return DEFAULT_VERSION;
-  }
 }
 
 export async function installClaudeCodePlugin(
