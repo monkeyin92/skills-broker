@@ -34,7 +34,7 @@ describe("Claude Code smoke", () => {
       );
 
       try {
-        await execFileAsync(installScriptPath, [installDirectory], {
+        await execFileAsync("bash", [installScriptPath, installDirectory], {
           cwd: process.cwd()
         });
 
@@ -95,8 +95,9 @@ describe("Claude Code smoke", () => {
         expect(result.handoff.request.url).toBe("https://example.com/article");
 
         const { stdout } = await execFileAsync(
-          relocatedRunnerPath,
+          "bash",
           [
+            relocatedRunnerPath,
             "--debug",
             JSON.stringify({
               requestText: "测下这个网站的质量",

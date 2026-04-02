@@ -34,6 +34,40 @@ export function formatLifecycleResult(
       }
     }
 
+    lines.push("");
+    lines.push(`Status board: ${result.status.boardPath}`);
+    if (result.status.repoTarget) {
+      lines.push(`Status repo target: ${result.status.repoTarget}`);
+    }
+    lines.push(
+      `Status remote freshness: ${result.status.remoteFreshness.state} (${result.status.remoteFreshness.detail})`
+    );
+    if (result.status.shippingRef) {
+      lines.push(`Status shipping ref: ${result.status.shippingRef}`);
+    }
+
+    if (result.status.items.length === 0) {
+      lines.push("Status items: unavailable");
+    } else {
+      for (const item of result.status.items) {
+        lines.push(
+          `Status ${item.id}: declared=${item.declaredStatus}, evaluated=${item.evaluatedStatus}`
+        );
+      }
+    }
+
+    if (result.status.issues.length === 0) {
+      lines.push("Status issues: none");
+    } else {
+      for (const issue of result.status.issues) {
+        lines.push(
+          `Status issue ${issue.code}: ${issue.message}${
+            issue.strict ? " (strict)" : ""
+          }`
+        );
+      }
+    }
+
     for (const host of result.hosts) {
       const suffix = host.reason ? ` (${host.reason})` : "";
       lines.push(`Host ${host.name}: ${host.status}${suffix}`);

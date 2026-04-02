@@ -12,10 +12,12 @@ fi
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+NODE_BIN="$(command -v node)"
+NPM_CLI="${npm_execpath:-$(dirname "$(dirname "${NODE_BIN}")")/lib/node_modules/npm/bin/npm-cli.js}"
 
 cd "${PROJECT_ROOT}"
 
-npm run build >/dev/null
+"${NODE_BIN}" "${NPM_CLI}" run build >/dev/null
 
 ARGS=(
   node "${PROJECT_ROOT}/dist/bin/skills-broker.js"

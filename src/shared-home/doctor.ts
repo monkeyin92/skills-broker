@@ -10,6 +10,7 @@ import {
   detectCompetingPeerSkills
 } from "./host-surface.js";
 import { detectLifecycleHostTargets } from "./paths.js";
+import { evaluateStatusBoard, type DoctorStatusResult } from "./status.js";
 
 export type DoctorLifecycleResult = {
   command: "doctor";
@@ -35,14 +36,19 @@ export type DoctorLifecycleResult = {
       message: string;
     };
   }>;
+  status: DoctorStatusResult;
   warnings: string[];
 };
 
 export type DoctorSharedBrokerHomeOptions = {
   brokerHomeDirectory: string;
+  cwd?: string;
   homeDirectory?: string;
   claudeCodeInstallDirectory?: string;
   codexInstallDirectory?: string;
+  refreshRemote?: boolean;
+  repoRootOverride?: string;
+  shipRefOverride?: string;
   now?: Date;
 };
 
@@ -253,6 +259,12 @@ export async function doctorSharedBrokerHome(
         warnings
       )
     ],
+    status: await evaluateStatusBoard({
+      cwd: options.cwd,
+      refreshRemote: options.refreshRemote,
+      repoRootOverride: options.repoRootOverride,
+      shipRefOverride: options.shipRefOverride
+    }),
     warnings
   };
 }
