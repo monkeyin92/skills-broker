@@ -1,5 +1,14 @@
 import { cp, mkdir, readdir, rename, rm, stat } from "node:fs/promises";
 import { dirname, join } from "node:path";
+import type {
+  PeerSurfaceAuditInspection,
+  PeerSurfaceHostName,
+  PeerSurfaceManualRecoveryMarker
+} from "./peer-surface-audit.js";
+import {
+  inspectPeerSurfaceAuditState,
+  recommendedManualRecoveryClearCommand
+} from "./peer-surface-audit.js";
 
 const COMPETING_PEER_SKILL_NAMES = [
   "baoyu-url-to-markdown",
@@ -47,7 +56,7 @@ export async function detectCompetingPeerSkills(
 }
 
 export function competingPeerSkillsWarning(
-  hostName: "claude-code" | "codex",
+  hostName: PeerSurfaceHostName,
   skillNames: string[]
 ): string {
   return `${hostName}: competing peer skills detected (${skillNames.join(", ")}); broker-first hit rate may be reduced until these peer skills are hidden behind skills-broker`;
@@ -60,8 +69,18 @@ export type PeerSkillRemediation = {
   message: string;
 };
 
+export type PeerSurfaceManagedState = {
+  competingPeerSkills: string[];
+  remediation?: PeerSkillRemediation;
+  manualRecovery?: PeerSurfaceManualRecoveryMarker & {
+    path: string;
+    clearCommand: string;
+  };
+  integrityIssues: PeerSurfaceAuditInspection["integrityIssues"];
+};
+
 export function buildPeerSkillRemediation(
-  hostName: "claude-code" | "codex",
+  hostName: PeerSurfaceHostName,
   brokerHomeDirectory: string,
   peerSkills: string[]
 ): PeerSkillRemediation {
@@ -82,10 +101,16 @@ export function buildPeerSkillRemediation(
 
 export function resolveDownstreamSkillStoreDirectory(
   brokerHomeDirectory: string,
-  hostName: "claude-code" | "codex"
+  hostName: PeerSurfaceHostName
 ): string {
   return join(brokerHomeDirectory, "downstream", hostName, "skills");
 }
+
+export type PlannedPeerSkillMove = {
+  skillName: string;
+  sourceDirectory: string;
+  targetDirectory: string;
+};
 
 type MigratePeerSkillsResult = {
   migratedPeerSkills: string[];
@@ -108,48 +133,171 @@ async function moveDirectory(sourceDirectory: string, targetDirectory: string): 
   }
 }
 
-export async function migrateCompetingPeerSkills(
-  hostName: "claude-code" | "codex",
+export function planCompetingPeerSkillMoves(
+  hostName: PeerSurfaceHostName,
   installDirectory: string,
   brokerHomeDirectory: string,
   skillNames: string[]
-): Promise<MigratePeerSkillsResult> {
+): PlannedPeerSkillMove[] {
   const hostSkillsDirectory = dirname(installDirectory);
   const downstreamDirectory = resolveDownstreamSkillStoreDirectory(
     brokerHomeDirectory,
     hostName
   );
-  const migratedPeerSkills: string[] = [];
-  const remainingPeerSkills: string[] = [];
+
+  return skillNames.map((skillName) => ({
+    skillName,
+    sourceDirectory: join(hostSkillsDirectory, skillName),
+    targetDirectory: join(downstreamDirectory, skillName)
+  }));
+}
+
+export async function movePlannedPeerSkillMoves(
+  moves: PlannedPeerSkillMove[]
+): Promise<void> {
+  if (moves.length === 0) {
+    return;
+  }
+
+  await mkdir(dirname(moves[0]!.targetDirectory), { recursive: true });
+
+  for (const move of moves) {
+    if (await directoryExists(move.targetDirectory)) {
+      throw new Error(
+        `cannot migrate ${move.skillName} because downstream target already exists at ${move.targetDirectory}`
+      );
+    }
+  }
+
+  for (const move of moves) {
+    await applyPlannedPeerSkillMove(move);
+  }
+}
+
+export async function applyPlannedPeerSkillMove(
+  move: PlannedPeerSkillMove
+): Promise<void> {
+  await mkdir(dirname(move.targetDirectory), { recursive: true });
+
+  if (await directoryExists(move.targetDirectory)) {
+    throw new Error(
+      `cannot migrate ${move.skillName} because downstream target already exists at ${move.targetDirectory}`
+    );
+  }
+
+  await moveDirectory(move.sourceDirectory, move.targetDirectory);
+}
+
+export async function rollbackPeerSkillMoves(
+  moves: PlannedPeerSkillMove[]
+): Promise<{
+  restoredPeerSkills: string[];
+  failedPeerSkills: string[];
+  warnings: string[];
+}> {
+  const restoredPeerSkills: string[] = [];
+  const failedPeerSkills: string[] = [];
   const warnings: string[] = [];
 
-  await mkdir(downstreamDirectory, { recursive: true });
+  for (const move of [...moves].reverse()) {
+    const targetExists = await directoryExists(move.targetDirectory);
 
-  for (const skillName of skillNames) {
-    const sourceDirectory = join(hostSkillsDirectory, skillName);
-    const targetDirectory = join(downstreamDirectory, skillName);
+    if (!targetExists) {
+      continue;
+    }
 
-    if (await directoryExists(targetDirectory)) {
-      remainingPeerSkills.push(skillName);
+    if (await directoryExists(move.sourceDirectory)) {
+      failedPeerSkills.push(move.skillName);
       warnings.push(
-        `${hostName}: cannot migrate ${skillName} because downstream target already exists at ${targetDirectory}`
+        `cannot rollback ${move.skillName} because source already exists at ${move.sourceDirectory}`
       );
       continue;
     }
 
     try {
-      await moveDirectory(sourceDirectory, targetDirectory);
-      migratedPeerSkills.push(skillName);
+      await moveDirectory(move.targetDirectory, move.sourceDirectory);
+      restoredPeerSkills.push(move.skillName);
     } catch (error) {
-      remainingPeerSkills.push(skillName);
+      failedPeerSkills.push(move.skillName);
       const message = error instanceof Error ? error.message : String(error);
-      warnings.push(`${hostName}: failed to migrate ${skillName}: ${message}`);
+      warnings.push(`failed to rollback ${move.skillName}: ${message}`);
     }
   }
 
   return {
-    migratedPeerSkills,
-    remainingPeerSkills,
+    restoredPeerSkills,
+    failedPeerSkills,
     warnings
   };
+}
+
+export async function inspectManagedPeerSurface(
+  hostName: PeerSurfaceHostName,
+  installDirectory: string,
+  brokerHomeDirectory: string
+): Promise<PeerSurfaceManagedState> {
+  const competingPeerSkills = await detectCompetingPeerSkills(installDirectory);
+  const auditState = await inspectPeerSurfaceAuditState(
+    brokerHomeDirectory,
+    hostName
+  );
+
+  return {
+    competingPeerSkills,
+    ...(competingPeerSkills.length > 0
+      ? {
+          remediation: buildPeerSkillRemediation(
+            hostName,
+            brokerHomeDirectory,
+            competingPeerSkills
+          )
+        }
+      : {}),
+    ...(auditState.marker === null
+      ? {}
+      : {
+          manualRecovery: {
+            ...auditState.marker,
+            path: auditState.markerPath,
+            clearCommand: recommendedManualRecoveryClearCommand(
+              hostName,
+              auditState.marker.markerId,
+              brokerHomeDirectory
+            )
+          }
+        }),
+    integrityIssues: auditState.integrityIssues
+  };
+}
+
+export async function migrateCompetingPeerSkills(
+  hostName: PeerSurfaceHostName,
+  installDirectory: string,
+  brokerHomeDirectory: string,
+  skillNames: string[]
+): Promise<MigratePeerSkillsResult> {
+  const moves = planCompetingPeerSkillMoves(
+    hostName,
+    installDirectory,
+    brokerHomeDirectory,
+    skillNames
+  );
+
+  try {
+    await movePlannedPeerSkillMoves(moves);
+
+    return {
+      migratedPeerSkills: skillNames,
+      remainingPeerSkills: [],
+      warnings: []
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+
+    return {
+      migratedPeerSkills: [],
+      remainingPeerSkills: skillNames,
+      warnings: [`${hostName}: failed to migrate competing peers: ${message}`]
+    };
+  }
 }

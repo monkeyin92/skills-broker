@@ -130,10 +130,7 @@ type ShipRefResolution = {
 };
 
 type RepoSnapshot = {
-  headCommit: string;
   shippingRef?: string;
-  aheadCount?: number;
-  behindCount?: number;
   remoteFreshness: DoctorStatusResult["remoteFreshness"];
 };
 
@@ -547,34 +544,9 @@ async function buildRepoSnapshot(
     }
   }
 
-  const headCommit = await runGit(repoTarget, ["rev-parse", "HEAD"]);
-  let aheadCount: number | undefined;
-  let behindCount: number | undefined;
-
-  if (shippingRef !== undefined) {
-    try {
-      const counts = await runGit(repoTarget, [
-        "rev-list",
-        "--left-right",
-        "--count",
-        `${shippingRef}...HEAD`
-      ]);
-      const [behind, ahead] = counts.split("\t").map((value) => Number.parseInt(value, 10));
-      if (Number.isFinite(ahead) && Number.isFinite(behind)) {
-        aheadCount = ahead;
-        behindCount = behind;
-      }
-    } catch {
-      // Preserve the snapshot even when ahead/behind cannot be computed.
-    }
-  }
-
   return {
     snapshot: {
-      headCommit,
       shippingRef,
-      aheadCount,
-      behindCount,
       remoteFreshness
     },
     issues
@@ -588,15 +560,11 @@ async function evaluateProof(
   proof: StatusProof
 ): Promise<StatusProofResult> {
   if (proof.type === "commit") {
-    const localValid = await runGit(repoTarget, ["rev-parse", "--verify", `${proof.ref}^{commit}`])
-      .then(async () => isCommitReachable(repoTarget, proof.ref, "HEAD"))
-      .catch(() => false);
+    const localValid = await isCommitReachable(repoTarget, proof.ref, "HEAD");
 
     let remoteValid: StatusProofResult["remoteValid"] = "unknown";
     if (shippingRef !== undefined && remoteFreshness !== "unknown") {
-      remoteValid = (await isCommitReachable(repoTarget, proof.ref, shippingRef))
-        ? "valid"
-        : "invalid";
+      remoteValid = (await isCommitReachable(repoTarget, proof.ref, shippingRef)) ? "valid" : "invalid";
     }
 
     return {

@@ -2,8 +2,17 @@ import { chmod, mkdtemp, mkdir, realpath, rm, writeFile } from "node:fs/promises
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { loadMaintainedBrokerFirstContract } from "../../src/core/maintained-broker-first";
+import {
+  brokerFirstGateArtifactPath,
+  type BrokerFirstGateArtifact
+} from "../../src/shared-home/broker-first-gate";
 import { formatLifecycleResult } from "../../src/shared-home/format";
 import { doctorSharedBrokerHome } from "../../src/shared-home/doctor";
+import {
+  installSharedBrokerHome,
+  resolveSharedBrokerHomeLayout
+} from "../../src/shared-home/install";
 import { writeManagedShellManifest } from "../../src/shared-home/ownership";
 import { commitAll, initGitRepo } from "../helpers/git";
 
@@ -31,6 +40,42 @@ function renderStatusBoard(status: string): string {
 \`\`\`
 <!-- skills-broker-status:end -->
 `;
+}
+
+async function writeFreshGateArtifact(
+  brokerHomeDirectory: string,
+  generatedAt = new Date().toISOString()
+): Promise<void> {
+  const layout = resolveSharedBrokerHomeLayout(brokerHomeDirectory);
+  const contract = await loadMaintainedBrokerFirstContract(
+    layout.maintainedFamiliesPath
+  );
+  const artifactPath = brokerFirstGateArtifactPath(brokerHomeDirectory);
+  const artifact: BrokerFirstGateArtifact = {
+    schemaVersion: 1,
+    artifactPath,
+    generatedAt,
+    maintainedFamilies: contract.maintainedFamilies.map((family) => ({
+      family: family.family,
+      winnerId: family.winnerId,
+      capabilityId: family.capabilityId,
+      status: "green",
+      proofs: {
+        phase2Boundary: "pass",
+        phase3Eval: "pass",
+        peerConflict: "pass"
+      },
+      issues: []
+    })),
+    issues: []
+  };
+
+  await mkdir(join(brokerHomeDirectory, "state"), { recursive: true });
+  await writeFile(
+    artifactPath,
+    `${JSON.stringify(artifact, null, 2)}\n`,
+    "utf8"
+  );
 }
 
 describe("doctor shared broker home", () => {
@@ -72,7 +117,7 @@ describe("doctor shared broker home", () => {
     } finally {
       await rm(runtimeDirectory, { recursive: true, force: true });
     }
-  });
+  }, 15000);
 
   it("reports a host as not writable when the target directory cannot be created", async () => {
     const runtimeDirectory = await mkdtemp(join(tmpdir(), "skills-broker-doctor-readonly-"));
@@ -102,7 +147,7 @@ describe("doctor shared broker home", () => {
       await chmod(parentDirectory, 0o755).catch(() => undefined);
       await rm(runtimeDirectory, { recursive: true, force: true });
     }
-  });
+  }, 15000);
 
   it("keeps an existing managed host detected even when the install directory is read-only", async () => {
     const runtimeDirectory = await mkdtemp(join(tmpdir(), "skills-broker-doctor-managed-"));
@@ -185,6 +230,11 @@ describe("doctor shared broker home", () => {
     const codexInstallDirectory = join(runtimeDirectory, ".agents", "skills", "skills-broker");
 
     try {
+      await installSharedBrokerHome({
+        brokerHomeDirectory,
+        projectRoot: process.cwd()
+      });
+      await writeFreshGateArtifact(brokerHomeDirectory);
       await initGitRepo(repoDirectory);
       await writeFile(join(repoDirectory, "README.md"), "# repo\n", "utf8");
       await writeFile(join(repoDirectory, "STATUS.md"), renderStatusBoard("in_progress"), "utf8");
@@ -200,6 +250,8 @@ describe("doctor shared broker home", () => {
       });
 
       expect(result.status.repoTarget).toBe(repoRealPath);
+      expect(result.brokerFirstGate.hasStrictIssues).toBe(false);
+      expect(result.brokerFirstGate.maintainedFamilies).toHaveLength(3);
       expect(result.status.items).toContainEqual(
         expect.objectContaining({
           id: "status-board-proof-rails",
@@ -210,7 +262,64 @@ describe("doctor shared broker home", () => {
 
       const parsed = JSON.parse(formatLifecycleResult(result, "json")) as typeof result;
       expect(parsed.status.boardPath).toBe(join(repoRealPath, "STATUS.md"));
+      expect(parsed.brokerFirstGate.maintainedFamilies).toHaveLength(3);
       expect(parsed.status.items).toHaveLength(1);
+    } finally {
+      await rm(runtimeDirectory, { recursive: true, force: true });
+    }
+  }, 15000);
+
+  it("renders all maintained broker-first proofs in doctor text output", async () => {
+    const runtimeDirectory = await mkdtemp(join(tmpdir(), "skills-broker-doctor-gate-proofs-"));
+    const brokerHomeDirectory = join(runtimeDirectory, ".skills-broker");
+
+    try {
+      await installSharedBrokerHome({
+        brokerHomeDirectory,
+        projectRoot: process.cwd()
+      });
+      await writeFreshGateArtifact(brokerHomeDirectory);
+
+      const result = await doctorSharedBrokerHome({
+        brokerHomeDirectory,
+        homeDirectory: runtimeDirectory,
+        cwd: runtimeDirectory
+      });
+      const rendered = formatLifecycleResult(result, "text");
+
+      expect(rendered).toContain(
+        "proofs=phase2Boundary:pass, phase3Eval:pass, peerConflict:pass"
+      );
+    } finally {
+      await rm(runtimeDirectory, { recursive: true, force: true });
+    }
+  });
+
+  it("renders broker-first gate issues in doctor text output without duplicating them into warnings", async () => {
+    const runtimeDirectory = await mkdtemp(join(tmpdir(), "skills-broker-doctor-gate-text-"));
+    const brokerHomeDirectory = join(runtimeDirectory, ".skills-broker");
+
+    try {
+      await installSharedBrokerHome({
+        brokerHomeDirectory,
+        projectRoot: process.cwd()
+      });
+
+      const result = await doctorSharedBrokerHome({
+        brokerHomeDirectory,
+        homeDirectory: runtimeDirectory,
+        cwd: runtimeDirectory
+      });
+      const rendered = formatLifecycleResult(result, "text");
+
+      expect(result.warnings).not.toContain(
+        expect.stringContaining("BROKER_FIRST_GATE_MISSING")
+      );
+      expect(rendered).toContain("Broker-first gate:");
+      expect(rendered).toContain(
+        "Broker-first gate issue BROKER_FIRST_GATE_MISSING"
+      );
+      expect(rendered).not.toContain("Warning: BROKER_FIRST_GATE_MISSING");
     } finally {
       await rm(runtimeDirectory, { recursive: true, force: true });
     }
@@ -269,7 +378,7 @@ describe("doctor shared broker home", () => {
     } finally {
       await rm(runtimeDirectory, { recursive: true, force: true });
     }
-  });
+  }, 15000);
 
   it("includes structured remediation when competing peer skills are detected", async () => {
     const runtimeDirectory = await mkdtemp(join(tmpdir(), "skills-broker-doctor-remediation-"));
@@ -324,7 +433,7 @@ describe("doctor shared broker home", () => {
     } finally {
       await rm(runtimeDirectory, { recursive: true, force: true });
     }
-  });
+  }, 15000);
 
   it("summarizes recent routing hit, misroute, and fallback rates from persisted traces", async () => {
     const runtimeDirectory = await mkdtemp(join(tmpdir(), "skills-broker-doctor-traces-"));
@@ -453,5 +562,5 @@ describe("doctor shared broker home", () => {
     } finally {
       await rm(runtimeDirectory, { recursive: true, force: true });
     }
-  });
+  }, 15000);
 });

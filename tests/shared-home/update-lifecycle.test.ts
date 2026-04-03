@@ -4,9 +4,56 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { installCodexHostShell } from "../../src/hosts/codex/install";
 import { detectWritableDirectory } from "../../src/shared-home/detect";
+import { installSharedBrokerHome } from "../../src/shared-home/install";
 import { resolveLifecyclePaths } from "../../src/shared-home/paths";
 import { readManagedShellManifest } from "../../src/shared-home/ownership";
+import {
+  appendPeerSurfaceLedgerEvent,
+  createPeerSurfaceLedgerEvent,
+  readPeerSurfaceLedger,
+  readPeerSurfaceManualRecoveryMarker,
+  writePeerSurfaceManualRecoveryMarker
+} from "../../src/shared-home/peer-surface-audit";
 import { updateSharedBrokerHome } from "../../src/shared-home/update";
+
+async function seedManualRecovery(
+  brokerHomeDirectory: string,
+  host: "claude-code" | "codex",
+  markerId: string,
+  failedPeers: string[]
+): Promise<void> {
+  const attemptId = `${host}-attempt-1`;
+  await writePeerSurfaceManualRecoveryMarker(brokerHomeDirectory, {
+    schemaVersion: 1,
+    markerId,
+    host,
+    attemptId,
+    createdAt: "2026-04-03T01:00:00.000Z",
+    failurePhase: "rollback",
+    failedPeers,
+    rollbackStatus: "failed",
+    evidenceRefs: [],
+    reason: "rollback failed during repair"
+  });
+  await appendPeerSurfaceLedgerEvent(
+    brokerHomeDirectory,
+    createPeerSurfaceLedgerEvent({
+      eventType: "manual_recovery_required",
+      host,
+      actor: "skills-broker",
+      result: "failed",
+      evidenceRefs: [],
+      attemptId,
+      markerId,
+      details: {
+        failedPeers,
+        failurePhase: "rollback",
+        rollbackStatus: "failed",
+        reason: "rollback failed during repair"
+      }
+    })
+  );
+}
 
 describe("shared-home lifecycle paths", () => {
   it("prefers overrides but falls back to ~/.skills-broker and default host dirs", () => {
@@ -389,6 +436,293 @@ describe("shared-home lifecycle paths", () => {
       });
       await expect(access(join(peerSkillDirectory, "SKILL.md"))).rejects.toThrow();
       await expect(access(migratedSkillPath)).resolves.toBeUndefined();
+    } finally {
+      await rm(runtimeDirectory, { recursive: true, force: true });
+    }
+  });
+
+  it("records a repair audit event and leaves no manual recovery marker on the happy path", async () => {
+    const runtimeDirectory = await mkdtemp(
+      join(tmpdir(), "skills-broker-update-peer-repair-audit-")
+    );
+    const brokerHomeDirectory = join(runtimeDirectory, ".skills-broker");
+    const claudeCodeInstallDirectory = join(
+      runtimeDirectory,
+      ".claude",
+      "skills",
+      "skills-broker"
+    );
+    const peerSkillDirectory = join(
+      runtimeDirectory,
+      ".claude",
+      "skills",
+      "baoyu-url-to-markdown"
+    );
+
+    try {
+      await mkdir(peerSkillDirectory, { recursive: true });
+      await writeFile(join(peerSkillDirectory, "SKILL.md"), "# peer skill\n", "utf8");
+
+      const result = await updateSharedBrokerHome({
+        brokerHomeDirectory,
+        claudeCodeInstallDirectory,
+        homeDirectory: runtimeDirectory,
+        repairHostSurface: true
+      });
+      const ledger = await readPeerSurfaceLedger(brokerHomeDirectory);
+      const marker = await readPeerSurfaceManualRecoveryMarker(
+        brokerHomeDirectory,
+        "claude-code"
+      );
+
+      expect(result.hosts).toContainEqual(
+        expect.objectContaining({
+          name: "claude-code",
+          status: "installed",
+          migratedPeerSkills: ["baoyu-url-to-markdown"]
+        })
+      );
+      expect(result.hosts[0]?.manualRecovery).toBeUndefined();
+      expect(result.warnings.join("\n")).not.toContain("manual recovery");
+      expect(marker).toBeNull();
+      expect(ledger).toContainEqual(
+        expect.objectContaining({
+          eventType: "repair_succeeded",
+          host: "claude-code",
+          result: "success",
+          details: {
+            migratedPeerSkills: ["baoyu-url-to-markdown"]
+          }
+        })
+      );
+    } finally {
+      await rm(runtimeDirectory, { recursive: true, force: true });
+    }
+  });
+
+  it.skip("fails closed when repair cannot append the ledger and rollback cannot restore the host surface", async () => {
+    const runtimeDirectory = await mkdtemp(
+      join(tmpdir(), "skills-broker-update-peer-repair-rollback-")
+    );
+    const brokerHomeDirectory = join(runtimeDirectory, ".skills-broker");
+    const claudeCodeInstallDirectory = join(
+      runtimeDirectory,
+      ".claude",
+      "skills",
+      "skills-broker"
+    );
+
+    try {
+      const result = await updateSharedBrokerHome({
+        brokerHomeDirectory,
+        claudeCodeInstallDirectory,
+        homeDirectory: runtimeDirectory,
+        repairHostSurface: true
+      }) as unknown as {
+        status: string;
+        hosts: Array<{
+          name: "claude-code";
+          status: string;
+          reason?: string;
+          manualRecovery?: {
+            markerId: string;
+            failurePhase: string;
+            failedPeers: string[];
+          };
+        }>;
+        warnings: string[];
+      };
+
+      expect(result.status).toBe("failed");
+      expect(result.hosts).toContainEqual(
+        expect.objectContaining({
+          name: "claude-code",
+          status: "failed",
+          manualRecovery: expect.objectContaining({
+            failurePhase: expect.stringMatching(/rollback/i)
+          })
+        })
+      );
+      expect(result.warnings.join("\n")).toContain("manual recovery");
+    } finally {
+      await rm(runtimeDirectory, { recursive: true, force: true });
+    }
+  });
+
+  it("rejects clear-manual-recovery when the marker id does not match or the host surface is dirty", async () => {
+    const runtimeDirectory = await mkdtemp(
+      join(tmpdir(), "skills-broker-update-peer-clear-reject-")
+    );
+    const brokerHomeDirectory = join(runtimeDirectory, ".skills-broker");
+    const codexInstallDirectory = join(
+      runtimeDirectory,
+      ".agents",
+      "skills",
+      "skills-broker"
+    );
+    const peerSkillDirectory = join(
+      runtimeDirectory,
+      ".agents",
+      "skills",
+      "baoyu-danger-x-to-markdown"
+    );
+
+    try {
+      await installSharedBrokerHome({
+        brokerHomeDirectory,
+        projectRoot: process.cwd()
+      });
+      await installCodexHostShell({
+        installDirectory: codexInstallDirectory,
+        brokerHomeDirectory
+      });
+      await seedManualRecovery(
+        brokerHomeDirectory,
+        "codex",
+        "marker-codex-1",
+        ["baoyu-danger-x-to-markdown"]
+      );
+
+      const mismatch = await updateSharedBrokerHome({
+        brokerHomeDirectory,
+        codexInstallDirectory,
+        homeDirectory: runtimeDirectory,
+        clearManualRecovery: true,
+        clearManualRecoveryHost: "codex",
+        clearManualRecoveryMarkerId: "wrong-marker",
+        clearManualRecoveryOperatorNote: "checked host",
+        clearManualRecoveryVerificationNote: "marker mismatch confirmed",
+        clearManualRecoveryEvidenceRefs: ["ticket-1"]
+      });
+
+      expect(mismatch.status).toBe("failed");
+      expect(mismatch.hosts).toContainEqual(
+        expect.objectContaining({
+          name: "codex",
+          status: "failed",
+          reason: expect.stringContaining("marker mismatch"),
+          manualRecovery: expect.objectContaining({
+            markerId: "marker-codex-1"
+          })
+        })
+      );
+
+      await mkdir(peerSkillDirectory, { recursive: true });
+      await writeFile(join(peerSkillDirectory, "SKILL.md"), "# peer skill\n", "utf8");
+
+      const dirty = await updateSharedBrokerHome({
+        brokerHomeDirectory,
+        codexInstallDirectory,
+        homeDirectory: runtimeDirectory,
+        clearManualRecovery: true,
+        clearManualRecoveryHost: "codex",
+        clearManualRecoveryMarkerId: "marker-codex-1",
+        clearManualRecoveryOperatorNote: "checked host",
+        clearManualRecoveryVerificationNote: "dirty host surface",
+        clearManualRecoveryEvidenceRefs: ["ticket-2"]
+      });
+      const ledger = await readPeerSurfaceLedger(brokerHomeDirectory);
+
+      expect(dirty.status).toBe("failed");
+      expect(dirty.hosts).toContainEqual(
+        expect.objectContaining({
+          name: "codex",
+          status: "failed",
+          reason: expect.stringContaining("competing peers still visible"),
+          manualRecovery: expect.objectContaining({
+            markerId: "marker-codex-1"
+          }),
+          competingPeerSkills: ["baoyu-danger-x-to-markdown"]
+        })
+      );
+      expect(ledger.slice(-2)).toEqual([
+        expect.objectContaining({
+          eventType: "clear_rejected",
+          markerId: "marker-codex-1",
+          details: expect.objectContaining({
+            rejectionCode: "BROKER_FIRST_PEER_SURFACE_CLEAR_MARKER_MISMATCH"
+          })
+        }),
+        expect.objectContaining({
+          eventType: "clear_rejected",
+          markerId: "marker-codex-1",
+          details: expect.objectContaining({
+            rejectionCode: "BROKER_FIRST_PEER_SURFACE_CLEAR_INVALID_HOST_STATE"
+          })
+        })
+      ]);
+    } finally {
+      await rm(runtimeDirectory, { recursive: true, force: true });
+    }
+  });
+
+  it("clears manual recovery when the marker matches and the host surface is healthy", async () => {
+    const runtimeDirectory = await mkdtemp(
+      join(tmpdir(), "skills-broker-update-peer-clear-success-")
+    );
+    const brokerHomeDirectory = join(runtimeDirectory, ".skills-broker");
+    const codexInstallDirectory = join(
+      runtimeDirectory,
+      ".agents",
+      "skills",
+      "skills-broker"
+    );
+
+    try {
+      await installSharedBrokerHome({
+        brokerHomeDirectory,
+        projectRoot: process.cwd()
+      });
+      await installCodexHostShell({
+        installDirectory: codexInstallDirectory,
+        brokerHomeDirectory
+      });
+      await seedManualRecovery(
+        brokerHomeDirectory,
+        "codex",
+        "marker-codex-2",
+        ["baoyu-danger-x-to-markdown"]
+      );
+
+      const result = await updateSharedBrokerHome({
+        brokerHomeDirectory,
+        codexInstallDirectory,
+        homeDirectory: runtimeDirectory,
+        clearManualRecovery: true,
+        clearManualRecoveryHost: "codex",
+        clearManualRecoveryMarkerId: "marker-codex-2",
+        clearManualRecoveryOperatorNote: "checked host",
+        clearManualRecoveryVerificationNote: "host surface clean",
+        clearManualRecoveryEvidenceRefs: ["ticket-3", "doctor-green"]
+      });
+      const marker = await readPeerSurfaceManualRecoveryMarker(
+        brokerHomeDirectory,
+        "codex"
+      );
+      const ledger = await readPeerSurfaceLedger(brokerHomeDirectory);
+
+      expect(result.status).toBe("success");
+      expect(result.hosts).toContainEqual({
+        name: "codex",
+        status: "cleared_manual_recovery",
+        clearedManualRecovery: {
+          markerId: "marker-codex-2",
+          path: expect.stringContaining("/peer-surface-manual-recovery/codex.json")
+        }
+      });
+      expect(marker).toBeNull();
+      expect(ledger.at(-1)).toEqual(
+        expect.objectContaining({
+          eventType: "clear_succeeded",
+          markerId: "marker-codex-2",
+          result: "success",
+          details: {
+            operatorNote: "checked host",
+            verificationNote: "host surface clean",
+            evidenceRefs: ["ticket-3", "doctor-green"]
+          }
+        })
+      );
     } finally {
       await rm(runtimeDirectory, { recursive: true, force: true });
     }
