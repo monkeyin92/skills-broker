@@ -1,4 +1,4 @@
-import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, rm, writeFile, readFile, access } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -11,7 +11,8 @@ import {
 } from "../../src/shared-home/peer-surface-audit";
 import {
   competingPeerSkillsWarning,
-  detectCompetingPeerSkills
+  detectCompetingPeerSkills,
+  migrateCompetingPeerSkills
 } from "../../src/shared-home/host-surface";
 import { doctorSharedBrokerHome } from "../../src/shared-home/doctor";
 
@@ -188,6 +189,116 @@ describe("host surface management", () => {
       );
       expect(result.warnings).toContainEqual(
         expect.stringContaining("manual recovery required (marker-codex-1)")
+      );
+    } finally {
+      await rm(runtimeDirectory, { recursive: true, force: true });
+    }
+  });
+
+  it("adopts an identical downstream peer directory without overwriting it", async () => {
+    const runtimeDirectory = await mkdtemp(
+      join(tmpdir(), "skills-broker-host-surface-adopt-identical-")
+    );
+    const brokerHomeDirectory = join(runtimeDirectory, ".skills-broker");
+    const installDirectory = join(
+      runtimeDirectory,
+      ".claude",
+      "skills",
+      "skills-broker"
+    );
+    const sourceDirectory = join(
+      runtimeDirectory,
+      ".claude",
+      "skills",
+      "baoyu-url-to-markdown"
+    );
+    const targetDirectory = join(
+      brokerHomeDirectory,
+      "downstream",
+      "claude-code",
+      "skills",
+      "baoyu-url-to-markdown"
+    );
+    const sourceSkillPath = join(sourceDirectory, "SKILL.md");
+    const targetSkillPath = join(targetDirectory, "SKILL.md");
+
+    try {
+      await mkdir(sourceDirectory, { recursive: true });
+      await mkdir(targetDirectory, { recursive: true });
+      await writeFile(sourceSkillPath, "# peer skill\n", "utf8");
+      await writeFile(targetSkillPath, "# peer skill\n", "utf8");
+
+      const result = await migrateCompetingPeerSkills(
+        "claude-code",
+        installDirectory,
+        brokerHomeDirectory,
+        ["baoyu-url-to-markdown"]
+      );
+
+      expect(result).toEqual({
+        migratedPeerSkills: ["baoyu-url-to-markdown"],
+        remainingPeerSkills: [],
+        warnings: []
+      });
+      await expect(readFile(targetSkillPath, "utf8")).resolves.toBe("# peer skill\n");
+      await expect(access(sourceDirectory)).rejects.toThrow();
+    } finally {
+      await rm(runtimeDirectory, { recursive: true, force: true });
+    }
+  });
+
+  it("fails closed when a downstream peer directory differs from the host-visible source", async () => {
+    const runtimeDirectory = await mkdtemp(
+      join(tmpdir(), "skills-broker-host-surface-adopt-divergent-")
+    );
+    const brokerHomeDirectory = join(runtimeDirectory, ".skills-broker");
+    const installDirectory = join(
+      runtimeDirectory,
+      ".claude",
+      "skills",
+      "skills-broker"
+    );
+    const sourceDirectory = join(
+      runtimeDirectory,
+      ".claude",
+      "skills",
+      "baoyu-danger-x-to-markdown"
+    );
+    const targetDirectory = join(
+      brokerHomeDirectory,
+      "downstream",
+      "claude-code",
+      "skills",
+      "baoyu-danger-x-to-markdown"
+    );
+    const sourceSkillPath = join(sourceDirectory, "SKILL.md");
+    const targetSkillPath = join(targetDirectory, "SKILL.md");
+
+    try {
+      await mkdir(sourceDirectory, { recursive: true });
+      await mkdir(targetDirectory, { recursive: true });
+      await writeFile(sourceSkillPath, "# source peer skill\n", "utf8");
+      await writeFile(targetSkillPath, "# existing downstream skill\n", "utf8");
+
+      const result = await migrateCompetingPeerSkills(
+        "claude-code",
+        installDirectory,
+        brokerHomeDirectory,
+        ["baoyu-danger-x-to-markdown"]
+      );
+
+      expect(result.migratedPeerSkills).toEqual([]);
+      expect(result.remainingPeerSkills).toEqual(["baoyu-danger-x-to-markdown"]);
+      expect(result.warnings).toEqual(
+        expect.arrayContaining([
+          expect.stringContaining(
+            "failed to migrate competing peers: cannot migrate baoyu-danger-x-to-markdown because downstream target already exists"
+          )
+        ])
+      );
+      await expect(readFile(sourceSkillPath, "utf8")).resolves.toBe("# source peer skill\n");
+      await expect(readFile(targetSkillPath, "utf8")).resolves.toBe(
+        "# existing downstream skill\n"
       );
     } finally {
       await rm(runtimeDirectory, { recursive: true, force: true });

@@ -66,6 +66,14 @@
 
 **Shipped:** package-aware and leaf-aware handoff fields, downstream ownership surface metadata, validated probe contracts, competing peer-skill detection/remediation, and broker-managed host-surface migration for the first markdown competitors.
 
+### Shipped the maintained broker-first compiler and recovery contract
+
+**What:** Move raw broker-first request compilation behind a dedicated broker-owned seam, make maintained families explicit contract data, and harden shared-home recovery around that contract.
+
+**Why:** This is the point where broker-first stops being a loose prompt convention and becomes a fail-closed runtime with auditable recovery behavior.
+
+**Shipped:** maintained-family contract data, broker-owned query compiler extraction, maintained gate freshness/proof diagnostics, typed peer-surface audit history, transactional repair locking, and explicit `update --clear-manual-recovery` recovery flows.
+
 ## Next
 
 ### Improve real host auto-routing hit rate
@@ -74,7 +82,7 @@
 
 **Why:** The install and runtime skeleton is done. The next product bottleneck is whether the broker is actually chosen in real workflows often enough to matter.
 
-**Context:** Phase 1 foundations are already in `main`: host-shell wording is stronger, structured decline behavior is stable, routing traces persist into the shared home, and `skills-broker doctor` can roll up hit / misroute / fallback by request surface. The remaining gap is that host entry still depends too much on family-shaped examples instead of a truly coarse broker-first boundary.
+**Context:** The coarse host boundary, broker-owned query compiler, and maintained gate/update closure plus peer-surface recovery tightening are already in `main`. The remaining gap is operational: real installs can drift behind the latest shared-home contract, competing peer skills can stay visible long enough to steal requests, and the broker still needs stronger host-in-the-loop coverage plus better operator nudges to stay on the hot path.
 
 **Effort:** M
 **Priority:** P0
@@ -82,11 +90,11 @@
 
 ### Finish the capability-query migration and retire the legacy intent gate
 
-**What:** Introduce a broker-owned raw-request query compiler and reduce the remaining fixed-intent path to a compatibility shim that can eventually disappear.
+**What:** Remove the remaining top-boundary legacy-intent compatibility bridge so modern broker-first requests stay query-native end to end.
 
-**Why:** Query-first foundations are already live, but the top boundary still relies on handwritten legacy intent branches. That blocks scaling to more natural phrasing and more families without router surgery.
+**Why:** The compiler seam is shipped, but `BrokerIntent` still survives as the public top-boundary compatibility shape. That keeps future routing growth tied to old lane labels longer than it should.
 
-**Context:** Query-led discovery is already in `main` for host catalog, MCP, and workflow sources, and modern web / social / discovery requests already normalize query-first. The remaining gap is that `/Users/monkeyin/projects/skills-broker/src/core/request.ts` and `/Users/monkeyin/projects/skills-broker/src/core/types.ts` still keep `BrokerIntent` at the top boundary, and the broker still lacks a maintained bilingual raw-request compiler path for non-markdown families.
+**Context:** Query-led discovery, the broker-owned raw-request compiler, maintained bilingual eval coverage, and workflow routing are already in `main`. The remaining gap is the legacy-task bridge in `/Users/monkeyin/projects/skills-broker/src/core/request.ts`, the compatibility enum still exposed from `/Users/monkeyin/projects/skills-broker/src/core/types.ts`, and any remaining call sites that still treat `intent` as more than a degraded compatibility hint.
 
 **Effort:** L
 **Priority:** P0

@@ -10,7 +10,7 @@ This file is the repo-native execution board for `skills-broker`.
 
 - Compatibility-intent routing metrics are shipped on `origin/main`.
 - The coarse broker-first host boundary tightening is now shipped on the active shipping ref.
-- The Phase 2 / Phase 3 query-compiler migration is still delayed behind the remaining compiler and eval artifacts.
+- The Phase 2 / Phase 3 broker-first compiler, gate, and recovery slice is now shipped on `origin/main`.
 
 <!-- skills-broker-status:start -->
 ```json
@@ -50,19 +50,39 @@ This file is the repo-native execution board for `skills-broker`.
     },
     {
       "id": "phase2-phase3-query-compiler-migration",
-      "title": "Phase 2 / Phase 3 query-compiler migration",
-      "summary": "The design and implementation plan exist, but the broker-owned query compiler files and eval artifacts are not landed yet.",
-      "status": "delayed",
+      "title": "Phase 2 / Phase 3 broker-first compiler and recovery slice",
+      "summary": "Broker-owned query compilation, maintained-family gate diagnostics, and peer-surface recovery are shipped on the active shipping ref.",
+      "status": "shipped_remote",
       "proofs": [
         {
-          "type": "doc",
-          "path": "docs/superpowers/plans/2026-04-01-broker-first-phase2-phase3-implementation.md",
-          "label": "Phase 2 / Phase 3 implementation plan"
+          "type": "commit",
+          "ref": "16d549b",
+          "label": "feat: add maintained broker-first compiler contract"
         },
         {
-          "type": "file",
-          "path": "TODOS.md",
-          "label": "Roadmap still tracks migration as unfinished work"
+          "type": "commit",
+          "ref": "46ff8b6",
+          "label": "feat: harden shared-home broker-first recovery"
+        },
+        {
+          "type": "test",
+          "path": "tests/broker/query-compiler.test.ts",
+          "label": "query compiler contract coverage"
+        },
+        {
+          "type": "test",
+          "path": "tests/shared-home/broker-first-gate.test.ts",
+          "label": "maintained-family gate coverage"
+        },
+        {
+          "type": "test",
+          "path": "tests/shared-home/update-lifecycle.test.ts",
+          "label": "peer-surface recovery lifecycle coverage"
+        },
+        {
+          "type": "test",
+          "path": "tests/cli/lifecycle-cli.test.ts",
+          "label": "clear-manual-recovery keeps doctor strict green"
         }
       ]
     }

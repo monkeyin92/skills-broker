@@ -1,4 +1,4 @@
-import { cp, mkdir, readdir, rename, rm, stat } from "node:fs/promises";
+import { cp, mkdir, readdir, rename, rm, stat, readFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import type {
   PeerSurfaceAuditInspection,
@@ -112,6 +112,8 @@ export type PlannedPeerSkillMove = {
   targetDirectory: string;
 };
 
+export type AppliedPeerSkillMoveResult = "moved" | "adopted" | "noop";
+
 type MigratePeerSkillsResult = {
   migratedPeerSkills: string[];
   remainingPeerSkills: string[];
@@ -131,6 +133,71 @@ async function moveDirectory(sourceDirectory: string, targetDirectory: string): 
     await cp(sourceDirectory, targetDirectory, { recursive: true, force: false });
     await rm(sourceDirectory, { recursive: true, force: true });
   }
+}
+
+async function directoriesAreEquivalent(
+  sourceDirectory: string,
+  targetDirectory: string
+): Promise<boolean> {
+  const [sourceExists, targetExists] = await Promise.all([
+    directoryExists(sourceDirectory),
+    directoryExists(targetDirectory)
+  ]);
+
+  if (!sourceExists || !targetExists) {
+    return false;
+  }
+
+  const [sourceEntries, targetEntries] = await Promise.all([
+    readdir(sourceDirectory, { withFileTypes: true }),
+    readdir(targetDirectory, { withFileTypes: true })
+  ]);
+
+  if (sourceEntries.length !== targetEntries.length) {
+    return false;
+  }
+
+  const targetEntriesByName = new Map(targetEntries.map((entry) => [entry.name, entry]));
+
+  for (const sourceEntry of sourceEntries) {
+    const targetEntry = targetEntriesByName.get(sourceEntry.name);
+    if (targetEntry === undefined) {
+      return false;
+    }
+
+    if (
+      sourceEntry.isDirectory() !== targetEntry.isDirectory() ||
+      sourceEntry.isFile() !== targetEntry.isFile()
+    ) {
+      return false;
+    }
+
+    const sourceEntryPath = join(sourceDirectory, sourceEntry.name);
+    const targetEntryPath = join(targetDirectory, targetEntry.name);
+
+    if (sourceEntry.isDirectory()) {
+      if (!(await directoriesAreEquivalent(sourceEntryPath, targetEntryPath))) {
+        return false;
+      }
+      continue;
+    }
+
+    if (sourceEntry.isFile()) {
+      const [sourceFile, targetFile] = await Promise.all([
+        readFile(sourceEntryPath),
+        readFile(targetEntryPath)
+      ]);
+
+      if (Buffer.compare(sourceFile, targetFile) !== 0) {
+        return false;
+      }
+      continue;
+    }
+
+    return false;
+  }
+
+  return true;
 }
 
 export function planCompetingPeerSkillMoves(
@@ -162,30 +229,32 @@ export async function movePlannedPeerSkillMoves(
   await mkdir(dirname(moves[0]!.targetDirectory), { recursive: true });
 
   for (const move of moves) {
-    if (await directoryExists(move.targetDirectory)) {
-      throw new Error(
-        `cannot migrate ${move.skillName} because downstream target already exists at ${move.targetDirectory}`
-      );
-    }
-  }
-
-  for (const move of moves) {
     await applyPlannedPeerSkillMove(move);
   }
 }
 
 export async function applyPlannedPeerSkillMove(
   move: PlannedPeerSkillMove
-): Promise<void> {
+): Promise<AppliedPeerSkillMoveResult> {
   await mkdir(dirname(move.targetDirectory), { recursive: true });
 
   if (await directoryExists(move.targetDirectory)) {
-    throw new Error(
-      `cannot migrate ${move.skillName} because downstream target already exists at ${move.targetDirectory}`
-    );
+    if (await directoryExists(move.sourceDirectory)) {
+      if (await directoriesAreEquivalent(move.sourceDirectory, move.targetDirectory)) {
+        await rm(move.sourceDirectory, { recursive: true, force: true });
+        return "adopted";
+      }
+
+      throw new Error(
+        `cannot migrate ${move.skillName} because downstream target already exists at ${move.targetDirectory} and differs from the host-visible source`
+      );
+    }
+
+    return "noop";
   }
 
   await moveDirectory(move.sourceDirectory, move.targetDirectory);
+  return "moved";
 }
 
 export async function rollbackPeerSkillMoves(

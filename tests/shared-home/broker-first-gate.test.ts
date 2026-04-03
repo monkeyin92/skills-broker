@@ -6,6 +6,7 @@ import {
   BROKER_FIRST_GATE_ALLOWED_FRESHNESS_MS,
   brokerFirstGateArtifactPath,
   evaluateBrokerFirstGate,
+  materializeBrokerFirstGateArtifact,
   type BrokerFirstGateArtifact
 } from "../../src/shared-home/broker-first-gate";
 import {
@@ -126,6 +127,44 @@ describe("broker-first gate", () => {
         "quality_assurance",
         "investigation"
       ]);
+    } finally {
+      await rm(runtimeDirectory, { recursive: true, force: true });
+    }
+  });
+
+  it("materializes a fresh passing gate artifact from the maintained contract", async () => {
+    const runtimeDirectory = await mkdtemp(
+      join(tmpdir(), "skills-broker-gate-materialize-")
+    );
+    const brokerHomeDirectory = join(runtimeDirectory, ".skills-broker");
+
+    try {
+      await installSharedBrokerHome({
+        brokerHomeDirectory,
+        projectRoot: process.cwd()
+      });
+
+      const artifact = await materializeBrokerFirstGateArtifact({
+        brokerHomeDirectory,
+        now: new Date("2026-04-03T12:00:00.000Z")
+      });
+      const result = await evaluateBrokerFirstGate({
+        brokerHomeDirectory,
+        now: new Date("2026-04-03T12:30:00.000Z")
+      });
+
+      expect(artifact.issues).toEqual([]);
+      expect(
+        artifact.maintainedFamilies.every(
+          (family) =>
+            family.status === "green" &&
+            family.proofs.phase2Boundary === "pass" &&
+            family.proofs.phase3Eval === "pass" &&
+            family.proofs.peerConflict === "pass"
+        )
+      ).toBe(true);
+      expect(result.hasStrictIssues).toBe(false);
+      expect(result.freshness.state).toBe("fresh");
     } finally {
       await rm(runtimeDirectory, { recursive: true, force: true });
     }

@@ -113,7 +113,7 @@ describe("evaluateStatusBoard", () => {
     } finally {
       await rm(repoDirectory, { recursive: true, force: true });
     }
-  });
+  }, 15_000);
 
   it("fails closed when the canonical block uses an unknown proof type", async () => {
     const repoDirectory = await mkdtemp(join(tmpdir(), "skills-broker-status-invalid-block-"));

@@ -1,8 +1,12 @@
 import { access, mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { installCodexHostShell } from "../../src/hosts/codex/install";
+import {
+  brokerFirstGateArtifactPath,
+  evaluateBrokerFirstGate
+} from "../../src/shared-home/broker-first-gate";
 import { detectWritableDirectory } from "../../src/shared-home/detect";
 import { installSharedBrokerHome } from "../../src/shared-home/install";
 import { resolveLifecyclePaths } from "../../src/shared-home/paths";
@@ -14,6 +18,7 @@ import {
   readPeerSurfaceManualRecoveryMarker,
   writePeerSurfaceManualRecoveryMarker
 } from "../../src/shared-home/peer-surface-audit";
+import * as peerSurfaceAudit from "../../src/shared-home/peer-surface-audit";
 import { updateSharedBrokerHome } from "../../src/shared-home/update";
 
 async function seedManualRecovery(
@@ -343,6 +348,33 @@ describe("shared-home lifecycle paths", () => {
     }
   });
 
+  it("materializes a fresh broker-first gate artifact on successful update", async () => {
+    const runtimeDirectory = await mkdtemp(
+      join(tmpdir(), "skills-broker-update-gate-artifact-")
+    );
+    const brokerHomeDirectory = join(runtimeDirectory, ".skills-broker");
+    const artifactPath = brokerFirstGateArtifactPath(brokerHomeDirectory);
+
+    try {
+      const result = await updateSharedBrokerHome({
+        brokerHomeDirectory,
+        homeDirectory: runtimeDirectory
+      });
+      const gate = await evaluateBrokerFirstGate({
+        brokerHomeDirectory
+      });
+
+      expect(result.status).toBe("success");
+      await expect(readFile(artifactPath, "utf8")).resolves.toContain(
+        "\"phase2Boundary\": \"pass\""
+      );
+      expect(gate.hasStrictIssues).toBe(false);
+      expect(gate.freshness.state).toBe("fresh");
+    } finally {
+      await rm(runtimeDirectory, { recursive: true, force: true });
+    }
+  });
+
   it("warns when a managed broker shell still has competing peer skills beside it", async () => {
     const runtimeDirectory = await mkdtemp(
       join(tmpdir(), "skills-broker-update-peer-warning-")
@@ -496,6 +528,73 @@ describe("shared-home lifecycle paths", () => {
         })
       );
     } finally {
+      await rm(runtimeDirectory, { recursive: true, force: true });
+    }
+  });
+
+  it("keeps an adopted downstream peer hidden when repair ledger append fails", async () => {
+    const runtimeDirectory = await mkdtemp(
+      join(tmpdir(), "skills-broker-update-peer-repair-adopt-append-fail-")
+    );
+    const brokerHomeDirectory = join(runtimeDirectory, ".skills-broker");
+    const claudeCodeInstallDirectory = join(
+      runtimeDirectory,
+      ".claude",
+      "skills",
+      "skills-broker"
+    );
+    const peerSkillDirectory = join(
+      runtimeDirectory,
+      ".claude",
+      "skills",
+      "baoyu-url-to-markdown"
+    );
+    const downstreamSkillDirectory = join(
+      brokerHomeDirectory,
+      "downstream",
+      "claude-code",
+      "skills",
+      "baoyu-url-to-markdown"
+    );
+    const peerSkillPath = join(peerSkillDirectory, "SKILL.md");
+    const downstreamSkillPath = join(downstreamSkillDirectory, "SKILL.md");
+    const appendSpy = vi
+      .spyOn(peerSurfaceAudit, "appendPeerSurfaceLedgerEvent")
+      .mockRejectedValueOnce(new Error("ledger offline"));
+
+    try {
+      await mkdir(peerSkillDirectory, { recursive: true });
+      await mkdir(downstreamSkillDirectory, { recursive: true });
+      await writeFile(peerSkillPath, "# peer skill\n", "utf8");
+      await writeFile(downstreamSkillPath, "# peer skill\n", "utf8");
+
+      const result = await updateSharedBrokerHome({
+        brokerHomeDirectory,
+        claudeCodeInstallDirectory,
+        homeDirectory: runtimeDirectory,
+        repairHostSurface: true
+      });
+      const marker = await readPeerSurfaceManualRecoveryMarker(
+        brokerHomeDirectory,
+        "claude-code"
+      );
+
+      expect(result.status).toBe("degraded_success");
+      expect(result.hosts).toContainEqual(
+        expect.objectContaining({
+          name: "claude-code",
+          status: "failed",
+          reason: expect.stringContaining(
+            "BROKER_FIRST_PEER_SURFACE_REPAIR_APPEND_FAILED: ledger offline"
+          )
+        })
+      );
+      expect(result.warnings.join("\n")).not.toContain("manual recovery");
+      expect(marker).toBeNull();
+      await expect(access(peerSkillPath)).rejects.toThrow();
+      await expect(readFile(downstreamSkillPath, "utf8")).resolves.toBe("# peer skill\n");
+    } finally {
+      appendSpy.mockRestore();
       await rm(runtimeDirectory, { recursive: true, force: true });
     }
   });
@@ -661,6 +760,7 @@ describe("shared-home lifecycle paths", () => {
       join(tmpdir(), "skills-broker-update-peer-clear-success-")
     );
     const brokerHomeDirectory = join(runtimeDirectory, ".skills-broker");
+    const artifactPath = brokerFirstGateArtifactPath(brokerHomeDirectory);
     const codexInstallDirectory = join(
       runtimeDirectory,
       ".agents",
@@ -700,6 +800,9 @@ describe("shared-home lifecycle paths", () => {
         "codex"
       );
       const ledger = await readPeerSurfaceLedger(brokerHomeDirectory);
+      const gate = await evaluateBrokerFirstGate({
+        brokerHomeDirectory
+      });
 
       expect(result.status).toBe("success");
       expect(result.hosts).toContainEqual({
@@ -711,6 +814,11 @@ describe("shared-home lifecycle paths", () => {
         }
       });
       expect(marker).toBeNull();
+      await expect(readFile(artifactPath, "utf8")).resolves.toContain(
+        "\"phase2Boundary\": \"pass\""
+      );
+      expect(gate.hasStrictIssues).toBe(false);
+      expect(gate.freshness.state).toBe("fresh");
       expect(ledger.at(-1)).toEqual(
         expect.objectContaining({
           eventType: "clear_succeeded",

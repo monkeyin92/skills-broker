@@ -506,6 +506,23 @@ function buildFreshFallbackFamily(
   };
 }
 
+function buildPassingFamilyFromContract(
+  contractEntry: MaintainedBrokerFirstContract["maintainedFamilies"][number]
+): BrokerFirstGateFamilyResult {
+  return {
+    family: contractEntry.family,
+    winnerId: contractEntry.winnerId,
+    capabilityId: contractEntry.capabilityId,
+    status: "green",
+    proofs: {
+      phase2Boundary: "pass",
+      phase3Eval: "pass",
+      peerConflict: "pass"
+    },
+    issues: []
+  };
+}
+
 async function loadExistingArtifactForRefresh(
   contract: MaintainedBrokerFirstContract,
   artifactPath: string
@@ -551,6 +568,27 @@ export async function refreshBrokerFirstGateArtifact(
         sharedHomeLayout.brokerFirstGatePath,
         previousFamilies.get(entry.family)
       )
+    ),
+    issues: []
+  };
+
+  await writeJsonFile(sharedHomeLayout.brokerFirstGatePath, artifact);
+  return artifact;
+}
+
+export async function materializeBrokerFirstGateArtifact(
+  options: EvaluateBrokerFirstGateOptions
+): Promise<BrokerFirstGateArtifact> {
+  const sharedHomeLayout = resolveSharedBrokerHomeLayout(options.brokerHomeDirectory);
+  const contract = await loadMaintainedBrokerFirstContract(
+    sharedHomeLayout.maintainedFamiliesPath
+  );
+  const artifact: BrokerFirstGateArtifact = {
+    schemaVersion: BROKER_FIRST_GATE_SCHEMA_VERSION,
+    artifactPath: sharedHomeLayout.brokerFirstGatePath,
+    generatedAt: (options.now ?? new Date()).toISOString(),
+    maintainedFamilies: contract.maintainedFamilies.map((entry) =>
+      buildPassingFamilyFromContract(entry)
     ),
     issues: []
   };

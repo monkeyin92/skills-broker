@@ -324,6 +324,68 @@ describe("lifecycle cli", () => {
     }
   }, 15000);
 
+  it("keeps doctor --strict green after update materializes the broker-first gate", async () => {
+    const scriptPath = resolve("src/bin/skills-broker.ts");
+    const runtimeDirectory = await mkdtemp(
+      resolve(tmpdir(), "skills-broker-cli-gate-after-update-")
+    );
+    const brokerHomeDirectory = resolve(runtimeDirectory, ".skills-broker");
+
+    try {
+      await execFileAsync(
+        "node",
+        [
+          "--loader",
+          tsNodeLoaderPath,
+          scriptPath,
+          "update",
+          "--broker-home",
+          brokerHomeDirectory
+        ],
+        {
+          env: {
+            ...process.env,
+            HOME: runtimeDirectory
+          },
+          encoding: "utf8"
+        }
+      );
+
+      const { stdout } = await execFileAsync(
+        "node",
+        [
+          "--loader",
+          tsNodeLoaderPath,
+          scriptPath,
+          "doctor",
+          "--strict",
+          "--json",
+          "--broker-home",
+          brokerHomeDirectory
+        ],
+        {
+          env: {
+            ...process.env,
+            HOME: runtimeDirectory
+          },
+          encoding: "utf8"
+        }
+      );
+
+      const result = JSON.parse(stdout.trim()) as {
+        brokerFirstGate: {
+          hasStrictIssues: boolean;
+          freshness: { state: string };
+        };
+      };
+
+      expect(result.brokerFirstGate.hasStrictIssues).toBe(false);
+      expect(result.brokerFirstGate.freshness.state).toBe("fresh");
+    } finally {
+      await rm(runtimeDirectory, { recursive: true, force: true });
+    }
+  }, 15000);
+
   it("exits non-zero when doctor --strict sees competing peer skills", async () => {
     const scriptPath = resolve("src/bin/skills-broker.ts");
     const runtimeDirectory = await mkdtemp(resolve(tmpdir(), "skills-broker-cli-peer-strict-"));
@@ -789,6 +851,38 @@ describe("lifecycle cli", () => {
       expect(stdout).toContain("Host codex: cleared_manual_recovery");
       expect(stdout).toContain("Host codex cleared manual recovery: marker-123");
       await expect(access(markerPath)).rejects.toThrow();
+
+      const { stdout: doctorStdout } = await execFileAsync(
+        "node",
+        [
+          "--loader",
+          tsNodeLoaderPath,
+          scriptPath,
+          "doctor",
+          "--strict",
+          "--json",
+          "--broker-home",
+          brokerHomeDirectory,
+          "--codex-dir",
+          codexInstallDirectory
+        ],
+        {
+          env: {
+            ...process.env,
+            HOME: runtimeDirectory
+          },
+          encoding: "utf8"
+        }
+      );
+      const doctorResult = JSON.parse(doctorStdout.trim()) as {
+        brokerFirstGate: {
+          hasStrictIssues: boolean;
+          freshness: { state: string };
+        };
+      };
+
+      expect(doctorResult.brokerFirstGate.hasStrictIssues).toBe(false);
+      expect(doctorResult.brokerFirstGate.freshness.state).toBe("fresh");
     } finally {
       await rm(runtimeDirectory, { recursive: true, force: true });
     }
