@@ -10,6 +10,10 @@ import { runClaudeCodeAdapter } from "../../src/hosts/claude-code/adapter";
 import { installClaudeCodeHostShell } from "../../src/hosts/claude-code/install";
 import { runCodexAdapter } from "../../src/hosts/codex/adapter";
 import { installCodexHostShell } from "../../src/hosts/codex/install";
+import {
+  loadMaintainedBrokerFirstContract,
+  type MaintainedBrokerFirstContract
+} from "../../src/core/maintained-broker-first";
 import { installSharedBrokerHome } from "../../src/shared-home/install";
 
 const PHASE2_BOUNDARY_DECISIONS = [
@@ -73,6 +77,11 @@ async function loadEvalFixture(): Promise<EvalCase[]> {
   return fixture.cases;
 }
 
+const [cases, contract] = await Promise.all([
+  loadEvalFixture(),
+  loadMaintainedBrokerFirstContract()
+]);
+
 function defaultInvocationMode(host: EvalHost): "auto" | "explicit" {
   return host === "claude-code" ? "auto" : "explicit";
 }
@@ -107,93 +116,138 @@ async function runHostRunnerEvalCase(
   return result.trace;
 }
 
+function maintainedBrokerFirstFamilies(contract: MaintainedBrokerFirstContract): string[] {
+  return contract.maintainedFamilies.map((entry) => entry.family);
+}
+
+function maintainedBrokerFirstWinnerIds(
+  contract: MaintainedBrokerFirstContract
+): string[] {
+  return contract.maintainedFamilies.map((entry) => entry.winnerId);
+}
+
 describe("Phase 2 coarse-boundary eval harness", () => {
   it(
     "keeps Claude Code and Codex aligned on the maintained coarse-boundary eval set",
     async () => {
-    const runtimeDirectory = await mkdtemp(
-      join(tmpdir(), "skills-broker-phase2-boundary-")
-    );
-    const brokerHomeDirectory = join(runtimeDirectory, ".skills-broker");
-    const claudeShellDirectory = join(
-      runtimeDirectory,
-      ".claude",
-      "skills",
-      "skills-broker"
-    );
-    const codexShellDirectory = join(
-      runtimeDirectory,
-      ".agents",
-      "skills",
-      "skills-broker"
-    );
+      const runtimeDirectory = await mkdtemp(
+        join(tmpdir(), "skills-broker-phase2-boundary-")
+      );
+      const brokerHomeDirectory = join(runtimeDirectory, ".skills-broker");
+      const claudeShellDirectory = join(
+        runtimeDirectory,
+        ".claude",
+        "skills",
+        "skills-broker"
+      );
+      const codexShellDirectory = join(
+        runtimeDirectory,
+        ".agents",
+        "skills",
+        "skills-broker"
+      );
 
-    try {
-      const cases = await loadEvalFixture();
+      try {
+        await installSharedBrokerHome({
+          brokerHomeDirectory,
+          projectRoot: process.cwd()
+        });
+        await installClaudeCodeHostShell({
+          installDirectory: claudeShellDirectory,
+          brokerHomeDirectory,
+          projectRoot: process.cwd()
+        });
+        await installCodexHostShell({
+          installDirectory: codexShellDirectory,
+          brokerHomeDirectory
+        });
 
-      await installSharedBrokerHome({
-        brokerHomeDirectory,
-        projectRoot: process.cwd()
-      });
-      await installClaudeCodeHostShell({
-        installDirectory: claudeShellDirectory,
-        brokerHomeDirectory,
-        projectRoot: process.cwd()
-      });
-      await installCodexHostShell({
-        installDirectory: codexShellDirectory,
-        brokerHomeDirectory
-      });
+        const observedDecisions = new Set<BrokerRoutingTrace["hostDecision"]>();
+        const observedMaintainedWinners = new Map<string, Set<string>>();
 
-      const observedDecisions = new Set<BrokerRoutingTrace["hostDecision"]>();
-
-      for (const testCase of cases) {
-        const signatures: string[] = [];
-
-        for (const host of testCase.hosts) {
-          const trace =
-            testCase.mode === "synthetic_host_skip"
-              ? createSyntheticHostSkippedBrokerTrace({
-                  requestText: testCase.requestText,
-                  host,
-                  now: new Date(testCase.now),
-                  hostDecision:
-                    testCase.expect.hostDecision === "broker_first"
-                      ? undefined
-                      : testCase.expect.hostDecision,
-                  hostAction: testCase.expect.hostAction
-                })
-              : await runHostRunnerEvalCase(testCase, host, {
-                  "claude-code": claudeShellDirectory,
-                  codex: codexShellDirectory
-                });
-
-          expect(trace).toMatchObject({
-            requestText: testCase.requestText,
-            host,
-            ...testCase.expect
-          });
-          observedDecisions.add(trace.hostDecision);
-          signatures.push(
-            [
-              trace.hostDecision,
-              trace.resultCode,
-              trace.hostAction ?? "",
-              trace.winnerId ?? ""
-            ].join("|")
-          );
+        for (const family of maintainedBrokerFirstFamilies(contract)) {
+          observedMaintainedWinners.set(family, new Set<string>());
         }
 
-        expect(new Set(signatures).size).toBe(1);
-      }
+        for (const testCase of cases) {
+          const signatures: string[] = [];
 
-      expect([...observedDecisions].sort()).toEqual(
-        [...PHASE2_BOUNDARY_DECISIONS].sort()
-      );
-    } finally {
-      await rm(runtimeDirectory, { recursive: true, force: true });
-    }
+          for (const host of testCase.hosts) {
+            const trace =
+              testCase.mode === "synthetic_host_skip"
+                ? createSyntheticHostSkippedBrokerTrace({
+                    requestText: testCase.requestText,
+                    host,
+                    now: new Date(testCase.now),
+                    hostDecision:
+                      testCase.expect.hostDecision === "broker_first"
+                        ? undefined
+                        : testCase.expect.hostDecision,
+                    hostAction: testCase.expect.hostAction
+                  })
+                : await runHostRunnerEvalCase(testCase, host, {
+                    "claude-code": claudeShellDirectory,
+                    codex: codexShellDirectory
+                  });
+
+            expect(trace).toMatchObject({
+              requestText: testCase.requestText,
+              host,
+              ...testCase.expect
+            });
+            observedDecisions.add(trace.hostDecision);
+            signatures.push(
+              [
+                trace.hostDecision,
+                trace.resultCode,
+                trace.hostAction ?? "",
+                trace.winnerId ?? ""
+              ].join("|")
+            );
+
+            if (
+              testCase.mode === "host_runner" &&
+              trace.hostDecision === "broker_first" &&
+              trace.winnerId !== null
+            ) {
+              for (const family of contract.maintainedFamilies) {
+                if (family.winnerId === trace.winnerId) {
+                  observedMaintainedWinners.get(family.family)?.add(host);
+                }
+              }
+            }
+          }
+
+          expect(new Set(signatures).size).toBe(1);
+        }
+
+        expect([...observedDecisions].sort()).toEqual(
+          [...PHASE2_BOUNDARY_DECISIONS].sort()
+        );
+
+        expect(maintainedBrokerFirstWinnerIds(contract)).toEqual(
+          expect.arrayContaining(["requirements-analysis", "website-qa", "investigation"])
+        );
+        expect(maintainedBrokerFirstFamilies(contract)).toEqual(
+          expect.arrayContaining([
+            "requirements_analysis",
+            "quality_assurance",
+            "investigation"
+          ])
+        );
+
+        for (const family of contract.maintainedFamilies) {
+          const hosts = observedMaintainedWinners.get(family.family);
+
+          expect(hosts, `missing coverage for maintained family ${family.family}`).toBeDefined();
+          expect(hosts?.size).toBeGreaterThan(0);
+          expect(hosts?.has("claude-code")).toBe(true);
+          expect(hosts?.has("codex")).toBe(true);
+        }
+      } finally {
+        await rm(runtimeDirectory, { recursive: true, force: true });
+      }
     },
-    15_000
+    30_000
   );
 });

@@ -2,6 +2,7 @@ type HostShellSkillMarkdownOptions = {
   host: "claude-code" | "codex";
   invocationMode: "auto" | "explicit";
   runnerCommand: string;
+  maintainedBoundaryExamples?: readonly string[];
 };
 
 const BROKER_FIRST_EXAMPLES = [
@@ -49,9 +50,21 @@ ${prefix} '${JSON.stringify(payload)}'
 \`\`\``;
 }
 
+function mergeExamples(
+  maintainedBoundaryExamples: readonly string[] | undefined
+): readonly string[] {
+  return [
+    ...new Set([
+      ...(maintainedBoundaryExamples ?? []),
+      ...BROKER_FIRST_EXAMPLES
+    ])
+  ];
+}
+
 export function buildHostShellSkillMarkdown(
   options: HostShellSkillMarkdownOptions
 ): string {
+  const brokerFirstExamples = mergeExamples(options.maintainedBoundaryExamples);
   const markdownPayload = {
     requestText: "turn this webpage into markdown: https://example.com/article",
     host: options.host,
@@ -116,7 +129,7 @@ Use the broker first when the user is asking for:
 
 Examples:
 
-${renderExamples(BROKER_FIRST_EXAMPLES)}
+${renderExamples(brokerFirstExamples)}
 
 ## Handle Normally (\`handle_normally\`)
 

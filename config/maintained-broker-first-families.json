@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "maintainedFamilies": [
+    {
+      "family": "requirements_analysis",
+      "winnerId": "requirements-analysis",
+      "capabilityId": "gstack.office-hours",
+      "expectedIntent": "capability_discovery_or_install",
+      "boundaryExamples": [
+        "帮我做需求分析并产出设计文档",
+        "帮我看看这个需求有没有漏洞"
+      ]
+    },
+    {
+      "family": "quality_assurance",
+      "winnerId": "website-qa",
+      "capabilityId": "gstack.qa",
+      "expectedIntent": "capability_discovery_or_install",
+      "boundaryExamples": [
+        "测下这个网站的质量：https://www.baidu.com",
+        "QA 这个网站 https://example.com",
+        "检查这个网站质量"
+      ]
+    },
+    {
+      "family": "investigation",
+      "winnerId": "investigation",
+      "capabilityId": "gstack.investigate",
+      "expectedIntent": "capability_discovery_or_install",
+      "boundaryExamples": [
+        "investigate this site failure with a reusable workflow"
+      ]
+    }
+  ]
+}

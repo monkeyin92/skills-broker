@@ -11,9 +11,11 @@ export type InstallSharedBrokerHomeResult = {
   brokerHomeDirectory: string;
   packageJsonPath: string;
   hostCatalogPath: string;
+  maintainedFamiliesPath: string;
   mcpRegistryPath: string;
   distPath: string;
   runnerPath: string;
+  brokerFirstGatePath: string;
 };
 
 const RUNTIME_PACKAGE_NAME = "skills-broker-home";
@@ -102,9 +104,19 @@ export function resolveSharedBrokerHomeLayout(
     brokerHomeDirectory,
     packageJsonPath: join(brokerHomeDirectory, "package.json"),
     hostCatalogPath: join(brokerHomeDirectory, "config", "host-skills.seed.json"),
+    maintainedFamiliesPath: join(
+      brokerHomeDirectory,
+      "config",
+      "maintained-broker-first-families.json"
+    ),
     mcpRegistryPath: join(brokerHomeDirectory, "config", "mcp-registry.seed.json"),
     distPath: join(brokerHomeDirectory, "dist"),
-    runnerPath: join(brokerHomeDirectory, "bin", "run-broker")
+    runnerPath: join(brokerHomeDirectory, "bin", "run-broker"),
+    brokerFirstGatePath: join(
+      brokerHomeDirectory,
+      "state",
+      "broker-first-gate.json"
+    )
   };
 }
 
@@ -116,6 +128,7 @@ export async function installSharedBrokerHome(
   const {
     packageJsonPath,
     hostCatalogPath,
+    maintainedFamiliesPath,
     mcpRegistryPath,
     distPath,
     runnerPath
@@ -132,6 +145,10 @@ export async function installSharedBrokerHome(
     "utf8"
   );
   await copyFile(join(sourceRoot, "config", "host-skills.seed.json"), hostCatalogPath);
+  await copyFile(
+    join(sourceRoot, "config", "maintained-broker-first-families.json"),
+    maintainedFamiliesPath
+  );
   await copyFile(join(sourceRoot, "config", "mcp-registry.seed.json"), mcpRegistryPath);
   await cp(join(sourceRoot, "dist"), distPath, { recursive: true, force: true });
   await writeFile(runnerPath, buildRunnerScript(), "utf8");

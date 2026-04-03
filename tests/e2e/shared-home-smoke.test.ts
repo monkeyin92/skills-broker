@@ -6,6 +6,7 @@ import { promisify } from "node:util";
 import { describe, expect, it } from "vitest";
 import { runClaudeCodeAdapter } from "../../src/hosts/claude-code/adapter";
 import { runCodexAdapter } from "../../src/hosts/codex/adapter";
+import { loadMaintainedBrokerFirstContract } from "../../src/core/maintained-broker-first";
 import { installSharedBrokerHome } from "../../src/shared-home/install";
 
 const execFileAsync = promisify(execFile);
@@ -58,6 +59,11 @@ describe("shared broker home smoke", () => {
       const buildScriptPath = join(process.cwd(), "dist", "bin", "skills-broker.js");
       const sharedRunnerPath = join(brokerHomeDirectory, "bin", "run-broker");
       const sharedDistCliPath = join(brokerHomeDirectory, "dist", "cli.js");
+      const sharedMaintainedFamiliesPath = join(
+        brokerHomeDirectory,
+        "config",
+        "maintained-broker-first-families.json"
+      );
       const claudeManifestPath = join(
         claudeShellDirectory,
         ".claude-plugin",
@@ -67,6 +73,7 @@ describe("shared broker home smoke", () => {
       const codexRunnerPath = join(codexShellDirectory, "bin", "run-broker");
 
       try {
+        const sourceContract = await loadMaintainedBrokerFirstContract();
         await expect(access(buildScriptPath)).resolves.toBeUndefined();
         await execFileAsync("node", [
           buildScriptPath,
@@ -81,8 +88,14 @@ describe("shared broker home smoke", () => {
 
         await expect(access(sharedRunnerPath)).resolves.toBeUndefined();
         await expect(access(sharedDistCliPath)).resolves.toBeUndefined();
+        await expect(access(sharedMaintainedFamiliesPath)).resolves.toBeUndefined();
         await expect(access(claudeManifestPath)).resolves.toBeUndefined();
         await expect(access(codexSkillPath)).resolves.toBeUndefined();
+
+        const sharedContract = await loadMaintainedBrokerFirstContract(
+          sharedMaintainedFamiliesPath
+        );
+        expect(sharedContract).toEqual(sourceContract);
 
         const codexSkillContents = await readFile(codexSkillPath, "utf8");
         expect(codexSkillContents).toContain("# Skills Broker");
@@ -207,7 +220,7 @@ describe("shared broker home smoke", () => {
         await rm(runtimeDirectory, { recursive: true, force: true });
       }
     },
-    15_000
+    30_000
   );
 
   it("keeps an old codex host shell working against a new shared runtime", async () => {

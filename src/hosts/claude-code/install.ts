@@ -1,5 +1,9 @@
 import { chmod, copyFile, cp, mkdir, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
+import {
+  loadMaintainedBrokerFirstContract,
+  maintainedBrokerFirstBoundaryExamples
+} from "../../core/maintained-broker-first.js";
 import { buildHostShellSkillMarkdown } from "../skill-markdown.js";
 import { writeManagedShellManifest } from "../../shared-home/ownership.js";
 import { readPackageVersion } from "../../shared-home/version.js";
@@ -45,14 +49,6 @@ function buildRuntimePackageJson(version: string) {
     private: true,
     type: "module"
   };
-}
-
-function buildSkillMarkdown(runnerCommand: string) {
-  return buildHostShellSkillMarkdown({
-    host: "claude-code",
-    invocationMode: "auto",
-    runnerCommand
-  });
 }
 
 function buildHostShellRunnerScript(brokerHomeDirectory: string): string {
@@ -145,6 +141,9 @@ export async function installClaudeCodePlugin(
 ): Promise<InstallClaudeCodePluginResult> {
   const sourceRoot = resolve(options.projectRoot ?? process.cwd());
   const version = await readPackageVersion(options.projectRoot);
+  const maintainedContract = await loadMaintainedBrokerFirstContract(
+    join(sourceRoot, "config", "maintained-broker-first-families.json")
+  );
   const packageJsonPath = join(options.installDirectory, "package.json");
   const manifestPath = join(
     options.installDirectory,
@@ -186,7 +185,13 @@ export async function installClaudeCodePlugin(
   );
   await writeFile(
     skillPath,
-    buildSkillMarkdown("../../bin/run-broker"),
+    buildHostShellSkillMarkdown({
+      host: "claude-code",
+      invocationMode: "auto",
+      runnerCommand: "../../bin/run-broker",
+      maintainedBoundaryExamples:
+        maintainedBrokerFirstBoundaryExamples(maintainedContract)
+    }),
     "utf8"
   );
   await copyFile(join(sourceRoot, "config", "host-skills.seed.json"), hostCatalogPath);
@@ -211,7 +216,11 @@ export async function installClaudeCodeHostShell(
   options: InstallClaudeCodeHostShellOptions
 ): Promise<InstallClaudeCodePluginResult> {
   const brokerHomeDirectory = resolve(options.brokerHomeDirectory);
+  const sourceRoot = resolve(options.projectRoot ?? process.cwd());
   const version = await readPackageVersion(options.projectRoot);
+  const maintainedContract = await loadMaintainedBrokerFirstContract(
+    join(sourceRoot, "config", "maintained-broker-first-families.json")
+  );
   const packageJsonPath = join(options.installDirectory, "package.json");
   const manifestPath = join(
     options.installDirectory,
@@ -234,7 +243,17 @@ export async function installClaudeCodeHostShell(
     `${JSON.stringify(buildManifest(version), null, 2)}\n`,
     "utf8"
   );
-  await writeFile(skillPath, buildSkillMarkdown("./bin/run-broker"), "utf8");
+  await writeFile(
+    skillPath,
+    buildHostShellSkillMarkdown({
+      host: "claude-code",
+      invocationMode: "auto",
+      runnerCommand: "./bin/run-broker",
+      maintainedBoundaryExamples:
+        maintainedBrokerFirstBoundaryExamples(maintainedContract)
+    }),
+    "utf8"
+  );
   await writeFile(
     runnerPath,
     buildHostShellRunnerScript(brokerHomeDirectory),

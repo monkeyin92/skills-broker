@@ -1,5 +1,9 @@
 import { chmod, mkdir, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
+import {
+  loadMaintainedBrokerFirstContract,
+  maintainedBrokerFirstBoundaryExamples
+} from "../../core/maintained-broker-first.js";
 import { buildHostShellSkillMarkdown } from "../skill-markdown.js";
 import { writeManagedShellManifest } from "../../shared-home/ownership.js";
 import { readPackageVersion } from "../../shared-home/version.js";
@@ -17,14 +21,6 @@ export type InstallCodexHostShellResult = {
 };
 
 const RUNNER_FILE_NAME = "run-broker";
-
-function buildSkillMarkdown(installDirectory: string): string {
-  return buildHostShellSkillMarkdown({
-    host: "codex",
-    invocationMode: "explicit",
-    runnerCommand: join(installDirectory, "bin", RUNNER_FILE_NAME)
-  });
-}
 
 function buildRunnerScript(brokerHomeDirectory: string): string {
   return `#!/usr/bin/env bash
@@ -54,13 +50,27 @@ export async function installCodexHostShell(
   options: InstallCodexHostShellOptions
 ): Promise<InstallCodexHostShellResult> {
   const brokerHomeDirectory = resolve(options.brokerHomeDirectory);
+  const sourceRoot = resolve(options.projectRoot ?? process.cwd());
   const version = await readPackageVersion(options.projectRoot);
+  const maintainedContract = await loadMaintainedBrokerFirstContract(
+    join(sourceRoot, "config", "maintained-broker-first-families.json")
+  );
   const skillPath = join(options.installDirectory, "SKILL.md");
   const runnerPath = join(options.installDirectory, "bin", RUNNER_FILE_NAME);
 
   await mkdir(dirname(skillPath), { recursive: true });
   await mkdir(dirname(runnerPath), { recursive: true });
-  await writeFile(skillPath, buildSkillMarkdown(options.installDirectory), "utf8");
+  await writeFile(
+    skillPath,
+    buildHostShellSkillMarkdown({
+      host: "codex",
+      invocationMode: "explicit",
+      runnerCommand: join(options.installDirectory, "bin", RUNNER_FILE_NAME),
+      maintainedBoundaryExamples:
+        maintainedBrokerFirstBoundaryExamples(maintainedContract)
+    }),
+    "utf8"
+  );
   await writeFile(runnerPath, buildRunnerScript(brokerHomeDirectory), "utf8");
   await chmod(runnerPath, 0o755);
   await writeManagedShellManifest(options.installDirectory, {
