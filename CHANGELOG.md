@@ -2,6 +2,24 @@
 
 ## [Unreleased]
 
+## [0.1.11] - 2026-04-03
+
+### Added
+
+- Added a maintained broker-first family contract plus shared-home gate artifacts, freshness checks, and proof rows so the broker can fail closed on the families it is actively proving.
+- Added typed peer-surface audit history, host-scoped repair locking, and an explicit `update --clear-manual-recovery` operator path for recovering from failed host-surface repairs.
+
+### Changed
+
+- Changed Claude Code and Codex host-shell guidance so the host only decides `broker_first`, `handle_normally`, or `clarify_before_broker`, while the broker compiles and selects the downstream family.
+- Changed broker-first raw-request handling so supported requirements-analysis, website-QA, investigation, and idea-workflow requests compile into structured capability queries before ranking and handoff.
+- Changed `skills-broker doctor` and shared-home lifecycle output to show broker-first gate freshness, maintained-family proof state, peer-surface remediation, and manual-recovery clear commands.
+
+### Fixed
+
+- Fixed strict doctor gating so missing or stale broker-first gates, peer-surface integrity problems, manual-recovery blockers, and visible competing peer skills now fail closed instead of slipping through as warnings.
+- Fixed peer-surface repair and clear flows so recovery markers carry typed audit evidence, reject mismatched marker clears, and keep the shared broker home pointed at the right location in operator follow-up commands.
+
 ## [0.1.10] - 2026-04-02
 
 ### Changed
