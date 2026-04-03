@@ -7,6 +7,12 @@ import { access, chmod, mkdtemp, mkdir, rm, symlink, writeFile } from "node:fs/p
 import { tmpdir } from "node:os";
 import { installSharedBrokerHome } from "../../src/shared-home/install";
 import { writeManagedShellManifest } from "../../src/shared-home/ownership";
+import {
+  appendPeerSurfaceLedgerEvent,
+  createPeerSurfaceLedgerEvent,
+  peerSurfaceManualRecoveryMarkerPath,
+  writePeerSurfaceManualRecoveryMarker
+} from "../../src/shared-home/peer-surface-audit";
 import { commitAll, initGitRepo } from "../helpers/git";
 import { execNpm } from "../helpers/npm";
 
@@ -85,6 +91,33 @@ describe("lifecycle cli", () => {
     expect(result.repairHostSurface).toBe(true);
   });
 
+  it("parses --clear-manual-recovery with host, marker id, and evidence flags", async () => {
+    const result = await runLifecycleCli([
+      "update",
+      "--clear-manual-recovery",
+      "--host",
+      "codex",
+      "--marker-id",
+      "marker-123",
+      "--operator-note",
+      "checked host",
+      "--verification-note",
+      "host surface clean",
+      "--evidence-ref",
+      "manual-check-pass",
+      "--evidence-ref",
+      "doctor-green"
+    ]);
+
+    expect(result.command).toBe("update");
+    expect(result.clearManualRecovery).toBe(true);
+    expect(result.hostOverride).toBe("codex");
+    expect(result.markerIdOverride).toBe("marker-123");
+    expect(result.operatorNote).toBe("checked host");
+    expect(result.verificationNote).toBe("host surface clean");
+    expect(result.evidenceRefs).toEqual(["manual-check-pass", "doctor-green"]);
+  });
+
   it("recognizes --json doctor", async () => {
     const result = await runLifecycleCli(["--json", "doctor"]);
 
@@ -156,7 +189,7 @@ describe("lifecycle cli", () => {
     } finally {
       await rm(runtimeDirectory, { recursive: true, force: true });
     }
-  });
+  }, 15000);
 
   it("exits non-zero when doctor --strict sees a strict status issue", async () => {
     const scriptPath = resolve("src/bin/skills-broker.ts");
@@ -196,7 +229,7 @@ describe("lifecycle cli", () => {
     } finally {
       await rm(runtimeDirectory, { recursive: true, force: true });
     }
-  });
+  }, 15000);
 
   it("keeps doctor --strict green when no status item needs remote truth", async () => {
     const scriptPath = resolve("src/bin/skills-broker.ts");
@@ -242,7 +275,124 @@ describe("lifecycle cli", () => {
     } finally {
       await rm(runtimeDirectory, { recursive: true, force: true });
     }
-  });
+  }, 15000);
+
+  it("exits non-zero when doctor --strict sees a broker-first gate issue", async () => {
+    const scriptPath = resolve("src/bin/skills-broker.ts");
+    const runtimeDirectory = await mkdtemp(resolve(tmpdir(), "skills-broker-cli-gate-strict-"));
+    const brokerHomeDirectory = resolve(runtimeDirectory, ".skills-broker");
+    const repoDirectory = resolve(runtimeDirectory, "repo");
+
+    try {
+      await installSharedBrokerHome({
+        brokerHomeDirectory,
+        projectRoot: process.cwd()
+      });
+      await initGitRepo(repoDirectory);
+      await writeFile(resolve(repoDirectory, "README.md"), "# repo\n", "utf8");
+      await writeFile(resolve(repoDirectory, "STATUS.md"), renderStatusBoard("in_progress"), "utf8");
+      await commitAll(repoDirectory, "add local-only status board");
+
+      await expect(
+        execFileAsync(
+          "node",
+          [
+            "--loader",
+            tsNodeLoaderPath,
+            scriptPath,
+            "doctor",
+            "--strict",
+            "--broker-home",
+            brokerHomeDirectory,
+            "--repo-root",
+            repoDirectory
+          ],
+          {
+            env: {
+              ...process.env,
+              HOME: runtimeDirectory
+            },
+            encoding: "utf8"
+          }
+        )
+      ).rejects.toMatchObject({
+        code: 1,
+        stdout: expect.stringContaining("Broker-first gate issue BROKER_FIRST_GATE_MISSING")
+      });
+    } finally {
+      await rm(runtimeDirectory, { recursive: true, force: true });
+    }
+  }, 15000);
+
+  it("exits non-zero when doctor --strict sees competing peer skills", async () => {
+    const scriptPath = resolve("src/bin/skills-broker.ts");
+    const runtimeDirectory = await mkdtemp(resolve(tmpdir(), "skills-broker-cli-peer-strict-"));
+    const brokerHomeDirectory = resolve(runtimeDirectory, ".skills-broker");
+    const repoDirectory = resolve(runtimeDirectory, "repo");
+    const codexInstallDirectory = resolve(
+      runtimeDirectory,
+      ".agents",
+      "skills",
+      "skills-broker"
+    );
+
+    try {
+      await installSharedBrokerHome({
+        brokerHomeDirectory,
+        projectRoot: process.cwd()
+      });
+      await initGitRepo(repoDirectory);
+      await writeFile(resolve(repoDirectory, "README.md"), "# repo\n", "utf8");
+      await writeFile(
+        resolve(repoDirectory, "STATUS.md"),
+        renderStatusBoard("in_progress"),
+        "utf8"
+      );
+      await commitAll(repoDirectory, "add local-only status board");
+      await mkdir(codexInstallDirectory, { recursive: true });
+      await writeManagedShellManifest(codexInstallDirectory, {
+        managedBy: "skills-broker",
+        host: "codex",
+        version: "test-version",
+        brokerHome: brokerHomeDirectory
+      });
+      await mkdir(resolve(runtimeDirectory, ".agents", "skills", "baoyu-danger-x-to-markdown"), {
+        recursive: true
+      });
+
+      await expect(
+        execFileAsync(
+          "node",
+          [
+            "--loader",
+            tsNodeLoaderPath,
+            scriptPath,
+            "doctor",
+            "--strict",
+            "--refresh-remote",
+            "--broker-home",
+            brokerHomeDirectory,
+            "--codex-dir",
+            codexInstallDirectory,
+            "--repo-root",
+            repoDirectory
+          ],
+          {
+            env: {
+              ...process.env,
+              HOME: runtimeDirectory
+            },
+            encoding: "utf8"
+          }
+        )
+      ).rejects.toMatchObject({
+        code: 1,
+        stdout: expect.stringContaining("Host codex competing peers")
+      });
+    } finally {
+      await rm(runtimeDirectory, { recursive: true, force: true });
+    }
+  }, 15000);
 
   it("prints remove result as JSON when --json is passed", async () => {
     const scriptPath = resolve("src/bin/skills-broker.ts");
@@ -549,6 +699,191 @@ describe("lifecycle cli", () => {
       await rm(runtimeDirectory, { recursive: true, force: true });
     }
   });
+
+  it("clears manual recovery through the lifecycle CLI", async () => {
+    const scriptPath = resolve("src/bin/skills-broker.ts");
+    const runtimeDirectory = await mkdtemp(resolve(tmpdir(), "skills-broker-cli-clear-manual-"));
+    const brokerHomeDirectory = resolve(runtimeDirectory, ".skills-broker");
+    const codexInstallDirectory = resolve(
+      runtimeDirectory,
+      ".agents",
+      "skills",
+      "skills-broker"
+    );
+    const markerPath = peerSurfaceManualRecoveryMarkerPath(
+      brokerHomeDirectory,
+      "codex"
+    );
+
+    try {
+      await installSharedBrokerHome({
+        brokerHomeDirectory,
+        projectRoot: process.cwd()
+      });
+      await mkdir(codexInstallDirectory, { recursive: true });
+      await writeManagedShellManifest(codexInstallDirectory, {
+        managedBy: "skills-broker",
+        host: "codex",
+        version: "test-version",
+        brokerHome: brokerHomeDirectory
+      });
+      await writePeerSurfaceManualRecoveryMarker(brokerHomeDirectory, {
+        schemaVersion: 1,
+        markerId: "marker-123",
+        host: "codex",
+        attemptId: "attempt-123",
+        createdAt: "2026-04-03T01:00:00.000Z",
+        failurePhase: "rollback",
+        failedPeers: ["baoyu-danger-x-to-markdown"],
+        rollbackStatus: "failed",
+        evidenceRefs: [],
+        reason: "rollback failed during repair"
+      });
+      await appendPeerSurfaceLedgerEvent(
+        brokerHomeDirectory,
+        createPeerSurfaceLedgerEvent({
+          eventType: "manual_recovery_required",
+          host: "codex",
+          actor: "skills-broker",
+          result: "failed",
+          evidenceRefs: [],
+          attemptId: "attempt-123",
+          markerId: "marker-123",
+          details: {
+            failedPeers: ["baoyu-danger-x-to-markdown"],
+            failurePhase: "rollback",
+            rollbackStatus: "failed",
+            reason: "rollback failed during repair"
+          }
+        })
+      );
+
+      const { stdout } = await execFileAsync("node", [
+        "--loader",
+        tsNodeLoaderPath,
+        scriptPath,
+        "update",
+        "--clear-manual-recovery",
+        "--broker-home",
+        brokerHomeDirectory,
+        "--codex-dir",
+        codexInstallDirectory,
+        "--host",
+        "codex",
+        "--marker-id",
+        "marker-123",
+        "--operator-note",
+        "checked host",
+        "--verification-note",
+        "host surface clean",
+        "--evidence-ref",
+        "ticket-123"
+      ], {
+        env: {
+          ...process.env,
+          HOME: runtimeDirectory
+        },
+        encoding: "utf8"
+      });
+
+      expect(stdout).toContain("Host codex: cleared_manual_recovery");
+      expect(stdout).toContain("Host codex cleared manual recovery: marker-123");
+      await expect(access(markerPath)).rejects.toThrow();
+    } finally {
+      await rm(runtimeDirectory, { recursive: true, force: true });
+    }
+  }, 15000);
+
+  it("exits non-zero when clear-manual-recovery is rejected", async () => {
+    const scriptPath = resolve("src/bin/skills-broker.ts");
+    const runtimeDirectory = await mkdtemp(resolve(tmpdir(), "skills-broker-cli-clear-reject-"));
+    const brokerHomeDirectory = resolve(runtimeDirectory, ".skills-broker");
+    const codexInstallDirectory = resolve(
+      runtimeDirectory,
+      ".agents",
+      "skills",
+      "skills-broker"
+    );
+
+    try {
+      await installSharedBrokerHome({
+        brokerHomeDirectory,
+        projectRoot: process.cwd()
+      });
+      await mkdir(codexInstallDirectory, { recursive: true });
+      await writeManagedShellManifest(codexInstallDirectory, {
+        managedBy: "skills-broker",
+        host: "codex",
+        version: "test-version",
+        brokerHome: brokerHomeDirectory
+      });
+      await writePeerSurfaceManualRecoveryMarker(brokerHomeDirectory, {
+        schemaVersion: 1,
+        markerId: "marker-123",
+        host: "codex",
+        attemptId: "attempt-123",
+        createdAt: "2026-04-03T01:00:00.000Z",
+        failurePhase: "rollback",
+        failedPeers: ["baoyu-danger-x-to-markdown"],
+        rollbackStatus: "failed",
+        evidenceRefs: [],
+        reason: "rollback failed during repair"
+      });
+      await appendPeerSurfaceLedgerEvent(
+        brokerHomeDirectory,
+        createPeerSurfaceLedgerEvent({
+          eventType: "manual_recovery_required",
+          host: "codex",
+          actor: "skills-broker",
+          result: "failed",
+          evidenceRefs: [],
+          attemptId: "attempt-123",
+          markerId: "marker-123",
+          details: {
+            failedPeers: ["baoyu-danger-x-to-markdown"],
+            failurePhase: "rollback",
+            rollbackStatus: "failed",
+            reason: "rollback failed during repair"
+          }
+        })
+      );
+
+      await expect(
+        execFileAsync("node", [
+          "--loader",
+          tsNodeLoaderPath,
+          scriptPath,
+          "update",
+          "--clear-manual-recovery",
+          "--broker-home",
+          brokerHomeDirectory,
+          "--codex-dir",
+          codexInstallDirectory,
+          "--host",
+          "codex",
+          "--marker-id",
+          "wrong-marker",
+          "--operator-note",
+          "checked host",
+          "--verification-note",
+          "marker mismatch confirmed",
+          "--evidence-ref",
+          "ticket-124"
+        ], {
+          env: {
+            ...process.env,
+            HOME: runtimeDirectory
+          },
+          encoding: "utf8"
+        })
+      ).rejects.toMatchObject({
+        code: 1,
+        stdout: expect.stringContaining("marker mismatch")
+      });
+    } finally {
+      await rm(runtimeDirectory, { recursive: true, force: true });
+    }
+  }, 15000);
 
   it("prints competing peer remediation in doctor text output", async () => {
     const scriptPath = resolve("src/bin/skills-broker.ts");

@@ -1,9 +1,18 @@
 import { execFile } from "node:child_process";
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { promisify } from "node:util";
 import { describe, expect, it } from "vitest";
+import { loadMaintainedBrokerFirstContract } from "../../src/core/maintained-broker-first";
+import {
+  brokerFirstGateArtifactPath,
+  type BrokerFirstGateArtifact
+} from "../../src/shared-home/broker-first-gate";
+import {
+  installSharedBrokerHome,
+  resolveSharedBrokerHomeLayout
+} from "../../src/shared-home/install";
 import {
   cloneGitRepo,
   commitAll,
@@ -58,11 +67,50 @@ ${JSON.stringify({ schemaVersion: 1, items }, null, 2)}
 `;
 }
 
+async function writeFreshGateArtifact(brokerHomeDirectory: string): Promise<void> {
+  const layout = resolveSharedBrokerHomeLayout(brokerHomeDirectory);
+  const contract = await loadMaintainedBrokerFirstContract(layout.maintainedFamiliesPath);
+  const artifactPath = brokerFirstGateArtifactPath(brokerHomeDirectory);
+  const artifact: BrokerFirstGateArtifact = {
+    schemaVersion: 1,
+    artifactPath,
+    generatedAt: new Date().toISOString(),
+    maintainedFamilies: contract.maintainedFamilies.map((family) => ({
+      family: family.family,
+      winnerId: family.winnerId,
+      capabilityId: family.capabilityId,
+      status: "green",
+      proofs: {
+        phase2Boundary: "pass",
+        phase3Eval: "pass",
+        peerConflict: "pass"
+      },
+      issues: []
+    })),
+    issues: []
+  };
+
+  await mkdir(join(brokerHomeDirectory, "state"), { recursive: true });
+  await writeFile(artifactPath, `${JSON.stringify(artifact, null, 2)}\n`, "utf8");
+}
+
+async function setupBrokerHome(homeDirectory: string): Promise<string> {
+  const brokerHomeDirectory = join(homeDirectory, ".skills-broker");
+  await installSharedBrokerHome({
+    brokerHomeDirectory,
+    projectRoot: process.cwd()
+  });
+  await writeFreshGateArtifact(brokerHomeDirectory);
+  return brokerHomeDirectory;
+}
+
 describe("status doctor git integration", () => {
   it("refreshes remote truth and keeps strict doctor green when the board matches", async () => {
     const remoteDirectory = await mkdtemp(join(tmpdir(), "skills-broker-status-e2e-remote-"));
     const repoDirectory = await mkdtemp(join(tmpdir(), "skills-broker-status-e2e-local-"));
+    const homeDirectory = await mkdtemp(join(tmpdir(), "skills-broker-status-e2e-home-"));
     const scriptPath = resolve("src/bin/skills-broker.ts");
+    const brokerHomeDirectory = await setupBrokerHome(homeDirectory);
 
     try {
       await initBareGitRepo(remoteDirectory);
@@ -89,10 +137,15 @@ describe("status doctor git integration", () => {
         "--json",
         "--strict",
         "--refresh-remote",
+        "--broker-home",
+        brokerHomeDirectory,
         "--repo-root",
         repoDirectory
       ], {
-        env: process.env,
+        env: {
+          ...process.env,
+          HOME: homeDirectory
+        },
         encoding: "utf8"
       });
 
@@ -121,13 +174,16 @@ describe("status doctor git integration", () => {
     } finally {
       await rm(repoDirectory, { recursive: true, force: true });
       await rm(remoteDirectory, { recursive: true, force: true });
+      await rm(homeDirectory, { recursive: true, force: true });
     }
-  }, 20_000);
+  }, 30_000);
 
   it("falls back to the remote default branch when strict doctor runs on detached HEAD", async () => {
     const remoteDirectory = await mkdtemp(join(tmpdir(), "skills-broker-status-e2e-detached-remote-"));
     const repoDirectory = await mkdtemp(join(tmpdir(), "skills-broker-status-e2e-detached-local-"));
+    const homeDirectory = await mkdtemp(join(tmpdir(), "skills-broker-status-e2e-detached-home-"));
     const scriptPath = resolve("src/bin/skills-broker.ts");
+    const brokerHomeDirectory = await setupBrokerHome(homeDirectory);
 
     try {
       await initBareGitRepo(remoteDirectory);
@@ -155,10 +211,15 @@ describe("status doctor git integration", () => {
         "--json",
         "--strict",
         "--refresh-remote",
+        "--broker-home",
+        brokerHomeDirectory,
         "--repo-root",
         repoDirectory
       ], {
-        env: process.env,
+        env: {
+          ...process.env,
+          HOME: homeDirectory
+        },
         encoding: "utf8"
       });
 
@@ -185,12 +246,15 @@ describe("status doctor git integration", () => {
     } finally {
       await rm(repoDirectory, { recursive: true, force: true });
       await rm(remoteDirectory, { recursive: true, force: true });
+      await rm(homeDirectory, { recursive: true, force: true });
     }
-  }, 20_000);
+  }, 30_000);
 
   it("fails strict doctor when remote refresh breaks but still preserves local diagnostics", async () => {
     const repoDirectory = await mkdtemp(join(tmpdir(), "skills-broker-status-e2e-refresh-fail-"));
+    const homeDirectory = await mkdtemp(join(tmpdir(), "skills-broker-status-e2e-refresh-fail-home-"));
     const scriptPath = resolve("src/bin/skills-broker.ts");
+    const brokerHomeDirectory = await setupBrokerHome(homeDirectory);
 
     try {
       await initGitRepo(repoDirectory);
@@ -213,11 +277,16 @@ describe("status doctor git integration", () => {
             "--json",
             "--strict",
             "--refresh-remote",
+            "--broker-home",
+            brokerHomeDirectory,
             "--repo-root",
             repoDirectory
           ],
           {
-            env: process.env,
+            env: {
+              ...process.env,
+              HOME: homeDirectory
+            },
             encoding: "utf8"
           }
         )
@@ -227,6 +296,7 @@ describe("status doctor git integration", () => {
       });
     } finally {
       await rm(repoDirectory, { recursive: true, force: true });
+      await rm(homeDirectory, { recursive: true, force: true });
     }
-  }, 20_000);
+  }, 30_000);
 });

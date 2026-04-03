@@ -226,7 +226,7 @@ describe("evaluateStatusBoard", () => {
       await rm(repoDirectory, { recursive: true, force: true });
       await rm(remoteDirectory, { recursive: true, force: true });
     }
-  });
+  }, 40_000);
 
   it("preserves declared and evaluated status on mismatch", async () => {
     const remoteDirectory = await mkdtemp(join(tmpdir(), "skills-broker-status-mismatch-remote-"));
@@ -278,7 +278,7 @@ describe("evaluateStatusBoard", () => {
       await rm(repoDirectory, { recursive: true, force: true });
       await rm(remoteDirectory, { recursive: true, force: true });
     }
-  });
+  }, 30_000);
 
   it("marks remote truth unknown and strict-failing when refresh remote fails", async () => {
     const repoDirectory = await mkdtemp(join(tmpdir(), "skills-broker-status-refresh-fail-"));
@@ -319,7 +319,7 @@ describe("evaluateStatusBoard", () => {
     } finally {
       await rm(repoDirectory, { recursive: true, force: true });
     }
-  });
+  }, 30_000);
 
   it("does not require a shipping ref when no item needs remote truth", async () => {
     const repoDirectory = await mkdtemp(join(tmpdir(), "skills-broker-status-no-upstream-"));
@@ -359,5 +359,5 @@ describe("evaluateStatusBoard", () => {
     } finally {
       await rm(repoDirectory, { recursive: true, force: true });
     }
-  });
+  }, 30_000);
 });

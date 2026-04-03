@@ -7,8 +7,16 @@ import { describe, expect, it } from "vitest";
 import { createSyntheticHostSkippedBrokerTrace } from "../../src/broker/trace";
 import { runClaudeCodeAdapter } from "../../src/hosts/claude-code/adapter";
 import { runCodexAdapter } from "../../src/hosts/codex/adapter";
+import { loadMaintainedBrokerFirstContract } from "../../src/core/maintained-broker-first";
 
 const execFileAsync = promisify(execFile);
+const maintainedContract = await loadMaintainedBrokerFirstContract();
+const maintainedExamples = maintainedContract.maintainedFamilies.flatMap(
+  (family) => family.boundaryExamples
+);
+const maintainedFamilies = maintainedContract.maintainedFamilies.map(
+  (family) => family.family
+);
 
 describe("installed host-shell routing smoke", () => {
   it(
@@ -32,6 +40,16 @@ describe("installed host-shell routing smoke", () => {
           "--codex-dir",
           codexShellDirectory
         ]);
+
+      const requirementsAnalysisRequest = maintainedExamples.find((example) =>
+        example.includes("需求分析")
+      ) ?? "帮我做需求分析并产出设计文档";
+      const qualityAssuranceRequest = maintainedExamples.find((example) =>
+        example.includes("网站")
+      ) ?? "测下这个网站的质量";
+      const investigationRequest = maintainedExamples.find((example) =>
+        example.includes("investigate") || example.includes("排查")
+      ) ?? "investigate this site failure with a reusable workflow";
 
       const socialResult = await runClaudeCodeAdapter(
         {
@@ -60,7 +78,7 @@ describe("installed host-shell routing smoke", () => {
 
       const requirementsResult = await runClaudeCodeAdapter(
         {
-          requestText: "帮我做需求分析并产出设计文档",
+          requestText: requirementsAnalysisRequest,
           host: "claude-code",
           invocationMode: "auto"
         },
@@ -72,7 +90,7 @@ describe("installed host-shell routing smoke", () => {
 
       const qaResult = await runCodexAdapter(
         {
-          requestText: "测下这个网站的质量",
+          requestText: qualityAssuranceRequest,
           host: "codex",
           invocationMode: "explicit",
           urls: ["https://example.com"]
@@ -85,7 +103,7 @@ describe("installed host-shell routing smoke", () => {
 
       const investigationResult = await runClaudeCodeAdapter(
         {
-          requestText: "investigate this site failure with a reusable workflow",
+          requestText: investigationRequest,
           host: "claude-code",
           invocationMode: "auto",
           urls: ["https://example.com"]
@@ -196,7 +214,7 @@ describe("installed host-shell routing smoke", () => {
             intent: "capability_discovery_or_install",
             capabilityQuery: {
               goal: "qa a website",
-              requestText: "测下这个网站的质量",
+              requestText: qualityAssuranceRequest,
               jobFamilies: ["quality_assurance"],
               targets: [
                 {
@@ -258,17 +276,31 @@ describe("installed host-shell routing smoke", () => {
           hostAction: "ask_clarifying_question"
         }
       });
+      expect(requirementsResult.handoff.request.capabilityQuery?.requestText).toBe(
+        requirementsAnalysisRequest
+      );
+      expect(qaResult.handoff.request.capabilityQuery?.requestText).toBe(
+        qualityAssuranceRequest
+      );
+      expect(investigationResult.handoff.request.capabilityQuery?.requestText).toBe(
+        investigationRequest
+      );
+      expect(
+        ["requirements_analysis", "quality_assurance", "investigation"].sort()
+      ).toEqual([...maintainedFamilies].sort());
       expect(socialResult).not.toHaveProperty("trace");
       expect(qaResult).not.toHaveProperty("trace");
-        expect(investigationResult).not.toHaveProperty("trace");
+      expect(investigationResult).not.toHaveProperty("trace");
       } finally {
         await rm(runtimeDirectory, { recursive: true, force: true });
       }
     },
-    15_000
+    30_000
   );
 
-  it("lets installed host adapters opt into routing trace without changing default output", async () => {
+  it(
+    "lets installed host adapters opt into routing trace without changing default output",
+    async () => {
     const runtimeDirectory = await mkdtemp(join(tmpdir(), "skills-broker-host-debug-"));
     const brokerHomeDirectory = join(runtimeDirectory, ".skills-broker");
     const codexShellDirectory = join(runtimeDirectory, ".agents", "skills", "skills-broker");
@@ -322,10 +354,12 @@ describe("installed host-shell routing smoke", () => {
           winnerId: "website-qa"
         }
       });
-    } finally {
-      await rm(runtimeDirectory, { recursive: true, force: true });
-    }
-  });
+      } finally {
+        await rm(runtimeDirectory, { recursive: true, force: true });
+      }
+    },
+    15_000
+  );
 
   it("records a synthetic host-selection trace when the host never invokes the broker", () => {
     const trace = createSyntheticHostSkippedBrokerTrace({

@@ -35,6 +35,58 @@ export function formatLifecycleResult(
     }
 
     lines.push("");
+    if (result.brokerFirstGate.skipped) {
+      lines.push(
+        `Broker-first gate: skipped (${result.brokerFirstGate.skipReason ?? "unavailable"})`
+      );
+      lines.push("Broker-first gate families: unavailable");
+      lines.push("Broker-first gate issues: none");
+    } else {
+      lines.push(`Broker-first gate: ${result.brokerFirstGate.artifactPath}`);
+      lines.push(
+        `Broker-first gate freshness: ${result.brokerFirstGate.freshness.state} (${result.brokerFirstGate.freshness.detail})`
+      );
+
+      if (result.brokerFirstGate.maintainedFamilies.length === 0) {
+        lines.push("Broker-first gate families: unavailable");
+      } else {
+        for (const family of result.brokerFirstGate.maintainedFamilies) {
+          lines.push(
+            `Broker-first gate ${family.family}: status=${family.status}, proofs=phase2Boundary:${family.proofs.phase2Boundary}, phase3Eval:${family.proofs.phase3Eval}, peerConflict:${family.proofs.peerConflict}`
+          );
+        }
+      }
+
+      const familyIssues = result.brokerFirstGate.maintainedFamilies.flatMap(
+        (family) =>
+          family.issues.map((issue) => ({
+            family: family.family,
+            issue
+          }))
+      );
+
+      if (result.brokerFirstGate.issues.length === 0 && familyIssues.length === 0) {
+        lines.push("Broker-first gate issues: none");
+      } else {
+        for (const issue of result.brokerFirstGate.issues) {
+          lines.push(
+            `Broker-first gate issue ${issue.code}: ${issue.message} [scope=${issue.scope}]`
+          );
+        }
+
+        for (const familyIssue of familyIssues) {
+          lines.push(
+            `Broker-first gate issue ${familyIssue.issue.code}: ${familyIssue.issue.message} [scope=${familyIssue.issue.scope}, family=${familyIssue.family}${
+              familyIssue.issue.proofKey === undefined
+                ? ""
+                : `, proof=${familyIssue.issue.proofKey}`
+            }]`
+          );
+        }
+      }
+    }
+
+    lines.push("");
     if (result.status.skipped) {
       lines.push(
         `Status board: skipped (${result.status.skipReason ?? "no repo-scoped status board available"})`
@@ -79,6 +131,17 @@ export function formatLifecycleResult(
     for (const host of result.hosts) {
       const suffix = host.reason ? ` (${host.reason})` : "";
       lines.push(`Host ${host.name}: ${host.status}${suffix}`);
+      if ((host.integrityIssues?.length ?? 0) > 0) {
+        for (const issue of host.integrityIssues ?? []) {
+          lines.push(`Host ${host.name} integrity issue ${issue.code}: ${issue.message}`);
+        }
+      }
+      if (host.manualRecovery) {
+        lines.push(
+          `Host ${host.name} manual recovery: marker=${host.manualRecovery.markerId}, failurePhase=${host.manualRecovery.failurePhase}`
+        );
+        lines.push(`Host ${host.name} clear command: ${host.manualRecovery.clearCommand}`);
+      }
       if ((host.competingPeerSkills?.length ?? 0) > 0) {
         lines.push(
           `Host ${host.name} competing peers: ${host.competingPeerSkills?.join(", ")}`
@@ -134,6 +197,22 @@ export function formatLifecycleResult(
   for (const host of result.hosts) {
     const suffix = host.reason ? ` (${host.reason})` : "";
     lines.push(`Host ${host.name}: ${host.status}${suffix}`);
+    if ((host.integrityIssues?.length ?? 0) > 0) {
+      for (const issue of host.integrityIssues ?? []) {
+        lines.push(`Host ${host.name} integrity issue ${issue.code}: ${issue.message}`);
+      }
+    }
+    if (host.manualRecovery) {
+      lines.push(
+        `Host ${host.name} manual recovery: marker=${host.manualRecovery.markerId}, failurePhase=${host.manualRecovery.failurePhase}`
+      );
+      lines.push(`Host ${host.name} clear command: ${host.manualRecovery.clearCommand}`);
+    }
+    if (host.clearedManualRecovery) {
+      lines.push(
+        `Host ${host.name} cleared manual recovery: ${host.clearedManualRecovery.markerId}`
+      );
+    }
     if ((host.migratedPeerSkills?.length ?? 0) > 0) {
       lines.push(
         `Host ${host.name} migrated peers: ${host.migratedPeerSkills?.join(", ")}`

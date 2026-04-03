@@ -2,6 +2,10 @@ import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
+import {
+  loadMaintainedBrokerFirstContract,
+  maintainedBrokerFirstBoundaryExamples
+} from "../../src/core/maintained-broker-first";
 import { installClaudeCodeHostShell } from "../../src/hosts/claude-code/install";
 import { installCodexHostShell } from "../../src/hosts/codex/install";
 
@@ -11,6 +15,12 @@ describe("host shell installers", () => {
     const claudeShellDirectory = join(runtimeDirectory, "claude-code-plugin");
     const codexShellDirectory = join(runtimeDirectory, "codex-skill");
     const relativeBrokerHomeDirectory = "relative-broker-home";
+    const maintainedContract = await loadMaintainedBrokerFirstContract(
+      join(process.cwd(), "config", "maintained-broker-first-families.json")
+    );
+    const maintainedBoundaryExamples = maintainedBrokerFirstBoundaryExamples(
+      maintainedContract
+    );
 
     try {
       const claudeResult = await installClaudeCodeHostShell({
@@ -43,6 +53,9 @@ describe("host shell installers", () => {
       expect(claudeSkill).toContain("## Clarify Before Broker (`clarify_before_broker`)");
       expect(claudeSkill).toContain("The host decides only the boundary; the broker chooses the package, workflow, skill, or MCP.");
       expect(claudeSkill).toContain("a specialized reusable workflow");
+      for (const example of maintainedBoundaryExamples) {
+        expect(claudeSkill).toContain(example);
+      }
       expect(claudeSkill).toContain("build a broker envelope with raw request text plus safe hints");
       expect(claudeSkill).toContain("keep it in the host's normal flow");
       expect(claudeSkill).toContain("ask a short clarifying question before brokering");
@@ -70,6 +83,9 @@ describe("host shell installers", () => {
       expect(codexSkill).toContain("## Clarify Before Broker (`clarify_before_broker`)");
       expect(codexSkill).toContain("The host decides only the boundary; the broker chooses the package, workflow, skill, or MCP.");
       expect(codexSkill).toContain("a specialized reusable workflow");
+      for (const example of maintainedBoundaryExamples) {
+        expect(codexSkill).toContain(example);
+      }
       expect(codexSkill).toContain("build a broker envelope with raw request text plus safe hints");
       expect(codexSkill).toContain("keep it in the host's normal flow");
       expect(codexSkill).toContain("ask a short clarifying question before brokering");
@@ -88,6 +104,8 @@ describe("host shell installers", () => {
       expect(codexSkill).toContain("If the broker returns `NO_CANDIDATE`, offer capability discovery or install help.");
       expect(codexSkill).toContain("If the broker returns `PREPARE_FAILED`, explain the failure clearly");
       expect(codexSkill).toContain('"host":"codex"');
+      expect(claudeSkill).not.toContain("maintainedFamilies");
+      expect(codexSkill).not.toContain("maintainedFamilies");
       expect(claudeManifest.managedBy).toBe("skills-broker");
 
       const codexManifest = JSON.parse(

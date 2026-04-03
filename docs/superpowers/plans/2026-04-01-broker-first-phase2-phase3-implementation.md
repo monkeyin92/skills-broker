@@ -9,46 +9,14 @@ Builds on: `/Users/monkeyin/projects/skills-broker/docs/superpowers/specs/2026-0
 
 ## Goal
 
-Complete Phase 2 and Phase 3 of the broker-first capability-scaling roadmap:
+Complete Phase 2 and Phase 3 of the broker-first capability-scaling roadmap, but do it in four sequential slices instead of one oversized rewrite.
 
-- shrink Claude Code and Codex down to a coarse broker-first boundary
-- move request understanding for broker-first work into a broker-owned raw-request query compiler
-- reduce the remaining fixed-intent path to compatibility infrastructure instead of the growth surface
+The product outcome stays the same:
 
-This should turn the current query-first direction into a durable product loop:
-
-- host decides "broker-first, normal, or clarify"
-- broker compiles raw request text into a structured capability query
-- retrieval and ranking remain deterministic and testable inside the broker
-
-## Non-Goals
-
-- adding many new downstream families in the same slice
-- redesigning the shared broker envelope
-- building the discovery/install flywheel
-- deleting all legacy intent compatibility in one breaking rewrite
-- adding OpenCode
-
-## Current State
-
-The repo already has the hard foundations:
-
-- query-led discovery across host catalog, MCP, and workflow sources
-- query-first normalization for modern web / social / discovery requests
-- `compatibilityIntent` internal routing labels
-- shared-home routing traces plus `doctor` rollups
-- maintained Phase 2 coarse-boundary eval harness and fixture
-- host adapters and host-shell installers for Claude Code and Codex
-
-The remaining bottlenecks are product-boundary bottlenecks:
-
-1. host shell wording still carries too much family-shaped trigger responsibility
-2. broker-first raw requests still do not go through a dedicated broker-owned compiler path
-3. `BrokerIntent` still survives as the top boundary in `/Users/monkeyin/projects/skills-broker/src/core/request.ts` and `/Users/monkeyin/projects/skills-broker/src/core/types.ts`
-
-## Architecture
-
-Keep the split explicit:
+- the host only decides `broker_first`, `handle_normally`, or `clarify_before_broker`
+- broker-first raw requests become compiler-backed structured capability queries
+- maintained families share one source of truth for evals, gates, and diagnostics
+- peer-surface hardening becomes auditable and reversible, not a spooky side effect
 
 ```text
 USER REQUEST
@@ -60,375 +28,247 @@ HOST COARSE BOUNDARY
 RUNNER
    | raw request text + safe hints
    v
-BROKER QUERY COMPILER
-   | structured capability query or structured decline
+BROKER COMPILER + MAINTAINED FAMILY CONTRACT
+   | structured capability query / fail-closed decline
    v
 RETRIEVAL + RANKING
-   | winner or no-candidate / prepare-failed
+   | winner / no-candidate / prepare-failed
    v
-HANDOFF / DECLINE
+HANDOFF / DECLINE / DIAGNOSTICS
+```
+
+## What Already Exists
+
+The plan is not starting from zero. These pieces already solve part of the problem and should be reused:
+
+- `src/hosts/skill-markdown.ts`, `src/hosts/claude-code/install.ts`, and `src/hosts/codex/install.ts` already generate the coarse broker-first boundary wording.
+- `src/core/request.ts` already contains the hidden request-to-capability compiler logic for markdown, discovery, requirements analysis, QA, and investigation.
+- `src/broker/run.ts` already supports structured `capabilityQuery` requests and broad discovery.
+- `src/broker/rank.ts` already scores candidates deterministically from query facets.
+- `src/broker/trace.ts` already distinguishes `normalizedBy`, `requestSurface`, and `missLayer`.
+- `src/shared-home/status.ts` already has fail-closed issue handling and partial-truth reporting.
+- `src/shared-home/update.ts` and `src/shared-home/host-surface.ts` already detect and migrate competing peer skills.
+- `src/shared-home/json-file.ts` already gives us atomic single-file JSON writes for sticky marker state.
+- `src/broker/workflow-session-store.ts` already proves the repo's lock-file + stale-lock + heartbeat pattern, so Slice D should reuse that shape instead of inventing a new concurrency model.
+- `tests/hosts/host-shell-install.test.ts`, `tests/core/request-normalization.test.ts`, `tests/integration/broker-flow.test.ts`, `tests/e2e/phase2-coarse-boundary-eval.test.ts`, and `tests/e2e/host-auto-routing-smoke.test.ts` already cover the current routing spine.
+
+## NOT in Scope
+
+- Adding more families in the same slice, that just fattens the diff without proving the loop.
+- Redesigning the shared broker envelope, because the existing envelope is already good enough for this phase.
+- Building the discovery/install flywheel, because that is the next product token, not this one.
+- Adding OpenCode, because the current two-host contract needs to be solid before a third host enters.
+- Rewriting `doctor`, `status`, or the shared-home lifecycle CLI, because they are consumers, not the bottleneck.
+- Deleting all legacy intent compatibility in one pass, because that turns a migration into a rewrite.
+- Adding root-audit reset, ledger quarantine repair, or any broader audit-destruction flows, because Slice D is only about peer-surface repair and clear.
+- Automatic ledger rotation or compaction, because the peer-surface ledger is low-frequency audit state, not a background log pipeline.
+- README, roadmap, TODO, or changelog edits before the repair contract and tests are green, because docs should describe the shipped behavior, not the intended one.
+
+## Slice Plan
+
+### Slice A, maintained-family source of truth + host boundary/eval tightening
+
+This is the first slice. It should land before anything else.
+
+Goal:
+
+- add a single maintained-family contract file as the source of truth for the families we are actively proving
+- keep the host shells coarse and explicit about what they are and are not deciding
+- tighten the maintained Phase 2 eval set so both Claude Code and Codex stay aligned
+- do not change the discovery/install story yet
+
+Files:
+
+- `config/maintained-broker-first-families.json`
+- `src/hosts/skill-markdown.ts`
+- `src/hosts/claude-code/install.ts`
+- `src/hosts/codex/install.ts`
+- `tests/hosts/host-shell-install.test.ts`
+- `tests/e2e/phase2-coarse-boundary-eval.test.ts`
+- `tests/fixtures/phase2-coarse-boundary-eval.json`
+
+Why this comes first:
+
+- the maintained-family list is the source of truth for what this plan is actually proving
+- the boundary wording needs to stop pretending the host is making family decisions
+- without this slice, every later gate or diagnostics improvement is built on a fuzzy set of families
+
+### Slice B, broker-owned compiler seam
+
+Goal:
+
+- extract the existing request-to-capability logic into a broker-owned compiler seam
+- keep compatibility behavior intact while the compiler becomes the preferred path for broker-first raw requests
+- make `BrokerIntent` shrink toward compatibility only, not growth surface
+
+Files:
+
+- `src/broker/query-compiler.ts`
+- `src/core/request.ts`
+- `src/core/types.ts`
+- `src/core/capability-query.ts`
+- `src/broker/run.ts`
+- `tests/broker/query-compiler.test.ts`
+- `tests/core/request-normalization.test.ts`
+- `tests/integration/broker-flow.test.ts`
+
+### Slice C, gate + diagnostics
+
+Goal:
+
+- make the maintained-family contract drive gate artifacts, freshness checks, and miss diagnostics
+- keep `doctor --strict` and CI fail-closed when the gate is missing or stale
+- add explicit layer/family/proof diagnostics so a miss says where it failed, not just that it failed
+
+Files:
+
+- `src/shared-home/status.ts`
+- `src/broker/trace.ts`
+- `src/broker/trace-store.ts`
+- `tests/broker/trace.test.ts`
+- `tests/cli/lifecycle-cli.test.ts`
+- `tests/shared-home/status.test.ts`
+
+### Slice D, peer-surface hardening + manual recovery clear path
+
+Goal:
+
+- harden the peer-surface repair path so every mutation is host-scoped, auditable, and reversible
+- add an explicit manual recovery clear path that validates current host state before unblocking
+- defer README / roadmap / changelog edits until the repair contract is stable and tested
+
+Files:
+
+- `src/shared-home/peer-surface-audit.ts`
+- `src/shared-home/update.ts`
+- `src/shared-home/host-surface.ts`
+- `src/shared-home/doctor.ts`
+- `src/shared-home/format.ts`
+- `src/bin/skills-broker.ts`
+- `tests/shared-home/update-lifecycle.test.ts`
+- `tests/shared-home/host-surface-management.test.ts`
+- `tests/cli/lifecycle-cli.test.ts`
+
+Execution shape:
+
+```text
+REPAIR
+update --repair-host-surface
+  -> acquire host lock
+  -> machine-check current host surface
+  -> refuse if manual-recovery marker already exists
+  -> move competing peers behind broker home
+  -> append typed repair event to ledger
+     -> append fails
+        -> rollback moved peers
+           -> rollback succeeds => fail closed, no marker cleared
+           -> rollback fails    => write sticky manual-recovery marker, fail hard
+  -> return migrated peers
+
+CLEAR
+update --clear-manual-recovery --host <host> --marker-id <id> ...
+  -> acquire same host lock
+  -> read marker, verify markerId
+  -> machine-check current host surface
+  -> refuse unless host is in one canonical healthy state
+  -> append typed clear event to ledger
+  -> delete marker
+```
+
+## Test Matrix
+
+| Slice | Unit tests | Integration tests | E2E / eval | What it proves |
+|------|------------|-------------------|------------|----------------|
+| A | host shell wording assertions | - | Phase 2 coarse-boundary eval | Hosts are coarse only, and both hosts stay aligned on the maintained family set |
+| B | query compiler behavior | broker flow normalization | bilingual compiler eval | Raw broker-first requests compile without expanding the top-level intent surface |
+| C | trace summarization and gate helpers | lifecycle CLI strict behavior | maintained gate freshness checks | Gates fail closed and diagnostics explain the failure layer |
+| D | peer-surface audit helpers | update lifecycle + lifecycle CLI | repair transaction + manual recovery clear flow | Peer mutations are auditable, rollback-safe, and recoverable without widening the host surface contract |
+
+## Failure Modes
+
+- Maintained-family contract missing or malformed, fail closed instead of silently drifting.
+- Compiler underfills a query, return a visible unsupported or ambiguous result instead of inventing certainty.
+- Gate artifact stale or missing, `doctor --strict` and CI must fail closed.
+- Peer-surface repair fails halfway, rollback must restore the host surface or enter manual recovery.
+- Manual recovery clear path sees the wrong marker id or a dirty host surface, refuse the clear.
+- Ledger read or append fails, treat the host as blocked instead of silently dropping audit history.
+
+## Parallelization
+
+Sequential implementation, no parallelization opportunity across the code slices until Slice A lands. Slice A is the contract that defines the truth set for the rest of the work.
+
+## Slice A Checklist
+
+- [x] Create `config/maintained-broker-first-families.json` as the single maintained-family source of truth.
+- [x] Update host shell wording so it only states the coarse boundary and does not imply family selection.
+- [x] Tighten the maintained Phase 2 eval corpus so Claude Code and Codex stay aligned.
+- [x] Add failing tests before changing the host wording or eval fixture.
+- [x] Re-run the targeted host-shell and Phase 2 eval tests.
+
+## Slice B Checklist
+
+- [x] Extract the compiler seam from `src/core/request.ts` into `src/broker/query-compiler.ts`.
+- [x] Keep compatibility behavior intact while broker-first raw requests go through the broker-owned compiler path.
+- [x] Add focused compiler unit tests for supported, unsupported, and ambiguous inputs.
+- [x] Re-run request-normalization and broker-flow tests.
+
+## Slice C Checklist
+
+- [x] Route maintained-family contract data into gate freshness and diagnostics.
+- [x] Make miss diagnostics explicit by layer and family.
+- [x] Add or update trace tests so compiler misses and retrieval misses are distinguishable.
+- [x] Re-run CLI strict-mode and trace tests.
+
+## Slice D Checklist
+
+- [x] Add one small peer-surface audit helper that owns ledger paths, marker paths, append/read helpers, and the host-scope lock.
+- [x] Keep `src/shared-home/host-surface.ts` focused on detection plus move/rollback primitives, not CLI parsing or report formatting.
+- [x] Reuse one shared host-state machine-check across `doctor`, repair, and clear so the CLI does not invent three slightly different definitions of "healthy".
+- [x] Make `update --repair-host-surface` transactional: detect -> move peers -> append ledger -> rollback on any failure -> write sticky manual recovery marker only when rollback itself fails.
+- [x] Add an explicit clear path that requires `--clear-manual-recovery`, `--host`, `--marker-id`, and structured evidence, then re-checks the current host surface before deleting the marker.
+- [x] Surface manual recovery state in `doctor` and text/JSON formatting so operators can see the blocker and the next command.
+- [x] Keep ledger reads typed and fail-closed. Unknown version, unknown event type, or malformed line must block trust in the history instead of being skipped.
+- [x] Re-run shared-home lifecycle, host-surface management, and lifecycle CLI tests before touching docs.
+
+## Architecture
+
+Keep the split explicit:
+
+```text
+Slice A -> Slice B -> Slice C -> Slice D
+   |         |         |         |
+   v         v         v         v
+contract  compiler   gate     repair
+truth     seam       surface   + audit
 ```
 
 Rules:
 
 - hosts do not choose a family winner
-- runners stay dumb and safe
-- compiler is broker-owned and testable
-- new families should prefer metadata + compiler evidence + evals, not new top-level `BrokerIntent` members
-
-## File Structure
-
-### Existing files to modify
-
-- [`TODOS.md`](/Users/monkeyin/projects/skills-broker/TODOS.md)
-  - keep the roadmap aligned once this phase lands
-- [`README.md`](/Users/monkeyin/projects/skills-broker/README.md)
-  - document the coarse broker-first boundary and compiler-first migration state
-- [`README.zh-CN.md`](/Users/monkeyin/projects/skills-broker/README.zh-CN.md)
-  - sync the same story in Chinese
-- [`src/hosts/skill-markdown.ts`](/Users/monkeyin/projects/skills-broker/src/hosts/skill-markdown.ts)
-  - make host shell guidance boundary-first instead of family-first
-- [`src/hosts/claude-code/install.ts`](/Users/monkeyin/projects/skills-broker/src/hosts/claude-code/install.ts)
-  - keep generated Claude host shells aligned with the coarse boundary contract
-- [`src/hosts/codex/install.ts`](/Users/monkeyin/projects/skills-broker/src/hosts/codex/install.ts)
-  - keep generated Codex host shells aligned with the same contract
-- [`src/core/request.ts`](/Users/monkeyin/projects/skills-broker/src/core/request.ts)
-  - shrink the legacy fixed-intent gate and bridge compiled queries into the broker request model
-- [`src/core/types.ts`](/Users/monkeyin/projects/skills-broker/src/core/types.ts)
-  - make `BrokerIntent` compatibility-only and stabilize compiler-facing request types
-- [`src/core/capability-query.ts`](/Users/monkeyin/projects/skills-broker/src/core/capability-query.ts)
-  - extend validation helpers if the compiler emits richer but still small query fields
-- [`src/broker/run.ts`](/Users/monkeyin/projects/skills-broker/src/broker/run.ts)
-  - route broker-first raw requests through the compiler path and preserve trace attribution
-- [`src/broker/rank.ts`](/Users/monkeyin/projects/skills-broker/src/broker/rank.ts)
-  - keep deterministic scoring aligned with compiler-emitted facets
-- [`src/broker/trace.ts`](/Users/monkeyin/projects/skills-broker/src/broker/trace.ts)
-  - keep `normalizedBy`, miss-layer, and surface attribution explicit for compiler-driven paths
-- [`tests/hosts/host-shell-install.test.ts`](/Users/monkeyin/projects/skills-broker/tests/hosts/host-shell-install.test.ts)
-  - assert the generated host shell remains coarse-boundary-first
-- [`tests/e2e/host-auto-routing-smoke.test.ts`](/Users/monkeyin/projects/skills-broker/tests/e2e/host-auto-routing-smoke.test.ts)
-  - prove maintained broker-first families still route cleanly after the compiler path lands
-- [`tests/e2e/phase2-coarse-boundary-eval.test.ts`](/Users/monkeyin/projects/skills-broker/tests/e2e/phase2-coarse-boundary-eval.test.ts)
-  - keep Claude Code and Codex aligned on the maintained coarse-boundary eval set
-- [`tests/fixtures/phase2-coarse-boundary-eval.json`](/Users/monkeyin/projects/skills-broker/tests/fixtures/phase2-coarse-boundary-eval.json)
-  - keep the maintained boundary corpus current
-- [`tests/core/request-normalization.test.ts`](/Users/monkeyin/projects/skills-broker/tests/core/request-normalization.test.ts)
-  - verify compatibility behavior and legacy-path shrinkage
-- [`tests/integration/broker-flow.test.ts`](/Users/monkeyin/projects/skills-broker/tests/integration/broker-flow.test.ts)
-  - cover compiler-driven broker flow and trace persistence
-
-### New files to create
-
-- [`src/broker/query-compiler.ts`](/Users/monkeyin/projects/skills-broker/src/broker/query-compiler.ts)
-  - broker-owned raw-request compiler for capability queries
-- [`tests/broker/query-compiler.test.ts`](/Users/monkeyin/projects/skills-broker/tests/broker/query-compiler.test.ts)
-  - focused unit coverage for compiler behavior and visible failure modes
-- [`tests/e2e/phase3-query-compiler-eval.test.ts`](/Users/monkeyin/projects/skills-broker/tests/e2e/phase3-query-compiler-eval.test.ts)
-  - maintained bilingual eval proving at least one non-markdown family routes through the compiler path
-- [`tests/fixtures/phase3-query-compiler-eval.json`](/Users/monkeyin/projects/skills-broker/tests/fixtures/phase3-query-compiler-eval.json)
-  - eval corpus for Chinese and English raw broker-first phrasing
-
-### Files intentionally left alone
-
-- [`config/host-skills.seed.json`](/Users/monkeyin/projects/skills-broker/config/host-skills.seed.json)
-  - do not add more families in this slice; use the current proof families
-- [`src/shared-home/update.ts`](/Users/monkeyin/projects/skills-broker/src/shared-home/update.ts)
-  - lifecycle CLI is not the bottleneck for this phase
-- [`src/shared-home/remove.ts`](/Users/monkeyin/projects/skills-broker/src/shared-home/remove.ts)
-  - removal semantics do not need to change
-- [`src/shared-home/host-surface.ts`](/Users/monkeyin/projects/skills-broker/src/shared-home/host-surface.ts)
-  - broker-owned downstream migration helpers already exist; this phase should consume that foundation, not redesign it
-
-## Task 1: Lock Hosts To A Coarse Broker-First Boundary
-
-**Files:**
-- Modify: [`src/hosts/skill-markdown.ts`](/Users/monkeyin/projects/skills-broker/src/hosts/skill-markdown.ts)
-- Modify: [`src/hosts/claude-code/install.ts`](/Users/monkeyin/projects/skills-broker/src/hosts/claude-code/install.ts)
-- Modify: [`src/hosts/codex/install.ts`](/Users/monkeyin/projects/skills-broker/src/hosts/codex/install.ts)
-- Modify: [`tests/hosts/host-shell-install.test.ts`](/Users/monkeyin/projects/skills-broker/tests/hosts/host-shell-install.test.ts)
-- Modify: [`tests/e2e/phase2-coarse-boundary-eval.test.ts`](/Users/monkeyin/projects/skills-broker/tests/e2e/phase2-coarse-boundary-eval.test.ts)
-- Modify: [`tests/fixtures/phase2-coarse-boundary-eval.json`](/Users/monkeyin/projects/skills-broker/tests/fixtures/phase2-coarse-boundary-eval.json)
-
-- [ ] **Step 1: Write failing assertions for boundary-first host shells**
-
-Assert that generated host shells:
-
-- describe `broker_first`, `handle_normally`, and `clarify_before_broker` as the primary contract
-- do not imply that the host is choosing the final family winner
-- preserve the maintained bilingual examples only as boundary guidance
-
-- [ ] **Step 2: Rewrite host shell wording around the coarse boundary**
-
-Keep examples, but make the contract say clearly:
-
-- hosts decide whether something looks broker-first
-- runners pass raw text plus safe hints
-- broker decides capability understanding and selection
-
-- [ ] **Step 3: Tighten the maintained Phase 2 eval corpus**
-
-Use the existing Phase 2 harness to cover:
-
-- clear broker-first requests
-- clear handle-normally requests
-- clarify-before-broker requests
-- identical expected decisions across Claude Code and Codex
-
-- [ ] **Step 4: Re-run targeted tests**
-
-Run:
-
-```bash
-npx vitest run \
-  tests/hosts/host-shell-install.test.ts \
-  tests/e2e/phase2-coarse-boundary-eval.test.ts
-```
-
-Expected: PASS
-
-- [ ] **Step 5: Commit**
-
-```bash
-git add src/hosts/skill-markdown.ts src/hosts/claude-code/install.ts src/hosts/codex/install.ts tests/hosts/host-shell-install.test.ts tests/e2e/phase2-coarse-boundary-eval.test.ts tests/fixtures/phase2-coarse-boundary-eval.json
-git commit -m "feat: tighten coarse broker-first host boundary"
-```
-
-## Task 2: Introduce A Broker-Owned Raw-Request Query Compiler
-
-**Files:**
-- Create: [`src/broker/query-compiler.ts`](/Users/monkeyin/projects/skills-broker/src/broker/query-compiler.ts)
-- Modify: [`src/core/request.ts`](/Users/monkeyin/projects/skills-broker/src/core/request.ts)
-- Modify: [`src/core/types.ts`](/Users/monkeyin/projects/skills-broker/src/core/types.ts)
-- Modify: [`src/core/capability-query.ts`](/Users/monkeyin/projects/skills-broker/src/core/capability-query.ts)
-- Modify: [`src/broker/run.ts`](/Users/monkeyin/projects/skills-broker/src/broker/run.ts)
-- Create: [`tests/broker/query-compiler.test.ts`](/Users/monkeyin/projects/skills-broker/tests/broker/query-compiler.test.ts)
-- Modify: [`tests/core/request-normalization.test.ts`](/Users/monkeyin/projects/skills-broker/tests/core/request-normalization.test.ts)
-- Modify: [`tests/integration/broker-flow.test.ts`](/Users/monkeyin/projects/skills-broker/tests/integration/broker-flow.test.ts)
-
-- [ ] **Step 1: Write failing compiler tests**
-
-Cover at least these raw broker-first requests:
-
-- requirements analysis in Chinese
-- website QA in Chinese and English
-- investigation in English
-- visible unsupported / ambiguous outcomes when the compiler lacks enough signal
-
-- [ ] **Step 2: Add the compiler layer**
-
-The compiler should:
-
-- accept raw request text plus safe hints
-- emit a small structured capability query when confidence is sufficient
-- preserve visible failure modes when the query would be malformed or underfilled
-- leave pre-structured `capabilityQuery` input untouched
-
-- [ ] **Step 3: Bridge compiler output into the broker request path**
-
-Do not delete compatibility behavior yet.
-
-Instead:
-
-- prefer structured query input when provided
-- otherwise let broker-first raw requests flow through the compiler
-- keep markdown / discovery legacy compatibility paths working during migration
-
-- [ ] **Step 4: Re-run targeted tests**
-
-Run:
-
-```bash
-npx vitest run \
-  tests/broker/query-compiler.test.ts \
-  tests/core/request-normalization.test.ts \
-  tests/integration/broker-flow.test.ts
-```
-
-Expected: PASS
-
-- [ ] **Step 5: Commit**
-
-```bash
-git add src/broker/query-compiler.ts src/core/request.ts src/core/types.ts src/core/capability-query.ts src/broker/run.ts tests/broker/query-compiler.test.ts tests/core/request-normalization.test.ts tests/integration/broker-flow.test.ts
-git commit -m "feat: add broker-owned raw request query compiler"
-```
-
-## Task 3: Shrink `BrokerIntent` Into A Compatibility Wrapper
-
-**Files:**
-- Modify: [`src/core/types.ts`](/Users/monkeyin/projects/skills-broker/src/core/types.ts)
-- Modify: [`src/core/request.ts`](/Users/monkeyin/projects/skills-broker/src/core/request.ts)
-- Modify: [`src/broker/run.ts`](/Users/monkeyin/projects/skills-broker/src/broker/run.ts)
-- Modify: [`src/broker/rank.ts`](/Users/monkeyin/projects/skills-broker/src/broker/rank.ts)
-- Modify: [`tests/core/request-normalization.test.ts`](/Users/monkeyin/projects/skills-broker/tests/core/request-normalization.test.ts)
-- Modify: [`tests/e2e/host-auto-routing-smoke.test.ts`](/Users/monkeyin/projects/skills-broker/tests/e2e/host-auto-routing-smoke.test.ts)
-
-- [ ] **Step 1: Write failing assertions that no new family needs a new top-level intent branch**
-
-The key assertion is product-level:
-
-- requirements analysis, QA, and investigation keep routing through compiler-backed capability queries
-- no new `BrokerIntent` member is introduced for those families
-
-- [ ] **Step 2: Reduce the legacy gate**
-
-Make `BrokerIntent` compatibility-only by ensuring:
-
-- existing markdown and discovery flows still derive compatibility intent when needed
-- non-markdown professional workflows can route without adding new top-level intent branches
-- traces and handoffs still expose enough compatibility context for existing consumers
-
-- [ ] **Step 3: Re-run targeted tests**
-
-Run:
-
-```bash
-npx vitest run \
-  tests/core/request-normalization.test.ts \
-  tests/e2e/host-auto-routing-smoke.test.ts
-```
-
-Expected: PASS
-
-- [ ] **Step 4: Commit**
-
-```bash
-git add src/core/types.ts src/core/request.ts src/broker/run.ts src/broker/rank.ts tests/core/request-normalization.test.ts tests/e2e/host-auto-routing-smoke.test.ts
-git commit -m "refactor: shrink broker intent to compatibility shim"
-```
-
-## Task 4: Add The Maintained Bilingual Phase 3 Eval Set
-
-**Files:**
-- Create: [`tests/e2e/phase3-query-compiler-eval.test.ts`](/Users/monkeyin/projects/skills-broker/tests/e2e/phase3-query-compiler-eval.test.ts)
-- Create: [`tests/fixtures/phase3-query-compiler-eval.json`](/Users/monkeyin/projects/skills-broker/tests/fixtures/phase3-query-compiler-eval.json)
-- Modify: [`src/broker/trace.ts`](/Users/monkeyin/projects/skills-broker/src/broker/trace.ts)
-- Modify: [`tests/broker/trace.test.ts`](/Users/monkeyin/projects/skills-broker/tests/broker/trace.test.ts)
-
-- [ ] **Step 1: Write the bilingual eval corpus**
-
-The corpus should cover:
-
-- Chinese and English requirements-analysis asks
-- Chinese and English website-QA asks
-- English investigation asks
-- markdown and discovery parity checks
-- unsupported and ambiguous raw broker-first requests
-
-- [ ] **Step 2: Make trace attribution explicit for compiler-driven routing**
-
-The maintained eval output should let the team tell:
-
-- host selected broker-first or not
-- compiler normalized the request or not
-- retrieval / prepare failed or not
-
-- [ ] **Step 3: Re-run the Phase 2 and Phase 3 eval stack**
-
-Run:
-
-```bash
-npx vitest run \
-  tests/e2e/phase2-coarse-boundary-eval.test.ts \
-  tests/e2e/phase3-query-compiler-eval.test.ts \
-  tests/broker/trace.test.ts
-```
-
-Expected: PASS
-
-- [ ] **Step 4: Commit**
-
-```bash
-git add tests/e2e/phase3-query-compiler-eval.test.ts tests/fixtures/phase3-query-compiler-eval.json src/broker/trace.ts tests/broker/trace.test.ts
-git commit -m "test: add bilingual query compiler eval coverage"
-```
-
-## Task 5: Sync Docs And Migration Tracker
-
-**Files:**
-- Modify: [`README.md`](/Users/monkeyin/projects/skills-broker/README.md)
-- Modify: [`README.zh-CN.md`](/Users/monkeyin/projects/skills-broker/README.zh-CN.md)
-- Modify: [`TODOS.md`](/Users/monkeyin/projects/skills-broker/TODOS.md)
-- Modify: [`CHANGELOG.md`](/Users/monkeyin/projects/skills-broker/CHANGELOG.md)
-
-- [ ] **Step 1: Document the new product contract**
-
-Docs should say clearly:
-
-- hosts now own only the coarse broker-first boundary
-- broker owns raw-request query compilation
-- legacy `BrokerIntent` is compatibility-only
-
-- [ ] **Step 2: Update the roadmap language**
-
-Once implementation lands:
-
-- mark Phase 2 and Phase 3 accurately in `TODOS.md`
-- keep discovery/install flywheel and OpenCode as later work
-
-- [ ] **Step 3: Commit**
-
-```bash
-git add README.md README.zh-CN.md TODOS.md CHANGELOG.md
-git commit -m "docs: describe broker-first compiler migration"
-```
-
-## Task 6: Full Verification And Review Gate
-
-**Files:**
-- No new product files; verification only
-
-- [ ] **Step 1: Run targeted verification**
-
-Run:
-
-```bash
-npx vitest run \
-  tests/hosts/host-shell-install.test.ts \
-  tests/e2e/phase2-coarse-boundary-eval.test.ts \
-  tests/broker/query-compiler.test.ts \
-  tests/core/request-normalization.test.ts \
-  tests/integration/broker-flow.test.ts \
-  tests/e2e/host-auto-routing-smoke.test.ts \
-  tests/e2e/phase3-query-compiler-eval.test.ts \
-  tests/broker/trace.test.ts
-```
-
-Expected: PASS
-
-- [ ] **Step 2: Run full verification**
-
-Run:
-
-```bash
-npm run build
-npx vitest run
-```
-
-Expected: PASS
-
-- [ ] **Step 3: Run pre-landing review**
-
-The review should specifically check:
-
-- host shells no longer overclaim per-family understanding
-- compiler failure modes are visible and tested
-- new family growth no longer depends on top-level `BrokerIntent` expansion
-- evals actually prove bilingual compiler behavior instead of replaying hand-authored structured queries
-
-- [ ] **Step 4: Land**
-
-Create a PR only after the review is clean.
-
-## Acceptance Checklist
-
-- [ ] Host shells define `broker_first`, `handle_normally`, and `clarify_before_broker` as the coarse contract
-- [ ] Claude Code and Codex stay aligned on the maintained Phase 2 coarse-boundary eval set
-- [ ] A broker-owned raw-request compiler exists and is covered by focused unit tests
-- [ ] At least one non-markdown family routes through the compiler path on a maintained bilingual eval set
-- [ ] Markdown and discovery compatibility behavior still works without regression
-- [ ] No new top-level `BrokerIntent` member is introduced for requirements, QA, or investigation
-- [ ] Routing traces can distinguish host miss, compiler miss, retrieval miss, and prepare miss
-- [ ] `npm run build` passes
-- [ ] `npx vitest run` passes
-- [ ] Docs and roadmap language match the migration state
+- Slice A must land before any compiler or gate work starts
+- compiler logic stays broker-owned and testable
+- new families should prefer contract data + compiler evidence + evals, not new top-level `BrokerIntent` members
+- Slice D should add exactly one new helper module, `src/shared-home/peer-surface-audit.ts`, and keep all other changes inside existing lifecycle consumers.
+- Slice D should reuse the existing lock-file pattern from workflow session storage, but must not modify workflow persistence just to share code.
+
+## What the slices mean for execution
+
+Slice A is the forcing function. It defines the maintained family set and locks the host boundary wording before the compiler work starts.
+Slice B can then extract the existing compiler seam without inventing a second compiler.
+Slice C can wire the maintained contract into gates and diagnostics.
+Slice D should first harden peer-surface mutation with one host-scoped audit contract.
+Only after that lands should docs and roadmap language be updated.
+
+That order matters. If we skip it, the plan becomes a pile of features with no stable truth source.
+
+## GSTACK REVIEW REPORT
+
+| Review | Trigger | Why | Runs | Status | Findings |
+|--------|---------|-----|------|--------|----------|
+| CEO Review | `/plan-ceo-review` | Scope & strategy | 2 | ISSUES OPEN | 12 proposals, 12 accepted, 0 deferred |
+| Codex Review | `/codex review` | Independent 2nd opinion | 0 | — | — |
+| Eng Review | `/plan-eng-review` | Architecture & tests (required) | 7 | CLEAN | mode: SCOPE_REDUCED, 11 issues, 0 critical gaps |
+| Design Review | `/plan-design-review` | UI/UX gaps | 0 | — | — |
+
+- **UNRESOLVED:** 0
+- **VERDICT:** ENG CLEARED. CEO review still carries optional product follow-ups, but this implementation plan is now ready to execute in the reduced Slice D shape.

@@ -1,16 +1,21 @@
 import { access, readdir, stat } from "node:fs/promises";
 import { readBrokerRoutingTraces, routingTraceLogFilePath } from "../broker/trace-store.js";
 import { summarizeBrokerRoutingTraces } from "../broker/trace.js";
+import {
+  evaluateBrokerFirstGate,
+  type BrokerFirstGateDiagnosticResult
+} from "./broker-first-gate.js";
 import { resolveSharedBrokerHomeLayout } from "./install.js";
 import { readManagedShellManifest } from "./ownership.js";
 import { detectWritableDirectory } from "./detect.js";
 import {
-  buildPeerSkillRemediation,
   competingPeerSkillsWarning,
-  detectCompetingPeerSkills
+  inspectManagedPeerSurface
 } from "./host-surface.js";
 import { detectLifecycleHostTargets } from "./paths.js";
 import { evaluateStatusBoard, type DoctorStatusResult } from "./status.js";
+import type { PeerSurfaceIntegrityIssue } from "./peer-surface-audit.js";
+import type { PeerSurfaceManualRecoveryMarker } from "./peer-surface-audit.js";
 
 export type DoctorLifecycleResult = {
   command: "doctor";
@@ -29,6 +34,11 @@ export type DoctorLifecycleResult = {
     status: "detected" | "not_detected" | "not_writable" | "conflict";
     reason?: string;
     competingPeerSkills?: string[];
+    integrityIssues?: PeerSurfaceIntegrityIssue[];
+    manualRecovery?: PeerSurfaceManualRecoveryMarker & {
+      path: string;
+      clearCommand: string;
+    };
     remediation?: {
       action: "hide_competing_peer_skills";
       targetDirectory: string;
@@ -36,6 +46,7 @@ export type DoctorLifecycleResult = {
       message: string;
     };
   }>;
+  brokerFirstGate: BrokerFirstGateDiagnosticResult;
   status: DoctorStatusResult;
   warnings: string[];
 };
@@ -134,26 +145,46 @@ async function doctorHost(
 
   const manifestState = await readManagedShellManifest(installDirectory);
   if (manifestState.status === "managed") {
-    const competingPeerSkills = await detectCompetingPeerSkills(installDirectory);
+    const peerSurface = await inspectManagedPeerSurface(
+      name,
+      installDirectory,
+      brokerHomeDirectory
+    );
 
-    if (competingPeerSkills.length > 0) {
-      warnings.push(competingPeerSkillsWarning(name, competingPeerSkills));
+    warnings.push(
+      ...peerSurface.integrityIssues.map(
+        (issue) => `${name}: ${issue.code}: ${issue.message}`
+      )
+    );
+
+    if (peerSurface.competingPeerSkills.length > 0) {
+      warnings.push(
+        competingPeerSkillsWarning(name, peerSurface.competingPeerSkills)
+      );
+    }
+
+    if (peerSurface.manualRecovery !== undefined) {
+      warnings.push(
+        `${name}: manual recovery required (${peerSurface.manualRecovery.markerId})`
+      );
     }
 
     return {
       name,
       status: "detected",
       reason: "managed by skills-broker",
-      ...(competingPeerSkills.length > 0
+      ...(peerSurface.competingPeerSkills.length > 0
         ? {
-            competingPeerSkills,
-            remediation: buildPeerSkillRemediation(
-              name,
-              brokerHomeDirectory,
-              competingPeerSkills
-            )
+            competingPeerSkills: peerSurface.competingPeerSkills,
+            remediation: peerSurface.remediation
           }
-        : {})
+        : {}),
+      ...(peerSurface.integrityIssues.length === 0
+        ? {}
+        : { integrityIssues: peerSurface.integrityIssues }),
+      ...(peerSurface.manualRecovery === undefined
+        ? {}
+        : { manualRecovery: peerSurface.manualRecovery })
     };
   }
 
@@ -211,6 +242,7 @@ export async function doctorSharedBrokerHome(
   options: DoctorSharedBrokerHomeOptions
 ): Promise<DoctorLifecycleResult> {
   const sharedHomeLayout = resolveSharedBrokerHomeLayout(options.brokerHomeDirectory);
+  const sharedHomeExists = await pathExists(sharedHomeLayout.packageJsonPath);
   const hostTargets = await detectLifecycleHostTargets({
     homeDirectory: options.homeDirectory,
     brokerHomeOverride: options.brokerHomeDirectory,
@@ -235,7 +267,7 @@ export async function doctorSharedBrokerHome(
     command: "doctor",
     sharedHome: {
       path: options.brokerHomeDirectory,
-      exists: await pathExists(sharedHomeLayout.packageJsonPath)
+      exists: sharedHomeExists
     },
     routingMetrics: {
       windowDays: routingWindowDays,
@@ -259,6 +291,11 @@ export async function doctorSharedBrokerHome(
         warnings
       )
     ],
+    brokerFirstGate: await evaluateBrokerFirstGate({
+      brokerHomeDirectory: options.brokerHomeDirectory,
+      refresh: options.refreshRemote,
+      now: options.now
+    }),
     status: await evaluateStatusBoard({
       cwd: options.cwd,
       refreshRemote: options.refreshRemote,
