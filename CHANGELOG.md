@@ -19,6 +19,8 @@
 
 - Fixed strict doctor gating so missing or stale broker-first gates, peer-surface integrity problems, manual-recovery blockers, and visible competing peer skills now fail closed instead of slipping through as warnings.
 - Fixed peer-surface repair and clear flows so recovery markers carry typed audit evidence, reject mismatched marker clears, and keep the shared broker home pointed at the right location in operator follow-up commands.
+- Fixed `update --clear-manual-recovery` so a successful clear rematerializes the broker-first gate artifact instead of leaving `doctor --strict` red on older installs.
+- Fixed peer-surface recovery rollback so adopting an identical downstream peer copy does not move that already-hidden directory back onto the host-visible surface when later ledger writes fail.
 
 ## [0.1.10] - 2026-04-02
 

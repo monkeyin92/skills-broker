@@ -12,6 +12,7 @@ import { readManagedShellManifest } from "./ownership.js";
 import {
   buildPeerSkillRemediation,
   competingPeerSkillsWarning,
+  type AppliedPeerSkillMoveResult,
   type PlannedPeerSkillMove,
   inspectManagedPeerSurface,
   planCompetingPeerSkillMoves,
@@ -23,6 +24,7 @@ import {
   resolveSharedBrokerHomeLayout,
   type InstallSharedBrokerHomeOptions
 } from "./install.js";
+import { materializeBrokerFirstGateArtifact } from "./broker-first-gate.js";
 import {
   appendPeerSurfaceLedgerEvent,
   createPeerSurfaceLedgerEvent,
@@ -413,8 +415,12 @@ async function repairHostPeerSurface(
 
     try {
       for (const move of moves) {
-        await applyPlannedPeerSkillMove(move);
-        moved.push(move);
+        const outcome: AppliedPeerSkillMoveResult =
+          await applyPlannedPeerSkillMove(move);
+
+        if (outcome === "moved") {
+          moved.push(move);
+        }
       }
 
       try {
@@ -1012,10 +1018,27 @@ export async function updateSharedBrokerHome(
     );
     warnings.push(...clearResult.warnings);
 
+    if (clearResult.host.status === "cleared_manual_recovery") {
+      try {
+        await materializeBrokerFirstGateArtifact({
+          brokerHomeDirectory: options.brokerHomeDirectory
+        });
+      } catch (error) {
+        const reason = error instanceof Error ? error.message : String(error);
+        warnings.push(`shared-home: ${reason}`);
+        sharedHome = {
+          path: options.brokerHomeDirectory,
+          status: "failed",
+          reason
+        };
+      }
+    }
+
     return {
       command: "update",
       status:
-        clearResult.host.status === "cleared_manual_recovery"
+        clearResult.host.status === "cleared_manual_recovery" &&
+        sharedHome.status !== "failed"
           ? "success"
           : "failed",
       dryRun: false,
@@ -1030,6 +1053,9 @@ export async function updateSharedBrokerHome(
       await installSharedBrokerHome({
         brokerHomeDirectory: options.brokerHomeDirectory,
         projectRoot: options.projectRoot
+      });
+      await materializeBrokerFirstGateArtifact({
+        brokerHomeDirectory: options.brokerHomeDirectory
       });
     } catch (error) {
       const reason = error instanceof Error ? error.message : String(error);
