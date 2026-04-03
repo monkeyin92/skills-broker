@@ -200,7 +200,7 @@ skills-broker update
 npx skills-broker update
 ```
 
-使用 `npx skills-broker update` 可以初始化或刷新共享 broker home，接上薄宿主壳，并让 Claude Code 和 Codex 复用同一份路由缓存。`npx skills-broker doctor` 用来只读诊断环境，如果 shared home 里已经有 routing trace，还会顺手汇总最近的 broker 命中率 / 误路由率 / fallback 率；如果当前 repo 接入了 canonical `STATUS.md`，它还可以顺手校验 shipped proof，并在 strict 模式下区分 `shipped_local` 和 `shipped_remote`，适合挂到 CI gate。`npx skills-broker remove` 默认只拆卸受管宿主壳而不删除共享历史，`npx skills-broker remove --purge` 会把共享 broker home 一起清掉。
+使用 `npx skills-broker update` 可以初始化或刷新共享 broker home，接上薄宿主壳，并让 Claude Code 和 Codex 复用同一份路由缓存。`npx skills-broker update --repair-host-surface` 现在会把 peer surface 修复写成 typed audit event，`npx skills-broker update --clear-manual-recovery --host <host> --marker-id <id> ...` 则是修复失败后给 operator 用的显式解封路径。`npx skills-broker doctor` 用来只读诊断环境，如果 shared home 里已经有 routing trace，还会顺手汇总最近的 broker 命中率 / 误路由率 / fallback 率，显示 broker-first gate 新鲜度和 manual recovery blocker；如果当前 repo 接入了 canonical `STATUS.md`，它还可以顺手校验 shipped proof，并在 strict 模式下区分 `shipped_local` 和 `shipped_remote`，适合挂到 CI gate。`npx skills-broker remove` 默认只拆卸受管宿主壳而不删除共享历史，`npx skills-broker remove --purge` 会把共享 broker home 一起清掉。
 
 默认情况下，`update` 会先按官方根目录检测宿主，再决定是否写入：
 
