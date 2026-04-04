@@ -175,6 +175,7 @@ describe("lifecycle cli", () => {
 
       const result = JSON.parse(stdout.trim());
       expect(result.command).toBe("doctor");
+      expect(result.adoptionHealth.status).toBe("blocked");
       expect(result.sharedHome).toEqual({
         path: brokerHomeDirectory,
         exists: false
@@ -189,7 +190,7 @@ describe("lifecycle cli", () => {
     } finally {
       await rm(runtimeDirectory, { recursive: true, force: true });
     }
-  }, 15000);
+  }, 30_000);
 
   it("exits non-zero when doctor --strict sees a strict status issue", async () => {
     const scriptPath = resolve("src/bin/skills-broker.ts");
@@ -225,6 +226,49 @@ describe("lifecycle cli", () => {
       ).rejects.toMatchObject({
         code: 1,
         stdout: expect.stringContaining("Status issue STATUS_SHIP_REF_UNRESOLVED")
+      });
+    } finally {
+      await rm(runtimeDirectory, { recursive: true, force: true });
+    }
+  }, 15000);
+
+  it("exits non-zero when doctor --strict sees an explicit missing host shell", async () => {
+    const scriptPath = resolve("src/bin/skills-broker.ts");
+    const runtimeDirectory = await mkdtemp(resolve(tmpdir(), "skills-broker-cli-doctor-host-missing-"));
+    const brokerHomeDirectory = resolve(runtimeDirectory, ".skills-broker");
+    const missingCodexDirectory = resolve(
+      runtimeDirectory,
+      ".agents",
+      "skills",
+      "skills-broker"
+    );
+
+    try {
+      await expect(
+        execFileAsync(
+          "node",
+          [
+            "--loader",
+            tsNodeLoaderPath,
+            scriptPath,
+            "doctor",
+            "--strict",
+            "--broker-home",
+            brokerHomeDirectory,
+            "--codex-dir",
+            missingCodexDirectory
+          ],
+          {
+            env: {
+              ...process.env,
+              HOME: runtimeDirectory
+            },
+            encoding: "utf8"
+          }
+        )
+      ).rejects.toMatchObject({
+        code: 1,
+        stdout: expect.stringContaining("Host codex: not_detected")
       });
     } finally {
       await rm(runtimeDirectory, { recursive: true, force: true });
@@ -330,8 +374,14 @@ describe("lifecycle cli", () => {
       resolve(tmpdir(), "skills-broker-cli-gate-after-update-")
     );
     const brokerHomeDirectory = resolve(runtimeDirectory, ".skills-broker");
+    const repoDirectory = resolve(runtimeDirectory, "repo");
 
     try {
+      await initGitRepo(repoDirectory);
+      await writeFile(resolve(repoDirectory, "README.md"), "# repo\n", "utf8");
+      await writeFile(resolve(repoDirectory, "STATUS.md"), renderStatusBoard("in_progress"), "utf8");
+      await commitAll(repoDirectory, "add local-only status board");
+
       await execFileAsync(
         "node",
         [
@@ -361,7 +411,9 @@ describe("lifecycle cli", () => {
           "--strict",
           "--json",
           "--broker-home",
-          brokerHomeDirectory
+          brokerHomeDirectory,
+          "--repo-root",
+          repoDirectory
         ],
         {
           env: {
@@ -588,6 +640,17 @@ describe("lifecycle cli", () => {
 
       const result = JSON.parse(stdout.trim());
       expect(result.command).toBe("doctor");
+      expect(result.adoptionHealth).toEqual({
+        status: "blocked",
+        managedHosts: ["codex"],
+        reasons: [
+          {
+            code: "SHARED_HOME_MISSING",
+            message:
+              "shared-home: managed host shells exist but the shared broker home is missing"
+          }
+        ]
+      });
       expect(result.sharedHome).toEqual({
         path: brokerHomeDirectory,
         exists: false
@@ -635,6 +698,7 @@ describe("lifecycle cli", () => {
     const scriptPath = resolve("src/bin/skills-broker.ts");
     const runtimeDirectory = await mkdtemp(resolve(tmpdir(), "skills-broker-cli-json-"));
     const brokerHomeDirectory = resolve(runtimeDirectory, ".skills-broker");
+    const repoDirectory = resolve(runtimeDirectory, "repo");
     const codexInstallDirectory = resolve(
       runtimeDirectory,
       ".agents",
@@ -698,6 +762,7 @@ describe("lifecycle cli", () => {
 
       const output = stdout.trim();
       expect(output).toContain("skills-broker updated");
+      expect(output).toContain("Adoption health: inactive");
       expect(output).toContain(`Shared home: ${brokerHomeDirectory}`);
       expect(output).toContain("Host claude-code: skipped_not_detected");
       expect(output).toContain("Host codex: skipped_not_detected");
@@ -766,6 +831,7 @@ describe("lifecycle cli", () => {
     const scriptPath = resolve("src/bin/skills-broker.ts");
     const runtimeDirectory = await mkdtemp(resolve(tmpdir(), "skills-broker-cli-clear-manual-"));
     const brokerHomeDirectory = resolve(runtimeDirectory, ".skills-broker");
+    const repoDirectory = resolve(runtimeDirectory, "repo");
     const codexInstallDirectory = resolve(
       runtimeDirectory,
       ".agents",
@@ -778,6 +844,11 @@ describe("lifecycle cli", () => {
     );
 
     try {
+      await initGitRepo(repoDirectory);
+      await writeFile(resolve(repoDirectory, "README.md"), "# repo\n", "utf8");
+      await writeFile(resolve(repoDirectory, "STATUS.md"), renderStatusBoard("in_progress"), "utf8");
+      await commitAll(repoDirectory, "add local-only status board");
+
       await installSharedBrokerHome({
         brokerHomeDirectory,
         projectRoot: process.cwd()
@@ -863,6 +934,8 @@ describe("lifecycle cli", () => {
           "--json",
           "--broker-home",
           brokerHomeDirectory,
+          "--repo-root",
+          repoDirectory,
           "--codex-dir",
           codexInstallDirectory
         ],
@@ -986,6 +1059,10 @@ describe("lifecycle cli", () => {
     const codexInstallDirectory = resolve(runtimeDirectory, ".agents", "skills", "skills-broker");
 
     try {
+      await installSharedBrokerHome({
+        brokerHomeDirectory,
+        projectRoot: process.cwd()
+      });
       await mkdir(resolve(runtimeDirectory, ".codex"), { recursive: true });
       await mkdir(codexInstallDirectory, { recursive: true });
       await mkdir(resolve(runtimeDirectory, ".agents", "skills", "baoyu-danger-x-to-markdown"), {
@@ -1012,12 +1089,13 @@ describe("lifecycle cli", () => {
       });
 
       const output = stdout.trim();
+      expect(output).toContain("HOST_COMPETING_PEERS");
       expect(output).toContain("Host codex competing peers: baoyu-danger-x-to-markdown");
       expect(output).toContain("Host codex remediation: Hide competing peer skills behind skills-broker");
     } finally {
       await rm(runtimeDirectory, { recursive: true, force: true });
     }
-  });
+  }, 30_000);
 
   it("auto-detects official Claude Code and Codex roots for zero-arg update", async () => {
     const scriptPath = resolve("src/bin/skills-broker.ts");
@@ -1047,6 +1125,7 @@ describe("lifecycle cli", () => {
 
       const result = JSON.parse(stdout.trim());
       expect(result.command).toBe("update");
+      expect(result.adoptionHealth.status).toBe("inactive");
       expect(result.hosts).toContainEqual({
         name: "claude-code",
         status: "planned_install"

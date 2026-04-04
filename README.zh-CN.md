@@ -134,7 +134,7 @@ v0 当前包含：
 这不是为了“什么都支持”。  
 v0 的目标是证明：在一个具体任务上，broker 可以比人手动翻 skills 更准确地选到并准备好正确能力。
 
-**当前产品阶段：**先提升真实宿主里的 auto-routing 命中率，让 Claude Code 和 Codex 在遇到明显的外部能力请求时更稳定地先问 broker，而不是装上了却经常不用。
+**当前产品阶段：**先把 adoption health 证明并维持在绿色，让 Claude Code 和 Codex 在真实使用里持续把 `skills-broker` 放在热路径上，而不是停留在“装上了但经常没被用到”。
 
 ## 架构一眼看懂
 
@@ -202,12 +202,18 @@ npx skills-broker update
 
 使用 `npx skills-broker update` 可以初始化或刷新共享 broker home，接上薄宿主壳，并让 Claude Code 和 Codex 复用同一份路由缓存。`npx skills-broker update --repair-host-surface` 现在会把 peer surface 修复写成 typed audit event，`npx skills-broker update --clear-manual-recovery --host <host> --marker-id <id> ...` 则是修复失败后给 operator 用的显式解封路径。`npx skills-broker doctor` 用来只读诊断环境，如果 shared home 里已经有 routing trace，还会顺手汇总最近的 broker 命中率 / 误路由率 / fallback 率，显示 broker-first gate 新鲜度和 manual recovery blocker；如果当前 repo 接入了 canonical `STATUS.md`，它还可以顺手校验 shipped proof，并在 strict 模式下区分 `shipped_local` 和 `shipped_remote`，适合挂到 CI gate。`npx skills-broker remove` 默认只拆卸受管宿主壳而不删除共享历史，`npx skills-broker remove --purge` 会把共享 broker home 一起清掉。
 
+`update` 和 `doctor` 现在还会输出一个一等公民的 `adoptionHealth` verdict：
+
+- `green`：至少有一个受管宿主是干净的，而且已知 proof surface 没有发红
+- `blocked`：安装物存在，但有明确 blocker，比如 competing peers、manual recovery、gate 漂移，或者显式指定的宿主壳 / shared home 缺失
+- `inactive`：还没有安装任何受管宿主壳，但当前也没有损坏状态
+
 默认情况下，`update` 会先按官方根目录检测宿主，再决定是否写入：
 
 - Claude Code：先看 `~/.claude`，检测到后把薄壳写到 `~/.claude/skills/skills-broker`
 - Codex：先看 `~/.codex`，检测到后把薄壳写到 `~/.agents/skills/skills-broker`
 
-如果没有检测到官方根目录，CLI 会明确提示，并告诉你用 `--claude-dir` 或 `--codex-dir` 指定自定义目录。
+如果没有检测到官方根目录，CLI 会明确提示，并告诉你用 `--claude-dir` 或 `--codex-dir` 指定自定义目录。默认根目录缺失会让 adoption health 保持在 `inactive`；如果你显式指定了一个缺失的宿主壳路径，则会出现带名字的 `blocked` verdict。
 
 ### 2. 用显式目录试跑共享 home
 

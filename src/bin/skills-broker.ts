@@ -354,13 +354,16 @@ async function main(argv = process.argv.slice(2)) {
         (host.integrityIssues?.length ?? 0) > 0 ||
         host.manualRecovery !== undefined
     );
+    const hasAdoptionBlockingIssues =
+      lifecycleResult.adoptionHealth.status === "blocked";
 
     process.stdout.write(`${formatLifecycleResult(lifecycleResult, result.outputMode)}\n`);
     if (
       result.strict &&
       (lifecycleResult.status.hasStrictIssues ||
         lifecycleResult.brokerFirstGate.hasStrictIssues ||
-        hasPeerSurfaceStrictIssues)
+        hasPeerSurfaceStrictIssues ||
+        hasAdoptionBlockingIssues)
     ) {
       process.exitCode = 1;
     }

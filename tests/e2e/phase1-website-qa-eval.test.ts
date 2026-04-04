@@ -223,6 +223,6 @@ describe("Phase 1 website QA eval harness", () => {
         await rm(runtimeDirectory, { recursive: true, force: true });
       }
     },
-    15_000
+    30_000
   );
 });

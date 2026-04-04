@@ -2,6 +2,29 @@ import type { DoctorLifecycleResult } from "./doctor.js";
 import type { RemoveLifecycleResult } from "./remove.js";
 import type { UpdateLifecycleResult } from "./update.js";
 
+function formatAdoptionHealthLine(
+  adoptionHealth: DoctorLifecycleResult["adoptionHealth"] | UpdateLifecycleResult["adoptionHealth"]
+): string {
+  if (adoptionHealth.status === "green") {
+    return "Adoption health: green";
+  }
+
+  if (adoptionHealth.status === "inactive") {
+    return `Adoption health: inactive (${adoptionHealth.reasons[0]?.message ?? "no managed host is installed yet"})`;
+  }
+
+  const blockerCodes = adoptionHealth.reasons
+    .slice(0, 3)
+    .map((reason) => reason.code)
+    .join(", ");
+  const overflow =
+    adoptionHealth.reasons.length > 3
+      ? `, +${adoptionHealth.reasons.length - 3} more`
+      : "";
+
+  return `Adoption health: blocked (${blockerCodes}${overflow})`;
+}
+
 export function formatLifecycleResult(
   result: UpdateLifecycleResult | DoctorLifecycleResult | RemoveLifecycleResult,
   outputMode: "text" | "json"
@@ -15,7 +38,8 @@ export function formatLifecycleResult(
       "skills-broker doctor",
       "",
       `Shared home: ${result.sharedHome.path}`,
-      `Shared home exists: ${result.sharedHome.exists ? "yes" : "no"}`
+      `Shared home exists: ${result.sharedHome.exists ? "yes" : "no"}`,
+      formatAdoptionHealthLine(result.adoptionHealth)
     ];
 
     if (result.routingMetrics.observed === 0) {
@@ -183,7 +207,8 @@ export function formatLifecycleResult(
     "skills-broker updated",
     "",
     `Shared home: ${result.sharedHome.path}`,
-    `Shared home status: ${result.sharedHome.status}`
+    `Shared home status: ${result.sharedHome.status}`,
+    formatAdoptionHealthLine(result.adoptionHealth)
   ];
 
   if (result.sharedHome.reason) {

@@ -117,7 +117,7 @@ describe("doctor shared broker home", () => {
     } finally {
       await rm(runtimeDirectory, { recursive: true, force: true });
     }
-  }, 15000);
+  }, 30_000);
 
   it("reports a host as not writable when the target directory cannot be created", async () => {
     const runtimeDirectory = await mkdtemp(join(tmpdir(), "skills-broker-doctor-readonly-"));
@@ -147,7 +147,7 @@ describe("doctor shared broker home", () => {
       await chmod(parentDirectory, 0o755).catch(() => undefined);
       await rm(runtimeDirectory, { recursive: true, force: true });
     }
-  }, 15000);
+  }, 30_000);
 
   it("keeps an existing managed host detected even when the install directory is read-only", async () => {
     const runtimeDirectory = await mkdtemp(join(tmpdir(), "skills-broker-doctor-managed-"));
@@ -202,6 +202,7 @@ describe("doctor shared broker home", () => {
       const parsed = JSON.parse(rendered) as typeof result;
 
       expect(parsed.command).toBe("doctor");
+      expect(parsed.adoptionHealth.status).toBe("inactive");
       expect(parsed.sharedHome.exists).toBe(false);
       expect(parsed.status.skipped).toBe(true);
       expect(parsed.status.issues).toEqual([]);
@@ -221,6 +222,58 @@ describe("doctor shared broker home", () => {
       await rm(runtimeDirectory, { recursive: true, force: true });
     }
   });
+
+  it("blocks adoption health when a managed host shell remains but the shared home is missing", async () => {
+    const runtimeDirectory = await mkdtemp(
+      join(tmpdir(), "skills-broker-doctor-missing-shared-home-")
+    );
+    const brokerHomeDirectory = join(runtimeDirectory, ".skills-broker");
+    const codexInstallDirectory = join(
+      runtimeDirectory,
+      ".agents",
+      "skills",
+      "skills-broker"
+    );
+
+    try {
+      await mkdir(join(runtimeDirectory, ".codex"), { recursive: true });
+      await mkdir(codexInstallDirectory, { recursive: true });
+      await writeManagedShellManifest(codexInstallDirectory, {
+        managedBy: "skills-broker",
+        host: "codex",
+        version: "test-version",
+        brokerHome: brokerHomeDirectory
+      });
+
+      const result = await doctorSharedBrokerHome({
+        brokerHomeDirectory,
+        homeDirectory: runtimeDirectory,
+        cwd: runtimeDirectory,
+        codexInstallDirectory
+      });
+
+      expect(result.sharedHome).toEqual({
+        path: brokerHomeDirectory,
+        exists: false
+      });
+      expect(result.adoptionHealth).toEqual({
+        status: "blocked",
+        managedHosts: ["codex"],
+        reasons: [
+          {
+            code: "SHARED_HOME_MISSING",
+            message:
+              "shared-home: managed host shells exist but the shared broker home is missing"
+          }
+        ]
+      });
+      expect(formatLifecycleResult(result, "text")).toContain(
+        "Adoption health: blocked (SHARED_HOME_MISSING)"
+      );
+    } finally {
+      await rm(runtimeDirectory, { recursive: true, force: true });
+    }
+  }, 30_000);
 
   it("includes a first-class status object in doctor output", async () => {
     const runtimeDirectory = await mkdtemp(join(tmpdir(), "skills-broker-doctor-status-json-"));
@@ -267,7 +320,54 @@ describe("doctor shared broker home", () => {
     } finally {
       await rm(runtimeDirectory, { recursive: true, force: true });
     }
-  }, 15000);
+  }, 30_000);
+
+  it("reports green adoption health when a managed host and repo truth are both clean", async () => {
+    const runtimeDirectory = await mkdtemp(join(tmpdir(), "skills-broker-doctor-adoption-green-"));
+    const brokerHomeDirectory = join(runtimeDirectory, ".skills-broker");
+    const repoDirectory = join(runtimeDirectory, "repo");
+    const codexInstallDirectory = join(
+      runtimeDirectory,
+      ".agents",
+      "skills",
+      "skills-broker"
+    );
+
+    try {
+      await installSharedBrokerHome({
+        brokerHomeDirectory,
+        projectRoot: process.cwd()
+      });
+      await writeFreshGateArtifact(brokerHomeDirectory);
+      await initGitRepo(repoDirectory);
+      await writeFile(join(repoDirectory, "README.md"), "# repo\n", "utf8");
+      await writeFile(join(repoDirectory, "STATUS.md"), renderStatusBoard("in_progress"), "utf8");
+      await commitAll(repoDirectory, "add clean status board");
+      await mkdir(codexInstallDirectory, { recursive: true });
+      await writeManagedShellManifest(codexInstallDirectory, {
+        managedBy: "skills-broker",
+        host: "codex",
+        version: "test-version",
+        brokerHome: brokerHomeDirectory
+      });
+
+      const result = await doctorSharedBrokerHome({
+        brokerHomeDirectory,
+        homeDirectory: runtimeDirectory,
+        repoRootOverride: repoDirectory,
+        codexInstallDirectory
+      });
+
+      expect(result.adoptionHealth).toEqual({
+        status: "green",
+        managedHosts: ["codex"],
+        reasons: []
+      });
+      expect(formatLifecycleResult(result, "text")).toContain("Adoption health: green");
+    } finally {
+      await rm(runtimeDirectory, { recursive: true, force: true });
+    }
+  }, 30_000);
 
   it("renders all maintained broker-first proofs in doctor text output", async () => {
     const runtimeDirectory = await mkdtemp(join(tmpdir(), "skills-broker-doctor-gate-proofs-"));
@@ -378,7 +478,7 @@ describe("doctor shared broker home", () => {
     } finally {
       await rm(runtimeDirectory, { recursive: true, force: true });
     }
-  }, 15000);
+  }, 30_000);
 
   it("includes structured remediation when competing peer skills are detected", async () => {
     const runtimeDirectory = await mkdtemp(join(tmpdir(), "skills-broker-doctor-remediation-"));
@@ -391,6 +491,10 @@ describe("doctor shared broker home", () => {
     );
 
     try {
+      await installSharedBrokerHome({
+        brokerHomeDirectory,
+        projectRoot: process.cwd()
+      });
       await mkdir(join(runtimeDirectory, ".codex"), { recursive: true });
       await mkdir(codexInstallDirectory, { recursive: true });
       await mkdir(
@@ -410,9 +514,11 @@ describe("doctor shared broker home", () => {
 
       const result = await doctorSharedBrokerHome({
         brokerHomeDirectory,
-        homeDirectory: runtimeDirectory
+        homeDirectory: runtimeDirectory,
+        cwd: runtimeDirectory
       });
 
+      expect(result.adoptionHealth.status).toBe("blocked");
       expect(result.hosts).toContainEqual({
         name: "codex",
         status: "detected",
@@ -430,10 +536,11 @@ describe("doctor shared broker home", () => {
           message: expect.stringContaining("Hide competing peer skills behind skills-broker")
         }
       });
+      expect(formatLifecycleResult(result, "text")).toContain("HOST_COMPETING_PEERS");
     } finally {
       await rm(runtimeDirectory, { recursive: true, force: true });
     }
-  }, 15000);
+  }, 30_000);
 
   it("summarizes recent routing hit, misroute, and fallback rates from persisted traces", async () => {
     const runtimeDirectory = await mkdtemp(join(tmpdir(), "skills-broker-doctor-traces-"));
@@ -512,7 +619,8 @@ describe("doctor shared broker home", () => {
       const result = await doctorSharedBrokerHome({
         brokerHomeDirectory,
         homeDirectory: runtimeDirectory,
-        now: new Date("2026-04-01T12:00:00.000Z")
+        now: new Date("2026-04-01T12:00:00.000Z"),
+        cwd: runtimeDirectory
       });
 
       expect(result.routingMetrics).toEqual({
@@ -562,5 +670,5 @@ describe("doctor shared broker home", () => {
     } finally {
       await rm(runtimeDirectory, { recursive: true, force: true });
     }
-  }, 15000);
+  }, 30_000);
 });

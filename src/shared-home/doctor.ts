@@ -5,6 +5,10 @@ import {
   evaluateBrokerFirstGate,
   type BrokerFirstGateDiagnosticResult
 } from "./broker-first-gate.js";
+import {
+  resolveAdoptionHealth,
+  type AdoptionHealthResult
+} from "./adoption-health.js";
 import { resolveSharedBrokerHomeLayout } from "./install.js";
 import { readManagedShellManifest } from "./ownership.js";
 import { detectWritableDirectory } from "./detect.js";
@@ -48,6 +52,7 @@ export type DoctorLifecycleResult = {
   }>;
   brokerFirstGate: BrokerFirstGateDiagnosticResult;
   status: DoctorStatusResult;
+  adoptionHealth: AdoptionHealthResult;
   warnings: string[];
 };
 
@@ -262,6 +267,34 @@ export async function doctorSharedBrokerHome(
       )
     }
   );
+  const hosts = [
+    await doctorHost(
+      "claude-code",
+      hostTargets.claudeCode.installDirectory,
+      hostTargets.claudeCode.reason,
+      options.brokerHomeDirectory,
+      warnings
+    ),
+    await doctorHost(
+      "codex",
+      hostTargets.codex.installDirectory,
+      hostTargets.codex.reason,
+      options.brokerHomeDirectory,
+      warnings
+    )
+  ];
+  const brokerFirstGate = await evaluateBrokerFirstGate({
+    brokerHomeDirectory: options.brokerHomeDirectory,
+    refresh: options.refreshRemote,
+    now: options.now
+  });
+  const status = await evaluateStatusBoard({
+    cwd: options.cwd,
+    refreshRemote: options.refreshRemote,
+    repoRootOverride: options.repoRootOverride,
+    shipRefOverride: options.shipRefOverride,
+    allowMissingRepoTarget: options.repoRootOverride === undefined
+  });
 
   return {
     command: "doctor",
@@ -275,33 +308,14 @@ export async function doctorSharedBrokerHome(
       syntheticHostSkips: routingSummary.syntheticHostSkips,
       surfaces: routingSummary.surfaces
     },
-    hosts: [
-      await doctorHost(
-        "claude-code",
-        hostTargets.claudeCode.installDirectory,
-        hostTargets.claudeCode.reason,
-        options.brokerHomeDirectory,
-        warnings
-      ),
-      await doctorHost(
-        "codex",
-        hostTargets.codex.installDirectory,
-        hostTargets.codex.reason,
-        options.brokerHomeDirectory,
-        warnings
-      )
-    ],
-    brokerFirstGate: await evaluateBrokerFirstGate({
-      brokerHomeDirectory: options.brokerHomeDirectory,
-      refresh: options.refreshRemote,
-      now: options.now
-    }),
-    status: await evaluateStatusBoard({
-      cwd: options.cwd,
-      refreshRemote: options.refreshRemote,
-      repoRootOverride: options.repoRootOverride,
-      shipRefOverride: options.shipRefOverride,
-      allowMissingRepoTarget: options.repoRootOverride === undefined
+    hosts,
+    brokerFirstGate,
+    status,
+    adoptionHealth: resolveAdoptionHealth({
+      sharedHomeExists,
+      hosts,
+      brokerFirstGate,
+      statusBoard: status
     }),
     warnings
   };

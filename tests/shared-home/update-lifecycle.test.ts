@@ -250,6 +250,7 @@ describe("shared-home lifecycle paths", () => {
       expect(result.command).toBe("update");
       expect(result.dryRun).toBe(true);
       expect(result.status).toBe("success");
+      expect(result.adoptionHealth.status).toBe("inactive");
       expect(result.sharedHome).toMatchObject({
         path: brokerHomeDirectory,
         status: "planned"
@@ -399,6 +400,7 @@ describe("shared-home lifecycle paths", () => {
       });
 
       expect(result.status).toBe("degraded_success");
+      expect(result.adoptionHealth.status).toBe("blocked");
       expect(result.hosts).toContainEqual({
         name: "claude-code",
         status: "installed",
@@ -461,6 +463,11 @@ describe("shared-home lifecycle paths", () => {
       });
 
       expect(result.status).toBe("success");
+      expect(result.adoptionHealth).toEqual({
+        status: "green",
+        managedHosts: ["claude-code"],
+        reasons: []
+      });
       expect(result.hosts).toContainEqual({
         name: "claude-code",
         status: "installed",
@@ -910,6 +917,7 @@ describe("shared-home lifecycle paths", () => {
 
       expect(result.sharedHome.status).toBe("installed");
       expect(result.status).toBe("degraded_success");
+      expect(result.adoptionHealth.status).toBe("blocked");
       expect(result.hosts).toContainEqual({
         name: "claude-code",
         status: "skipped_conflict",
@@ -941,6 +949,7 @@ describe("shared-home lifecycle paths", () => {
       });
 
       expect(result.status).toBe("failed");
+      expect(result.adoptionHealth.status).toBe("blocked");
       expect(result.sharedHome.status).toBe("failed");
       expect(result.sharedHome.reason).toContain("ENOTDIR");
       expect(result.hosts).toContainEqual({

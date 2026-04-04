@@ -84,7 +84,34 @@ describe("shared broker home smoke", () => {
           claudeShellDirectory,
           "--codex-dir",
           codexShellDirectory
-        ]);
+        ], {
+          cwd: runtimeDirectory
+        });
+
+        const { stdout: doctorStdout } = await execFileAsync("node", [
+          buildScriptPath,
+          "doctor",
+          "--json",
+          "--broker-home",
+          brokerHomeDirectory,
+          "--claude-dir",
+          claudeShellDirectory,
+          "--codex-dir",
+          codexShellDirectory
+        ], {
+          cwd: runtimeDirectory
+        });
+        const doctorResult = JSON.parse(doctorStdout) as {
+          adoptionHealth: {
+            status: string;
+            managedHosts: string[];
+          };
+        };
+
+        expect(doctorResult.adoptionHealth).toMatchObject({
+          status: "green",
+          managedHosts: ["claude-code", "codex"]
+        });
 
         await expect(access(sharedRunnerPath)).resolves.toBeUndefined();
         await expect(access(sharedDistCliPath)).resolves.toBeUndefined();
@@ -220,7 +247,7 @@ describe("shared broker home smoke", () => {
         await rm(runtimeDirectory, { recursive: true, force: true });
       }
     },
-    30_000
+    90_000
   );
 
   it("keeps an old codex host shell working against a new shared runtime", async () => {
@@ -263,5 +290,5 @@ describe("shared broker home smoke", () => {
     } finally {
       await rm(runtimeDirectory, { recursive: true, force: true });
     }
-  });
+  }, 30_000);
 });

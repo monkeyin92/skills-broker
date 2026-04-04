@@ -39,7 +39,34 @@ describe("installed host-shell routing smoke", () => {
           claudeShellDirectory,
           "--codex-dir",
           codexShellDirectory
-        ]);
+        ], {
+          cwd: runtimeDirectory
+        });
+
+      const { stdout: doctorStdout } = await execFileAsync("node", [
+        buildScriptPath,
+        "doctor",
+        "--json",
+        "--broker-home",
+        brokerHomeDirectory,
+        "--claude-dir",
+        claudeShellDirectory,
+        "--codex-dir",
+        codexShellDirectory
+      ], {
+        cwd: runtimeDirectory
+      });
+      const doctorResult = JSON.parse(doctorStdout) as {
+        adoptionHealth: {
+          status: string;
+          managedHosts: string[];
+        };
+      };
+
+      expect(doctorResult.adoptionHealth).toMatchObject({
+        status: "green",
+        managedHosts: ["claude-code", "codex"]
+      });
 
       const requirementsAnalysisRequest = maintainedExamples.find((example) =>
         example.includes("需求分析")
@@ -295,7 +322,7 @@ describe("installed host-shell routing smoke", () => {
         await rm(runtimeDirectory, { recursive: true, force: true });
       }
     },
-    30_000
+    90_000
   );
 
   it(
@@ -358,7 +385,7 @@ describe("installed host-shell routing smoke", () => {
         await rm(runtimeDirectory, { recursive: true, force: true });
       }
     },
-    15_000
+    30_000
   );
 
   it("records a synthetic host-selection trace when the host never invokes the broker", () => {

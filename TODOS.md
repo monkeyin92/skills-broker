@@ -74,19 +74,15 @@
 
 **Shipped:** maintained-family contract data, broker-owned query compiler extraction, maintained gate freshness/proof diagnostics, typed peer-surface audit history, transactional repair locking, and explicit `update --clear-manual-recovery` recovery flows.
 
+### Landed the Phase 1 adoption proof verdicts
+
+**What:** `update` / `doctor` now derive an explicit `adoptionHealth` verdict and mirror that operator-facing truth into installed-shell smoke plus repo-native docs.
+
+**Why:** The product bottleneck was no longer "can the broker route" but "can an operator tell in one step whether the broker is really on the hot path." This closes that gap with a green / blocked / inactive verdict instead of scattered lifecycle clues.
+
+**Shipped:** shared adoption-health derivation in shared-home lifecycle commands, strict doctor closure for explicit host blockers, installed-shell confidence smoke, and repo truth mirroring in `STATUS.md`, `README.md`, and `TODOS.md`.
+
 ## Next
-
-### Improve real host auto-routing hit rate
-
-**What:** Make Claude Code and Codex more reliably route obvious external-capability requests through `skills-broker` before they fall back to native tools.
-
-**Why:** The install and runtime skeleton is done. The next product bottleneck is whether the broker is actually chosen in real workflows often enough to matter.
-
-**Context:** The coarse host boundary, broker-owned query compiler, and maintained gate/update closure plus peer-surface recovery tightening are already in `main`. The remaining gap is operational: real installs can drift behind the latest shared-home contract, competing peer skills can stay visible long enough to steal requests, and the broker still needs stronger host-in-the-loop coverage plus better operator nudges to stay on the hot path.
-
-**Effort:** M
-**Priority:** P0
-**Depends on:** durable host-shell boundary guidance, maintained coarse-boundary evals, and continued real host-in-the-loop smoke coverage
 
 ### Finish the capability-query migration and retire the legacy intent gate
 
