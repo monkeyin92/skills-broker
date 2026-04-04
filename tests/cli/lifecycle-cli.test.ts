@@ -374,8 +374,14 @@ describe("lifecycle cli", () => {
       resolve(tmpdir(), "skills-broker-cli-gate-after-update-")
     );
     const brokerHomeDirectory = resolve(runtimeDirectory, ".skills-broker");
+    const repoDirectory = resolve(runtimeDirectory, "repo");
 
     try {
+      await initGitRepo(repoDirectory);
+      await writeFile(resolve(repoDirectory, "README.md"), "# repo\n", "utf8");
+      await writeFile(resolve(repoDirectory, "STATUS.md"), renderStatusBoard("in_progress"), "utf8");
+      await commitAll(repoDirectory, "add local-only status board");
+
       await execFileAsync(
         "node",
         [
@@ -405,7 +411,9 @@ describe("lifecycle cli", () => {
           "--strict",
           "--json",
           "--broker-home",
-          brokerHomeDirectory
+          brokerHomeDirectory,
+          "--repo-root",
+          repoDirectory
         ],
         {
           env: {
@@ -690,6 +698,7 @@ describe("lifecycle cli", () => {
     const scriptPath = resolve("src/bin/skills-broker.ts");
     const runtimeDirectory = await mkdtemp(resolve(tmpdir(), "skills-broker-cli-json-"));
     const brokerHomeDirectory = resolve(runtimeDirectory, ".skills-broker");
+    const repoDirectory = resolve(runtimeDirectory, "repo");
     const codexInstallDirectory = resolve(
       runtimeDirectory,
       ".agents",
@@ -822,6 +831,7 @@ describe("lifecycle cli", () => {
     const scriptPath = resolve("src/bin/skills-broker.ts");
     const runtimeDirectory = await mkdtemp(resolve(tmpdir(), "skills-broker-cli-clear-manual-"));
     const brokerHomeDirectory = resolve(runtimeDirectory, ".skills-broker");
+    const repoDirectory = resolve(runtimeDirectory, "repo");
     const codexInstallDirectory = resolve(
       runtimeDirectory,
       ".agents",
@@ -834,6 +844,11 @@ describe("lifecycle cli", () => {
     );
 
     try {
+      await initGitRepo(repoDirectory);
+      await writeFile(resolve(repoDirectory, "README.md"), "# repo\n", "utf8");
+      await writeFile(resolve(repoDirectory, "STATUS.md"), renderStatusBoard("in_progress"), "utf8");
+      await commitAll(repoDirectory, "add local-only status board");
+
       await installSharedBrokerHome({
         brokerHomeDirectory,
         projectRoot: process.cwd()
@@ -919,6 +934,8 @@ describe("lifecycle cli", () => {
           "--json",
           "--broker-home",
           brokerHomeDirectory,
+          "--repo-root",
+          repoDirectory,
           "--codex-dir",
           codexInstallDirectory
         ],

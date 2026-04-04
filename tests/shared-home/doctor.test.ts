@@ -248,6 +248,7 @@ describe("doctor shared broker home", () => {
       const result = await doctorSharedBrokerHome({
         brokerHomeDirectory,
         homeDirectory: runtimeDirectory,
+        cwd: runtimeDirectory,
         codexInstallDirectory
       });
 
@@ -513,7 +514,8 @@ describe("doctor shared broker home", () => {
 
       const result = await doctorSharedBrokerHome({
         brokerHomeDirectory,
-        homeDirectory: runtimeDirectory
+        homeDirectory: runtimeDirectory,
+        cwd: runtimeDirectory
       });
 
       expect(result.adoptionHealth.status).toBe("blocked");
@@ -617,7 +619,8 @@ describe("doctor shared broker home", () => {
       const result = await doctorSharedBrokerHome({
         brokerHomeDirectory,
         homeDirectory: runtimeDirectory,
-        now: new Date("2026-04-01T12:00:00.000Z")
+        now: new Date("2026-04-01T12:00:00.000Z"),
+        cwd: runtimeDirectory
       });
 
       expect(result.routingMetrics).toEqual({

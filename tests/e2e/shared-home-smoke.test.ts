@@ -84,7 +84,9 @@ describe("shared broker home smoke", () => {
           claudeShellDirectory,
           "--codex-dir",
           codexShellDirectory
-        ]);
+        ], {
+          cwd: runtimeDirectory
+        });
 
         const { stdout: doctorStdout } = await execFileAsync("node", [
           buildScriptPath,
@@ -96,7 +98,9 @@ describe("shared broker home smoke", () => {
           claudeShellDirectory,
           "--codex-dir",
           codexShellDirectory
-        ]);
+        ], {
+          cwd: runtimeDirectory
+        });
         const doctorResult = JSON.parse(doctorStdout) as {
           adoptionHealth: {
             status: string;
