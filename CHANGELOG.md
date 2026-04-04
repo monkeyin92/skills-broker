@@ -2,6 +2,21 @@
 
 ## [Unreleased]
 
+## [0.1.12] - 2026-04-04
+
+### Added
+
+- Added a shared `adoptionHealth` verdict across the shared-home lifecycle so `update` and `doctor` can classify installs as `green`, `blocked`, or `inactive`.
+- Added installed-shell confidence smoke plus repo-native status proofs that keep the new adoption-health story tied to shipped behavior.
+
+### Changed
+
+- Changed the repo's operator-facing narrative so `README.md`, `README.zh-CN.md`, `STATUS.md`, and `TODOS.md` all mirror the current Phase 1 adoption-proof focus.
+
+### Fixed
+
+- Fixed strict lifecycle handling so blocked adoption-health states, including a missing shared broker home behind an otherwise managed host, now fail closed instead of looking merely informational.
+
 ## [0.1.11] - 2026-04-03
 
 ### Added
