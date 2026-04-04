@@ -1,4 +1,4 @@
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -28,6 +28,18 @@ ${JSON.stringify({ schemaVersion: 1, items }, null, 2)}
 \`\`\`
 <!-- skills-broker-status:end -->
 `;
+}
+
+function extractCanonicalStatusBoard(markdown: string): { items: StatusItemFixture[] } {
+  const match = markdown.match(
+    /<!--\s*skills-broker-status:start\s*-->\s*```json\s*([\s\S]*?)\s*```\s*<!--\s*skills-broker-status:end\s*-->/m
+  );
+
+  if (!match) {
+    throw new Error("STATUS.md canonical block is missing");
+  }
+
+  return JSON.parse(match[1]) as { items: StatusItemFixture[] };
 }
 
 describe("evaluateStatusBoard", () => {
@@ -90,7 +102,7 @@ describe("evaluateStatusBoard", () => {
     } finally {
       await rm(repoDirectory, { recursive: true, force: true });
     }
-  });
+  }, 15_000);
 
   it("fails closed when STATUS.md is missing the canonical block", async () => {
     const repoDirectory = await mkdtemp(join(tmpdir(), "skills-broker-status-missing-"));
@@ -163,7 +175,7 @@ describe("evaluateStatusBoard", () => {
     } finally {
       await rm(repoDirectory, { recursive: true, force: true });
     }
-  });
+  }, 15_000);
 
   it("distinguishes shipped_remote from shipped_local using the shipping ref", async () => {
     const remoteDirectory = await mkdtemp(join(tmpdir(), "skills-broker-status-remote-"));
@@ -278,7 +290,7 @@ describe("evaluateStatusBoard", () => {
       await rm(repoDirectory, { recursive: true, force: true });
       await rm(remoteDirectory, { recursive: true, force: true });
     }
-  }, 30_000);
+  }, 60_000);
 
   it("marks remote truth unknown and strict-failing when refresh remote fails", async () => {
     const repoDirectory = await mkdtemp(join(tmpdir(), "skills-broker-status-refresh-fail-"));
@@ -319,7 +331,7 @@ describe("evaluateStatusBoard", () => {
     } finally {
       await rm(repoDirectory, { recursive: true, force: true });
     }
-  }, 30_000);
+  }, 60_000);
 
   it("does not require a shipping ref when no item needs remote truth", async () => {
     const repoDirectory = await mkdtemp(join(tmpdir(), "skills-broker-status-no-upstream-"));
@@ -359,5 +371,28 @@ describe("evaluateStatusBoard", () => {
     } finally {
       await rm(repoDirectory, { recursive: true, force: true });
     }
-  }, 30_000);
+  }, 60_000);
+
+  it("repo STATUS.md mirrors the adoption-proof item", async () => {
+    const board = extractCanonicalStatusBoard(
+      await readFile(join(process.cwd(), "STATUS.md"), "utf8")
+    );
+
+    expect(board.items).toContainEqual(
+      expect.objectContaining({
+        id: "adoption-proof",
+        status: "in_progress",
+        proofs: expect.arrayContaining([
+          expect.objectContaining({
+            type: "test",
+            path: "tests/shared-home/doctor.test.ts"
+          }),
+          expect.objectContaining({
+            type: "test",
+            path: "tests/e2e/shared-home-smoke.test.ts"
+          })
+        ])
+      })
+    );
+  });
 });

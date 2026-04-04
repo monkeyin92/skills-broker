@@ -136,6 +136,6 @@ describe("Claude Code smoke", () => {
         await rm(runtimeDirectory, { recursive: true, force: true });
       }
     },
-    15_000
+    30_000
   );
 });

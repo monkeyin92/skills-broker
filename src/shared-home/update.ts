@@ -39,6 +39,10 @@ import {
   writePeerSurfaceManualRecoveryMarker
 } from "./peer-surface-audit.js";
 import { detectLifecycleHostTargets } from "./paths.js";
+import {
+  resolveAdoptionHealth,
+  type AdoptionHealthResult
+} from "./adoption-health.js";
 
 export type HostLifecycleStatus =
   | "installed"
@@ -83,6 +87,7 @@ export type UpdateLifecycleResult = {
       message: string;
     };
   }>;
+  adoptionHealth: AdoptionHealthResult;
   warnings: string[];
 };
 
@@ -153,6 +158,29 @@ function resolveOverallStatus(
     (sharedHomeCountsAsSuccess(sharedHome.status) ? 1 : 0) +
     hosts.filter((host) => statusCountsAsSuccess(host.status)).length;
   return successCount > 0 ? "degraded_success" : "failed";
+}
+
+function buildUpdateLifecycleResult(input: {
+  dryRun: boolean;
+  sharedHome: UpdateLifecycleResult["sharedHome"];
+  hosts: HostLifecycleEntry[];
+  warnings: string[];
+  status?: UpdateLifecycleResult["status"];
+}): UpdateLifecycleResult {
+  return {
+    command: "update",
+    status:
+      input.status ?? resolveOverallStatus(input.sharedHome, input.hosts),
+    dryRun: input.dryRun,
+    sharedHome: input.sharedHome,
+    hosts: input.hosts,
+    adoptionHealth: resolveAdoptionHealth({
+      sharedHomeState: input.sharedHome.status,
+      sharedHomeReason: input.sharedHome.reason,
+      hosts: input.hosts
+    }),
+    warnings: input.warnings
+  };
 }
 
 function conflictReason(
@@ -969,8 +997,7 @@ export async function updateSharedBrokerHome(
     const evidence = resolveClearManualRecoveryEvidence(options);
 
     if (!sharedHomeExists) {
-      return {
-        command: "update",
+      return buildUpdateLifecycleResult({
         status: "failed",
         dryRun: false,
         sharedHome: {
@@ -986,15 +1013,14 @@ export async function updateSharedBrokerHome(
           }
         ],
         warnings
-      };
+      });
     }
 
     const target =
       host === "claude-code" ? hostTargets.claudeCode : hostTargets.codex;
 
     if (target.installDirectory === undefined) {
-      return {
-        command: "update",
+      return buildUpdateLifecycleResult({
         status: "failed",
         dryRun: false,
         sharedHome,
@@ -1006,7 +1032,7 @@ export async function updateSharedBrokerHome(
           }
         ],
         warnings
-      };
+      });
     }
 
     const clearResult = await clearHostManualRecovery(
@@ -1034,8 +1060,7 @@ export async function updateSharedBrokerHome(
       }
     }
 
-    return {
-      command: "update",
+    return buildUpdateLifecycleResult({
       status:
         clearResult.host.status === "cleared_manual_recovery" &&
         sharedHome.status !== "failed"
@@ -1045,7 +1070,7 @@ export async function updateSharedBrokerHome(
       sharedHome,
       hosts: [clearResult.host],
       warnings
-    };
+    });
   }
 
   if (!options.dryRun) {
@@ -1111,12 +1136,10 @@ export async function updateSharedBrokerHome(
           )
         ]);
 
-  return {
-    command: "update",
-    status: resolveOverallStatus(sharedHome, hosts),
+  return buildUpdateLifecycleResult({
     dryRun: options.dryRun ?? false,
     sharedHome,
     hosts,
     warnings
-  };
+  });
 }

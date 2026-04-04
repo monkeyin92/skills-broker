@@ -8,6 +8,7 @@ This file is the repo-native execution board for `skills-broker`.
 
 ## Human Summary
 
+- Phase 1 adoption proof is now tracked directly on `HEAD`: `update` / `doctor` expose `adoptionHealth`, installed-shell smoke keeps that proof honest, and repo docs mirror the operator-facing verdict.
 - Compatibility-intent routing metrics are shipped on `origin/main`.
 - The coarse broker-first host boundary tightening is now shipped on the active shipping ref.
 - The Phase 2 / Phase 3 broker-first compiler, gate, and recovery slice is now shipped on `origin/main`.
@@ -17,6 +18,54 @@ This file is the repo-native execution board for `skills-broker`.
 {
   "schemaVersion": 1,
   "items": [
+    {
+      "id": "adoption-proof",
+      "title": "Phase 1 adoption proof",
+      "summary": "Shared-home lifecycle commands now surface an explicit adoption health verdict, and the installed-shell smoke plus repo docs mirror that operator-visible truth.",
+      "status": "in_progress",
+      "proofs": [
+        {
+          "type": "commit",
+          "ref": "16d549b",
+          "label": "broker-first gate and recovery baseline"
+        },
+        {
+          "type": "file",
+          "path": "README.md",
+          "label": "operator lifecycle wording"
+        },
+        {
+          "type": "file",
+          "path": "TODOS.md",
+          "label": "phase outcome mirrored in repo backlog"
+        },
+        {
+          "type": "test",
+          "path": "tests/shared-home/doctor.test.ts",
+          "label": "doctor adoption health coverage"
+        },
+        {
+          "type": "test",
+          "path": "tests/shared-home/update-lifecycle.test.ts",
+          "label": "update adoption health coverage"
+        },
+        {
+          "type": "test",
+          "path": "tests/cli/lifecycle-cli.test.ts",
+          "label": "CLI adoption health and strict-path coverage"
+        },
+        {
+          "type": "test",
+          "path": "tests/e2e/host-auto-routing-smoke.test.ts",
+          "label": "installed-shell confidence smoke"
+        },
+        {
+          "type": "test",
+          "path": "tests/e2e/shared-home-smoke.test.ts",
+          "label": "shared-home doctor confidence smoke"
+        }
+      ]
+    },
     {
       "id": "compatibility-intent-routing-metrics",
       "title": "Compatibility-intent routing metrics",

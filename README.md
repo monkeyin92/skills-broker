@@ -128,7 +128,7 @@ This slice now also catches more free-form product-idea phrasing, so a natural s
 This is deliberately not "solve everything."  
 The point of v0 is to prove that a broker can pick and prepare the right capability better than a human manually browsing skills.
 
-**Current product phase:** improve real host auto-routing hit rate, so Claude Code and Codex ask the broker first for obvious external-capability work instead of leaving the broker installed-but-ignored.
+**Current product phase:** prove and keep adoption health green, so Claude Code and Codex visibly keep `skills-broker` on the hot path instead of leaving it installed-but-ignored.
 
 ## Architecture At A Glance
 
@@ -193,14 +193,20 @@ That distinction matters because the hardest part is not storing tools. The hard
 npx skills-broker update
 ```
 
-Use `npx skills-broker update` to initialize or refresh the shared broker home, attach thin host shells, and reuse the same routing cache across Claude Code and Codex. `npx skills-broker update --repair-host-surface` now records typed peer-surface repair events, and `npx skills-broker update --clear-manual-recovery --host <host> --marker-id <id> ...` is the explicit operator path for unblocking a host after a failed repair. `npx skills-broker doctor` inspects the environment without writing, summarizes recent broker hit / misroute / fallback rates when shared-home routing traces exist, surfaces broker-first gate freshness plus manual-recovery blockers, and, inside repos that opt into a canonical `STATUS.md`, can also validate shipped-local versus shipped-remote proof state for strict CI gates. `npx skills-broker remove` detaches only the managed host shells by default, and `npx skills-broker remove --purge` fully removes the shared broker home.
+Use `npx skills-broker update` to initialize or refresh the shared broker home, attach thin host shells, and reuse the same routing cache across Claude Code and Codex. `update` and `doctor` now also emit a first-class `adoptionHealth` verdict:
+
+- `green`: at least one managed host is clean and the known proof surfaces are not red
+- `blocked`: the install is present but a named blocker exists, such as competing peers, manual recovery, gate drift, or an explicit missing host shell
+- `inactive`: no managed host is installed yet, but nothing is broken
+
+`npx skills-broker update --repair-host-surface` records typed peer-surface repair events, and `npx skills-broker update --clear-manual-recovery --host <host> --marker-id <id> ...` is the explicit operator path for unblocking a host after a failed repair. `npx skills-broker doctor` inspects the environment without writing, summarizes recent broker hit / misroute / fallback rates when shared-home routing traces exist, surfaces broker-first gate freshness plus manual-recovery blockers, and, inside repos that opt into a canonical `STATUS.md`, can also validate shipped-local versus shipped-remote proof state for strict CI gates. `npx skills-broker remove` detaches only the managed host shells by default, and `npx skills-broker remove --purge` fully removes the shared broker home.
 
 By default, `update` detects official host roots before it writes anything:
 
 - Claude Code: `~/.claude`, then installs the thin shell at `~/.claude/skills/skills-broker`
 - Codex: `~/.codex`, then installs the thin shell at `~/.agents/skills/skills-broker`
 
-If a host root is not found, the CLI will explain that and tell you to use `--claude-dir` or `--codex-dir` for custom layouts.
+If a host root is not found, the CLI will explain that and tell you to use `--claude-dir` or `--codex-dir` for custom layouts. A missing default root keeps adoption health `inactive`; an explicitly targeted shell path that is missing shows up as a named `blocked` verdict.
 
 ### 2. Try explicit shared-home directories
 

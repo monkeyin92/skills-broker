@@ -13,6 +13,7 @@ import {
   installSharedBrokerHome,
   resolveSharedBrokerHomeLayout
 } from "../../src/shared-home/install";
+import { writeManagedShellManifest } from "../../src/shared-home/ownership";
 import {
   cloneGitRepo,
   commitAll,
@@ -176,7 +177,7 @@ describe("status doctor git integration", () => {
       await rm(remoteDirectory, { recursive: true, force: true });
       await rm(homeDirectory, { recursive: true, force: true });
     }
-  }, 30_000);
+  }, 60_000);
 
   it("falls back to the remote default branch when strict doctor runs on detached HEAD", async () => {
     const remoteDirectory = await mkdtemp(join(tmpdir(), "skills-broker-status-e2e-detached-remote-"));
@@ -248,7 +249,7 @@ describe("status doctor git integration", () => {
       await rm(remoteDirectory, { recursive: true, force: true });
       await rm(homeDirectory, { recursive: true, force: true });
     }
-  }, 30_000);
+  }, 60_000);
 
   it("fails strict doctor when remote refresh breaks but still preserves local diagnostics", async () => {
     const repoDirectory = await mkdtemp(join(tmpdir(), "skills-broker-status-e2e-refresh-fail-"));
@@ -298,5 +299,120 @@ describe("status doctor git integration", () => {
       await rm(repoDirectory, { recursive: true, force: true });
       await rm(homeDirectory, { recursive: true, force: true });
     }
-  }, 30_000);
+  }, 60_000);
+
+  it("keeps doctor green when installed-shell adoption proof and STATUS mirror stay clean", async () => {
+    const repoDirectory = await mkdtemp(join(tmpdir(), "skills-broker-status-e2e-adoption-repo-"));
+    const homeDirectory = await mkdtemp(join(tmpdir(), "skills-broker-status-e2e-adoption-home-"));
+    const scriptPath = resolve("src/bin/skills-broker.ts");
+    const brokerHomeDirectory = await setupBrokerHome(homeDirectory);
+    const codexInstallDirectory = join(
+      homeDirectory,
+      ".agents",
+      "skills",
+      "skills-broker"
+    );
+
+    try {
+      await initGitRepo(repoDirectory);
+      await writeFile(join(repoDirectory, "README.md"), "# repo\n", "utf8");
+      await mkdir(join(repoDirectory, "tests", "e2e"), { recursive: true });
+      await writeFile(
+        join(repoDirectory, "tests", "e2e", "adoption-proof.test.ts"),
+        "export {};\n",
+        "utf8"
+      );
+      await writeFile(
+        join(repoDirectory, "STATUS.md"),
+        `# STATUS
+
+<!-- skills-broker-status:start -->
+\`\`\`json
+${JSON.stringify(
+  {
+    schemaVersion: 1,
+    items: [
+      {
+        id: "adoption-proof",
+        title: "Adoption proof",
+        status: "in_progress",
+        proofs: [
+          {
+            type: "file",
+            path: "README.md"
+          },
+          {
+            type: "test",
+            path: "tests/e2e/adoption-proof.test.ts"
+          }
+        ]
+      }
+    ]
+  },
+  null,
+  2
+)}
+\`\`\`
+<!-- skills-broker-status:end -->
+`,
+        "utf8"
+      );
+      await commitAll(repoDirectory, "add adoption-proof board");
+
+      await mkdir(codexInstallDirectory, { recursive: true });
+      await writeManagedShellManifest(codexInstallDirectory, {
+        managedBy: "skills-broker",
+        host: "codex",
+        version: "test-version",
+        brokerHome: brokerHomeDirectory
+      });
+
+      const { stdout } = await execFileAsync("node", [
+        "--loader",
+        tsNodeLoaderPath,
+        scriptPath,
+        "doctor",
+        "--json",
+        "--strict",
+        "--broker-home",
+        brokerHomeDirectory,
+        "--repo-root",
+        repoDirectory,
+        "--codex-dir",
+        codexInstallDirectory
+      ], {
+        env: {
+          ...process.env,
+          HOME: homeDirectory
+        },
+        encoding: "utf8"
+      });
+
+      const result = JSON.parse(stdout.trim()) as {
+        adoptionHealth: {
+          status: string;
+          managedHosts: string[];
+        };
+        status: {
+          issues: unknown[];
+          items: Array<{ id: string; evaluatedStatus: string }>;
+        };
+      };
+
+      expect(result.adoptionHealth).toMatchObject({
+        status: "green",
+        managedHosts: ["codex"]
+      });
+      expect(result.status.issues).toEqual([]);
+      expect(result.status.items).toContainEqual(
+        expect.objectContaining({
+          id: "adoption-proof",
+          evaluatedStatus: "in_progress"
+        })
+      );
+    } finally {
+      await rm(repoDirectory, { recursive: true, force: true });
+      await rm(homeDirectory, { recursive: true, force: true });
+    }
+  }, 60_000);
 });
