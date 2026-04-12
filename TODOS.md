@@ -88,9 +88,9 @@
 
 **What:** Remove the remaining top-boundary legacy-intent compatibility bridge so modern broker-first requests stay query-native end to end.
 
-**Why:** The compiler seam is shipped, but `BrokerIntent` still survives as the public top-boundary compatibility shape. That keeps future routing growth tied to old lane labels longer than it should.
+**Why:** The compiler seam is shipped, but `BrokerIntent` still survives as an internal compatibility contract across ranking, explain output, workflow persistence, and maintained-family rails. That still keeps future routing growth tied to old lane labels longer than it should.
 
-**Context:** Query-led discovery, the broker-owned raw-request compiler, maintained bilingual eval coverage, and workflow routing are already in `main`. The remaining gap is the legacy-task bridge in `/Users/monkeyin/projects/skills-broker/src/core/request.ts`, the compatibility enum still exposed from `/Users/monkeyin/projects/skills-broker/src/core/types.ts`, and any remaining call sites that still treat `intent` as more than a degraded compatibility hint.
+**Context:** Query-led discovery, the broker-owned raw-request compiler, maintained bilingual eval coverage, and workflow routing are already in `main`. The remaining gap is to finish shrinking `intent` down to a clearly internal compatibility lane label, remove the remaining compatibility consumers that still act like it is a product boundary, and keep workflow/session compatibility explicit while that migration tail is still live.
 
 **Effort:** L
 **Priority:** P0
@@ -126,7 +126,7 @@
 
 **Why:** This validates that the current host-agnostic design is real, not just "Claude plus Codex with some duplication."
 
-**Context:** OpenCode is now the most natural next host once Claude Code and Codex share the same broker home and envelope.
+**Context:** The current supported host matrix is still Claude Code plus Codex only. OpenCode remains the next deferred thin-host shell once the query-native ingress and package-vs-leaf migration tail stop leaking compatibility debt.
 
 **Effort:** M
 **Priority:** P2

@@ -1,5 +1,7 @@
+import type { BrokerHost } from "../core/types.js";
+
 type HostShellSkillMarkdownOptions = {
-  host: "claude-code" | "codex";
+  host: BrokerHost;
   invocationMode: "auto" | "explicit";
   runnerCommand: string;
   maintainedBoundaryExamples?: readonly string[];

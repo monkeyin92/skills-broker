@@ -941,7 +941,24 @@ test("cli rejects invalid host values before host conflict handling", async () =
       }
     )
   ).rejects.toThrow(
-    /Expected broker envelope.host to be one of claude-code, codex, opencode\./
+    /Expected broker envelope.host to be one of claude-code, codex\./
+  );
+});
+
+test("cli rejects invalid currentHost overrides before host conflict handling", async () => {
+  await expect(
+    runBrokerCli(
+      {
+        requestText: "turn this webpage into markdown: https://example.com/post",
+        host: "claude-code",
+        urls: ["https://example.com/post"]
+      },
+      {
+        currentHost: "opencode" as never
+      }
+    )
+  ).rejects.toThrow(
+    /Expected broker currentHost to be one of claude-code, codex\./
   );
 });
 

@@ -6,6 +6,7 @@ import {
 } from "./workflow.js";
 import {
   BROKER_HOSTS,
+  isBrokerHost,
   type BrokerHost,
   type CapabilityQuery
 } from "./types.js";
@@ -106,10 +107,7 @@ export function parseBrokerEnvelope(value: unknown): BrokerEnvelope {
     );
   }
 
-  if (
-    typeof value.host !== "string" ||
-    !BROKER_HOSTS.includes(value.host as BrokerHost)
-  ) {
+  if (typeof value.host !== "string" || !isBrokerHost(value.host)) {
     throw new Error(
       `Expected broker envelope.host to be one of ${BROKER_HOSTS.join(", ")}.`
     );
@@ -152,6 +150,12 @@ export function parseBrokerEnvelope(value: unknown): BrokerEnvelope {
       ? parseWorkflowResume(value.workflowResume)
       : undefined;
 
+  if (capabilityQuery !== undefined && workflowResume !== undefined) {
+    throw new Error(
+      "Expected broker envelope.capabilityQuery and broker envelope.workflowResume to be mutually exclusive."
+    );
+  }
+
   if (
     capabilityQuery !== undefined &&
     capabilityQuery.requestText !== value.requestText
@@ -169,7 +173,7 @@ export function parseBrokerEnvelope(value: unknown): BrokerEnvelope {
 
   return {
     requestText: value.requestText,
-    host: value.host as BrokerHost,
+    host: value.host,
     invocationMode: value.invocationMode,
     cwd: value.cwd,
     urls: value.urls,

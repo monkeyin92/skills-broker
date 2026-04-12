@@ -6,7 +6,6 @@ import {
 import type { BrokerEnvelope } from "./envelope.js";
 import type {
   BrokerHost,
-  BrokerRequest,
   QueryBackedBrokerRequest
 } from "./types.js";
 
@@ -91,11 +90,11 @@ export function normalizeRequest(
 export function normalizeRequest(
   input: NormalizeRequestInput,
   fallbackHost?: BrokerHost
-): BrokerRequest;
+): QueryBackedBrokerRequest;
 export function normalizeRequest(
   input: NormalizeRequestInput,
   fallbackHost?: BrokerHost
-): BrokerRequest {
+): QueryBackedBrokerRequest {
   if (isLegacyInput(input)) {
     const normalizedTask = input.task.trim();
 
@@ -105,23 +104,21 @@ export function normalizeRequest(
       );
     }
 
-    if (fallbackHost !== undefined) {
-      return normalizeCompiledCapabilityQuery(
-        synthesizeWebContentCapabilityQuery(
-          {
-            host: fallbackHost,
-            requestText: normalizedTask
-          },
-          input.url
-        )
+    if (fallbackHost === undefined) {
+      throw new UnsupportedBrokerRequestError(
+        "Legacy broker tasks now require a fallback host so the request can be normalized into capabilityQuery."
       );
     }
 
-    return {
-      intent: "web_content_to_markdown",
-      outputMode: "markdown_only",
-      url: input.url
-    };
+    return normalizeCompiledCapabilityQuery(
+      synthesizeWebContentCapabilityQuery(
+        {
+          host: fallbackHost,
+          requestText: normalizedTask
+        },
+        input.url
+      )
+    );
   }
 
   return normalizeEnvelopeRequest(input);

@@ -89,6 +89,11 @@ describe("workflow runtime", () => {
       expect(result.stage.handoff?.chosenImplementation.id).toBe(
         "gstack.office_hours"
       );
+      expect(result.stage.handoff?.selection).toEqual({
+        package: result.stage.handoff?.chosenPackage,
+        leafCapability: result.stage.handoff?.chosenLeafCapability,
+        implementation: result.stage.handoff?.chosenImplementation
+      });
       expect(result.trace).toMatchObject({
         resultCode: "WORKFLOW_STAGE_READY",
         workflowId: "idea-to-ship",

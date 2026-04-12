@@ -207,6 +207,76 @@ describe("loadHostSkillCandidates", () => {
     ]);
   });
 
+  it("deep-merges package probe metadata instead of clobbering it", async () => {
+    const runtimeDirectory = await mkdtemp(
+      join(tmpdir(), "skills-broker-package-probe-merge-")
+    );
+    const fixturePath = join(runtimeDirectory, "host.json");
+
+    await writeFile(
+      fixturePath,
+      JSON.stringify({
+        packages: [
+          {
+            packageId: "gstack",
+            label: "gstack",
+            installState: "available",
+            acquisition: "published_package",
+            probe: {
+              layouts: ["bundle_root_children", "nested_agent_skills"],
+              manifestFiles: ["package.json"],
+              manifestNames: ["gstack"]
+            }
+          }
+        ],
+        skills: [
+          {
+            id: "requirements-analysis",
+            kind: "skill",
+            label: "Requirements Analysis",
+            intent: "capability_discovery_or_install",
+            package: {
+              packageId: "gstack",
+              probe: {
+                layouts: ["bundle_root_children", "nested_agent_skills"],
+                manifestNames: ["gstack-alt"]
+              }
+            },
+            leaf: {
+              capabilityId: "gstack.office-hours",
+              packageId: "gstack",
+              subskillId: "office-hours"
+            },
+            implementation: {
+              id: "gstack.office_hours",
+              type: "local_skill",
+              ownerSurface: "broker_owned_downstream"
+            }
+          }
+        ]
+      }),
+      "utf8"
+    );
+
+    try {
+      const [candidate] = await loadHostSkillCandidates(
+        "capability_discovery_or_install",
+        fixturePath
+      );
+
+      expect(candidate.package).toMatchObject({
+        packageId: "gstack",
+        probe: {
+          layouts: ["bundle_root_children", "nested_agent_skills"],
+          manifestFiles: ["package.json"],
+          manifestNames: ["gstack-alt"]
+        }
+      });
+    } finally {
+      await rm(runtimeDirectory, { recursive: true, force: true });
+    }
+  });
+
   it("rejects workflow recipes with duplicate stage ids", async () => {
     const runtimeDirectory = await mkdtemp(
       join(tmpdir(), "skills-broker-invalid-workflow-dup-stage-")

@@ -1,6 +1,11 @@
 import { randomUUID } from "node:crypto";
 import { access, readdir, stat } from "node:fs/promises";
 import {
+  BROKER_HOSTS,
+  brokerHostKnownShellEntries,
+  type BrokerHost
+} from "../core/types.js";
+import {
   installClaudeCodeHostShell,
   type InstallClaudeCodePluginResult
 } from "../hosts/claude-code/install.js";
@@ -38,7 +43,10 @@ import {
   withPeerSurfaceHostLock,
   writePeerSurfaceManualRecoveryMarker
 } from "./peer-surface-audit.js";
-import { detectLifecycleHostTargets } from "./paths.js";
+import {
+  detectLifecycleHostTargets,
+  lifecycleHostTarget
+} from "./paths.js";
 import {
   resolveAdoptionHealth,
   type AdoptionHealthResult
@@ -69,7 +77,7 @@ export type UpdateLifecycleResult = {
     reason?: string;
   };
   hosts: Array<{
-    name: "claude-code" | "codex";
+    name: BrokerHost;
     status: HostLifecycleStatus;
     reason?: string;
     competingPeerSkills?: string[];
@@ -201,7 +209,7 @@ function conflictReason(
 }
 
 async function installHostShell(
-  name: "claude-code" | "codex",
+  name: BrokerHost,
   installDirectory: string,
   brokerHomeDirectory: string,
   projectRoot: string | undefined
@@ -222,7 +230,7 @@ async function installHostShell(
 }
 
 async function detectUnmanagedHostConflict(
-  name: "claude-code" | "codex",
+  name: BrokerHost,
   installDirectory: string
 ): Promise<string | undefined> {
   try {
@@ -246,12 +254,10 @@ async function detectUnmanagedHostConflict(
     return undefined;
   }
 
-  const knownHostFiles =
-    name === "claude-code"
-      ? ["SKILL.md", "package.json", ".claude-plugin", "skills", "bin"]
-      : ["SKILL.md", "bin", ".skills-broker.json"];
-
-  if (entries.some((entry) => knownHostFiles.includes(entry)) || entries.length > 0) {
+  if (
+    entries.some((entry) => brokerHostKnownShellEntries(name).includes(entry)) ||
+    entries.length > 0
+  ) {
     return "existing unmanaged host directory";
   }
 
@@ -758,7 +764,7 @@ async function clearHostManualRecovery(
 }
 
 async function updateHost(
-  name: "claude-code" | "codex",
+  name: BrokerHost,
   installDirectory: string | undefined,
   notDetectedReason: string | undefined,
   options: UpdateSharedBrokerHomeOptions,
@@ -992,7 +998,7 @@ export async function updateSharedBrokerHome(
   };
 
   if (options.clearManualRecovery) {
-    const host = options.clearManualRecoveryHost;
+    const host = options.clearManualRecoveryHost ?? BROKER_HOSTS[0];
     const markerId = options.clearManualRecoveryMarkerId ?? "";
     const evidence = resolveClearManualRecoveryEvidence(options);
 
@@ -1007,7 +1013,7 @@ export async function updateSharedBrokerHome(
         },
         hosts: [
           {
-            name: host ?? "claude-code",
+            name: host,
             status: "failed",
             reason: "shared broker home is missing"
           }
@@ -1016,8 +1022,7 @@ export async function updateSharedBrokerHome(
       });
     }
 
-    const target =
-      host === "claude-code" ? hostTargets.claudeCode : hostTargets.codex;
+    const target = lifecycleHostTarget(hostTargets, host);
 
     if (target.installDirectory === undefined) {
       return buildUpdateLifecycleResult({
@@ -1026,7 +1031,7 @@ export async function updateSharedBrokerHome(
         sharedHome,
         hosts: [
           {
-            name: host ?? "claude-code",
+            name: host,
             status: "failed",
             reason: target.reason
           }
@@ -1036,7 +1041,7 @@ export async function updateSharedBrokerHome(
     }
 
     const clearResult = await clearHostManualRecovery(
-      host ?? "claude-code",
+      host,
       target.installDirectory,
       options.brokerHomeDirectory,
       markerId,
@@ -1095,45 +1100,32 @@ export async function updateSharedBrokerHome(
 
   const hosts =
     sharedHome.status === "failed"
-      ? [
-          {
-            name: "claude-code" as const,
+      ? BROKER_HOSTS.map((host) => {
+          const target = lifecycleHostTarget(hostTargets, host);
+
+          return {
+            name: host,
             status:
-              hostTargets.claudeCode.installDirectory === undefined
+              target.installDirectory === undefined
                 ? ("skipped_not_detected" as const)
                 : ("failed" as const),
             reason:
-              hostTargets.claudeCode.installDirectory === undefined
-                ? hostTargets.claudeCode.reason
+              target.installDirectory === undefined
+                ? target.reason
                 : sharedHome.reason
-          },
-          {
-            name: "codex" as const,
-            status:
-              hostTargets.codex.installDirectory === undefined
-                ? ("skipped_not_detected" as const)
-                : ("failed" as const),
-            reason:
-              hostTargets.codex.installDirectory === undefined
-                ? hostTargets.codex.reason
-                : sharedHome.reason
-          }
-        ]
+          };
+        })
       : await Promise.all([
-          updateHost(
-            "claude-code",
-            hostTargets.claudeCode.installDirectory,
-            hostTargets.claudeCode.reason,
-            options,
-            warnings
-          ),
-          updateHost(
-            "codex",
-            hostTargets.codex.installDirectory,
-            hostTargets.codex.reason,
-            options,
-            warnings
-          )
+          ...BROKER_HOSTS.map((host) => {
+            const target = lifecycleHostTarget(hostTargets, host);
+            return updateHost(
+              host,
+              target.installDirectory,
+              target.reason,
+              options,
+              warnings
+            );
+          })
         ]);
 
   return buildUpdateLifecycleResult({

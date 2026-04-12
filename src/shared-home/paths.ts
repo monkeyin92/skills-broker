@@ -1,6 +1,12 @@
 import { stat } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join, resolve } from "node:path";
+import {
+  BROKER_HOSTS,
+  brokerHostSupportSpec,
+  type BrokerHost,
+  type BrokerHostOverrideFlag
+} from "../core/types.js";
 
 export type ResolveLifecyclePathsInput = {
   homeDirectory?: string;
@@ -29,14 +35,6 @@ export type DetectLifecycleHostTargetsResult = {
 };
 
 const DEFAULT_BROKER_HOME_DIRECTORY = ".skills-broker";
-const DEFAULT_CLAUDE_CODE_ROOT_DIRECTORY = ".claude";
-const DEFAULT_CLAUDE_CODE_INSTALL_DIRECTORY = join(
-  DEFAULT_CLAUDE_CODE_ROOT_DIRECTORY,
-  "skills",
-  "skills-broker"
-);
-const DEFAULT_CODEX_ROOT_DIRECTORY = ".codex";
-const DEFAULT_CODEX_INSTALL_DIRECTORY = join(".agents", "skills", "skills-broker");
 
 function resolveHomeDirectory(homeDirectory?: string): string {
   return resolve(homeDirectory ?? homedir());
@@ -47,9 +45,9 @@ function resolveOverride(pathname: string | undefined, fallback: string): string
 }
 
 function buildMissingRootReason(
-  hostName: "claude-code" | "codex",
+  hostName: BrokerHost,
   rootDirectory: string,
-  overrideFlag: "--claude-dir" | "--codex-dir"
+  overrideFlag: BrokerHostOverrideFlag
 ): string {
   return `default ${hostName} root not detected at ${rootDirectory}; use ${overrideFlag} to specify a custom install directory`;
 }
@@ -70,10 +68,10 @@ async function directoryExists(pathname: string): Promise<boolean> {
 }
 
 async function resolveDefaultTarget(
-  hostName: "claude-code" | "codex",
+  hostName: BrokerHost,
   rootDirectory: string,
   installDirectory: string,
-  overrideFlag: "--claude-dir" | "--codex-dir"
+  overrideFlag: BrokerHostOverrideFlag
 ): Promise<DetectLifecycleHostTarget> {
   if (!(await directoryExists(rootDirectory))) {
     return {
@@ -98,13 +96,23 @@ export function resolveLifecyclePaths(
     ),
     claudeCodeInstallDirectory: resolveOverride(
       input.claudeDirOverride,
-      join(homeDirectory, DEFAULT_CLAUDE_CODE_INSTALL_DIRECTORY)
+      join(
+        homeDirectory,
+        ...brokerHostSupportSpec("claude-code").defaultInstallDirectorySegments
+      )
     ),
     codexInstallDirectory: resolveOverride(
       input.codexDirOverride,
-      join(homeDirectory, DEFAULT_CODEX_INSTALL_DIRECTORY)
+      join(homeDirectory, ...brokerHostSupportSpec("codex").defaultInstallDirectorySegments)
     )
   };
+}
+
+export function lifecycleHostTarget(
+  targets: DetectLifecycleHostTargetsResult,
+  host: BrokerHost
+): DetectLifecycleHostTarget {
+  return host === "claude-code" ? targets.claudeCode : targets.codex;
 }
 
 export async function detectLifecycleHostTargets(
@@ -112,32 +120,39 @@ export async function detectLifecycleHostTargets(
 ): Promise<DetectLifecycleHostTargetsResult> {
   const homeDirectory = resolveHomeDirectory(input.homeDirectory);
   const paths = resolveLifecyclePaths(input);
-  const claudeCodeRootDirectory = join(homeDirectory, DEFAULT_CLAUDE_CODE_ROOT_DIRECTORY);
-  const codexRootDirectory = join(homeDirectory, DEFAULT_CODEX_ROOT_DIRECTORY);
-
-  const claudeCode =
-    input.claudeDirOverride !== undefined
-      ? { installDirectory: paths.claudeCodeInstallDirectory }
-      : await resolveDefaultTarget(
-          "claude-code",
-          claudeCodeRootDirectory,
-          paths.claudeCodeInstallDirectory,
-          "--claude-dir"
+  const hostTargetsByName = Object.fromEntries(
+    await Promise.all(
+      BROKER_HOSTS.map(async (host) => {
+        const support = brokerHostSupportSpec(host);
+        const installDirectory =
+          host === "claude-code"
+            ? paths.claudeCodeInstallDirectory
+            : paths.codexInstallDirectory;
+        const hasOverride =
+          host === "claude-code"
+            ? input.claudeDirOverride !== undefined
+            : input.codexDirOverride !== undefined;
+        const rootDirectory = join(
+          homeDirectory,
+          ...support.defaultRootDirectorySegments
         );
+        const target = hasOverride
+          ? { installDirectory }
+          : await resolveDefaultTarget(
+              host,
+              rootDirectory,
+              installDirectory,
+              support.overrideFlag
+            );
 
-  const codex =
-    input.codexDirOverride !== undefined
-      ? { installDirectory: paths.codexInstallDirectory }
-      : await resolveDefaultTarget(
-          "codex",
-          codexRootDirectory,
-          paths.codexInstallDirectory,
-          "--codex-dir"
-        );
+        return [host, target] as const;
+      })
+    )
+  ) as Record<BrokerHost, DetectLifecycleHostTarget>;
 
   return {
     brokerHomeDirectory: paths.brokerHomeDirectory,
-    claudeCode,
-    codex
+    claudeCode: hostTargetsByName["claude-code"],
+    codex: hostTargetsByName.codex
   };
 }

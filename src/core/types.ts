@@ -1,15 +1,60 @@
 export const BROKER_HOSTS = [
   "claude-code",
-  "codex",
-  "opencode"
+  "codex"
 ] as const;
 
 export type BrokerHost = (typeof BROKER_HOSTS)[number];
 
-export type BrokerIntent =
+export function isBrokerHost(value: string): value is BrokerHost {
+  return BROKER_HOSTS.includes(value as BrokerHost);
+}
+
+export const BROKER_HOST_SUPPORT = {
+  "claude-code": {
+    host: "claude-code",
+    defaultRootDirectorySegments: [".claude"],
+    defaultInstallDirectorySegments: [".claude", "skills", "skills-broker"],
+    overrideFlag: "--claude-dir",
+    knownShellEntries: ["SKILL.md", "package.json", ".claude-plugin", "skills", "bin"]
+  },
+  codex: {
+    host: "codex",
+    defaultRootDirectorySegments: [".codex"],
+    defaultInstallDirectorySegments: [".agents", "skills", "skills-broker"],
+    overrideFlag: "--codex-dir",
+    knownShellEntries: ["SKILL.md", "bin", ".skills-broker.json"]
+  }
+} as const satisfies Record<
+  BrokerHost,
+  {
+    host: BrokerHost;
+    defaultRootDirectorySegments: readonly [string, ...string[]];
+    defaultInstallDirectorySegments: readonly [string, ...string[]];
+    overrideFlag: `--${string}`;
+    knownShellEntries: readonly string[];
+  }
+>;
+
+export type BrokerHostSupportSpec = (typeof BROKER_HOST_SUPPORT)[BrokerHost];
+
+export type BrokerHostOverrideFlag = BrokerHostSupportSpec["overrideFlag"];
+
+export function brokerHostSupportSpec(host: BrokerHost): BrokerHostSupportSpec {
+  return BROKER_HOST_SUPPORT[host];
+}
+
+export function brokerHostKnownShellEntries(
+  host: BrokerHost
+): readonly string[] {
+  return brokerHostSupportSpec(host).knownShellEntries;
+}
+
+export type CompatibilityIntent =
   | "web_content_to_markdown"
   | "social_post_to_markdown"
   | "capability_discovery_or_install";
+
+export type BrokerIntent = CompatibilityIntent;
 
 export type BrokerOutputMode = "markdown_only";
 
@@ -132,13 +177,4 @@ export type QueryBackedBrokerRequest = {
   capabilityQuery: CapabilityQuery;
 };
 
-export type LegacyIntentBrokerRequest = {
-  intent: BrokerIntent;
-  outputMode: BrokerOutputMode;
-  url?: string;
-  capabilityQuery?: undefined;
-};
-
-export type BrokerRequest =
-  | QueryBackedBrokerRequest
-  | LegacyIntentBrokerRequest;
+export type BrokerRequest = QueryBackedBrokerRequest;

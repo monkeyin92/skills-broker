@@ -2,9 +2,10 @@ import { randomUUID } from "node:crypto";
 import { appendFile, mkdir, open, readFile, rm, stat } from "node:fs/promises";
 import { join } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
+import { isBrokerHost, type BrokerHost } from "../core/types.js";
 import { readJsonFile, writeJsonFile } from "./json-file.js";
 
-export type PeerSurfaceHostName = "claude-code" | "codex";
+export type PeerSurfaceHostName = BrokerHost;
 
 export type PeerSurfaceIntegrityIssue = {
   code:
@@ -185,7 +186,7 @@ function expectStringArray(
 }
 
 function expectHost(value: unknown, field: string): PeerSurfaceHostName {
-  if (value === "claude-code" || value === "codex") {
+  if (typeof value === "string" && isBrokerHost(value)) {
     return value;
   }
 

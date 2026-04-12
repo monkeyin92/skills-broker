@@ -9,7 +9,7 @@
 > 别再让用户去记 skill 名字。  
 > 让用户只说结果，让 broker 去找能力。
 
-`skills-broker` 是一个面向 **Claude Code**、**Codex**、**OpenCode** 这类代码型 agent 宿主的开源 **skill router**、**MCP router**、**agent capability broker**。
+`skills-broker` 是一个面向 **Claude Code**、**Codex** 这类代码型 agent 宿主的开源 **skill router**、**MCP router**、**agent capability broker**。**OpenCode** 仍然处于 defer 状态，等到薄宿主契约真的落地后再接。
 
 它站在“用户请求”和“能力生态”之间，负责：
 
@@ -134,7 +134,11 @@ v0 当前包含：
 这不是为了“什么都支持”。  
 v0 的目标是证明：在一个具体任务上，broker 可以比人手动翻 skills 更准确地选到并准备好正确能力。
 
-**当前产品阶段：**先把 adoption health 证明并维持在绿色，让 Claude Code 和 Codex 在真实使用里持续把 `skills-broker` 放在热路径上，而不是停留在“装上了但经常没被用到”。
+**当前产品阶段：**在保持 adoption health 绿色的前提下，收完 query-native ingress 尾巴和 package-vs-leaf migration 尾巴，让 Claude Code 和 Codex 在真实使用里持续把 `skills-broker` 放在热路径上，而不是停留在“装上了但经常没被用到”。
+
+**迁移说明：**`capabilityQuery` 现在是唯一应该让调用方依赖的公开请求契约。`intent` 还在，但它正在被收成一个内部兼容层标签，用在 ranking、explain、maintained-family proof rail 和 workflow/session 兼容上。
+
+**这个 packet 的 DX bar：**把支持矩阵说清楚，把 first routed success 压到 5 分钟内，并让 operator-facing 错误至少说清“出了什么问题、原因是什么、下一步看哪里”。
 
 ## 架构一眼看懂
 
@@ -178,6 +182,12 @@ skills-broker update
 - 修复已有但损坏或缺失的宿主壳
 - 默认保留 cache、capability history 和成功路由记录
 
+## 当前支持矩阵
+
+- 现在支持：Claude Code、Codex
+- 已 defer 但计划中：OpenCode 薄宿主壳
+- v0 当前不支持：其它宿主
+
 ## 它和别的东西本质上有什么不同
 
 `skills-broker` **不是**：
@@ -200,7 +210,7 @@ skills-broker update
 npx skills-broker update
 ```
 
-使用 `npx skills-broker update` 可以初始化或刷新共享 broker home，接上薄宿主壳，并让 Claude Code 和 Codex 复用同一份路由缓存。`npx skills-broker update --repair-host-surface` 现在会把 peer surface 修复写成 typed audit event，`npx skills-broker update --clear-manual-recovery --host <host> --marker-id <id> ...` 则是修复失败后给 operator 用的显式解封路径。`npx skills-broker doctor` 用来只读诊断环境，如果 shared home 里已经有 routing trace，还会顺手汇总最近的 broker 命中率 / 误路由率 / fallback 率，显示 broker-first gate 新鲜度和 manual recovery blocker；如果当前 repo 接入了 canonical `STATUS.md`，它还可以顺手校验 shipped proof，并在 strict 模式下区分 `shipped_local` 和 `shipped_remote`，适合挂到 CI gate。`npx skills-broker remove` 默认只拆卸受管宿主壳而不删除共享历史，`npx skills-broker remove --purge` 会把共享 broker home 一起清掉。
+使用 `npx skills-broker update` 可以初始化或刷新共享 broker home，接上薄宿主壳，并让 Claude Code 和 Codex 复用同一份路由缓存。当前发布态 lifecycle CLI 只管理 Claude Code 和 Codex。裸跑 `npx skills-broker` 目前等价于 `npx skills-broker update`，所以脚本和文档里应该把子命令写全。`npx skills-broker update --repair-host-surface` 现在会把 peer surface 修复写成 typed audit event，`npx skills-broker update --clear-manual-recovery --host <host> --marker-id <id> ...` 则是修复失败后给 operator 用的显式解封路径。`npx skills-broker doctor` 用来只读诊断环境，如果 shared home 里已经有 routing trace，还会顺手汇总最近的 broker 命中率 / 误路由率 / fallback 率，显示 broker-first gate 新鲜度和 manual recovery blocker；如果当前 repo 接入了 canonical `STATUS.md`，它还可以顺手校验 shipped proof，并在 strict 模式下区分 `shipped_local` 和 `shipped_remote`，适合挂到 CI gate。`npx skills-broker remove` 默认只拆卸受管宿主壳而不删除共享历史，`npx skills-broker remove --purge` 会把共享 broker home 一起清掉。
 
 `update` 和 `doctor` 现在还会输出一个一等公民的 `adoptionHealth` verdict：
 
@@ -214,6 +224,18 @@ npx skills-broker update
 - Codex：先看 `~/.codex`，检测到后把薄壳写到 `~/.agents/skills/skills-broker`
 
 如果没有检测到官方根目录，CLI 会明确提示，并告诉你用 `--claude-dir` 或 `--codex-dir` 指定自定义目录。默认根目录缺失会让 adoption health 保持在 `inactive`；如果你显式指定了一个缺失的宿主壳路径，则会出现带名字的 `blocked` verdict。
+
+### 1.5 先验证 operator 路径
+
+```bash
+npx skills-broker doctor --strict
+```
+
+这是确认共享 home 安装是否真的生效的最快路径。这个 packet 现在只要求三件事：
+
+- 你能用一条命令看出 adoption health 是 `green`、`blocked` 还是 `inactive`
+- 支持矩阵只声称 Claude Code 和 Codex
+- operator-facing 失败能指出先去检查哪里
 
 ### 2. 用显式目录试跑共享 home
 
@@ -265,7 +287,7 @@ npx vitest run
 
 这条链路是 **仓库内的 Claude Code 开发路径**，不是当前主推的发布态安装入口。
 
-### 6. 直接试跑安装后的 runner
+### 6. 在 contributor 路径上拿到 first routed success
 
 ```bash
 /absolute/path/to/claude-code-plugin/bin/run-broker \
@@ -309,7 +331,7 @@ npx vitest run
 
 如果你符合下面任一情况，这个项目大概率对你有价值：
 
-- 你在 Claude Code、Codex、OpenCode 之上做 agent tooling
+- 你现在就在 Claude Code 或 Codex 之上做 agent tooling，或者后面准备扩到 OpenCode
 - 你受够了 skill 越装越多、上下文越拖越长
 - 你在实验 MCP-backed capability ecosystem
 - 你希望 agent 更像“面向结果”，而不是“面向工具名”
@@ -408,7 +430,7 @@ npx vitest run
 
 ### 它已经能直接生产使用了吗？
 
-还没有。现在仍然是一个聚焦型 v0，但已经有共享 broker home、已发布的 lifecycle CLI、Claude Code 和 Codex 两个薄宿主壳，以及一个小而清楚的 routed lake。当前阶段重点是提升真实宿主里的 auto-routing 命中率。
+还没有。现在仍然是一个聚焦型 v0，但已经有共享 broker home、已发布的 lifecycle CLI、Claude Code 和 Codex 两个薄宿主壳、已经发货的 adoption-proof rail，以及一个小而清楚的 routed lake。当前阶段重点是在不让真实宿主 auto-routing 回退的前提下，收完 query-native 和 package-vs-leaf 这两条迁移尾巴。
 
 ### 为什么先做 Claude Code 和 Codex？
 

@@ -1,6 +1,14 @@
 import { access, readdir, rm, stat } from "node:fs/promises";
+import {
+  BROKER_HOSTS,
+  brokerHostKnownShellEntries,
+  type BrokerHost
+} from "../core/types.js";
 import { readManagedShellManifest } from "./ownership.js";
-import { detectLifecycleHostTargets } from "./paths.js";
+import {
+  detectLifecycleHostTargets,
+  lifecycleHostTarget
+} from "./paths.js";
 
 export type RemoveLifecycleResult = {
   command: "remove";
@@ -9,7 +17,7 @@ export type RemoveLifecycleResult = {
     status: "preserved" | "purged";
   };
   hosts: Array<{
-    name: "claude-code" | "codex";
+    name: BrokerHost;
     status: "removed" | "already_absent" | "skipped_conflict";
     reason?: string;
   }>;
@@ -53,7 +61,7 @@ function conflictReason(
 }
 
 async function detectUnmanagedHostConflict(
-  name: "claude-code" | "codex",
+  name: BrokerHost,
   installDirectory: string
 ): Promise<string | undefined> {
   try {
@@ -77,12 +85,10 @@ async function detectUnmanagedHostConflict(
     return undefined;
   }
 
-  const knownHostFiles =
-    name === "claude-code"
-      ? ["SKILL.md", "package.json", ".claude-plugin", "skills", "bin"]
-      : ["SKILL.md", "bin", ".skills-broker.json"];
-
-  if (entries.some((entry) => knownHostFiles.includes(entry)) || entries.length > 0) {
+  if (
+    entries.some((entry) => brokerHostKnownShellEntries(name).includes(entry)) ||
+    entries.length > 0
+  ) {
     return "existing unmanaged host directory";
   }
 
@@ -90,7 +96,7 @@ async function detectUnmanagedHostConflict(
 }
 
 async function removeHost(
-  name: "claude-code" | "codex",
+  name: BrokerHost,
   installDirectory: string | undefined,
   warnings: string[]
 ): Promise<RemoveHostEntry> {
@@ -158,10 +164,15 @@ export async function removeSharedBrokerHome(
     codexDirOverride: options.codexInstallDirectory
   });
   const warnings: string[] = [];
-  const hosts: RemoveLifecycleResult["hosts"] = [
-    await removeHost("claude-code", hostTargets.claudeCode.installDirectory, warnings),
-    await removeHost("codex", hostTargets.codex.installDirectory, warnings)
-  ];
+  const hosts: RemoveLifecycleResult["hosts"] = await Promise.all(
+    BROKER_HOSTS.map((host) =>
+      removeHost(
+        host,
+        lifecycleHostTarget(hostTargets, host).installDirectory,
+        warnings
+      )
+    )
+  );
 
   if (options.purgeSharedHome) {
     await rm(options.brokerHomeDirectory, { recursive: true, force: true });

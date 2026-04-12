@@ -52,7 +52,21 @@ describe("buildHandoffEnvelope", () => {
     const request: BrokerRequest = {
       intent: "web_content_to_markdown",
       outputMode: "markdown_only",
-      url: "https://example.com/article"
+      url: "https://example.com/article",
+      capabilityQuery: {
+        kind: "capability_request",
+        goal: "convert web content to markdown",
+        host: "codex",
+        requestText: "turn this webpage into markdown",
+        jobFamilies: ["content_acquisition", "web_content_conversion"],
+        targets: [
+          {
+            type: "url",
+            value: "https://example.com/article"
+          }
+        ],
+        artifacts: ["markdown"]
+      }
     };
     const handoff = buildHandoffEnvelope(createWinner(), {
       currentHost: "codex"
@@ -60,6 +74,12 @@ describe("buildHandoffEnvelope", () => {
 
     expect(handoff.brokerDone).toBe(true);
     expect(handoff.request).toEqual(request);
+    expect(handoff.selection).toEqual({
+      package: handoff.chosenPackage,
+      leafCapability: handoff.chosenLeafCapability,
+      implementation: handoff.chosenImplementation
+    });
+    expect(handoff.context.selectionMode).toBe("explicit");
     expect(handoff.chosenPackage).toEqual({
       packageId: "baoyu",
       label: "baoyu",

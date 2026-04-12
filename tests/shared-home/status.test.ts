@@ -381,7 +381,7 @@ describe("evaluateStatusBoard", () => {
     expect(board.items).toContainEqual(
       expect.objectContaining({
         id: "adoption-proof",
-        status: "in_progress",
+        status: "shipped_remote",
         proofs: expect.arrayContaining([
           expect.objectContaining({
             type: "test",

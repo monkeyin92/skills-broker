@@ -1,7 +1,7 @@
 import type { BrokerEnvelope } from "../core/envelope.js";
 import type {
   BrokerHost,
-  BrokerRequest,
+  BrokerIntent,
   CapabilityQuery,
   QueryBackedBrokerRequest
 } from "../core/types.js";
@@ -305,20 +305,11 @@ function looksAmbiguous(requestText: string): boolean {
 }
 
 function buildBrokerRequest(
-  intent: BrokerRequest["intent"],
+  intent: BrokerIntent,
   url: string | undefined,
   capabilityQuery: CapabilityQuery
-): QueryBackedBrokerRequest;
-function buildBrokerRequest(
-  intent: BrokerRequest["intent"],
-  url?: string
-): BrokerRequest;
-function buildBrokerRequest(
-  intent: BrokerRequest["intent"],
-  url?: string,
-  capabilityQuery?: CapabilityQuery
-): BrokerRequest {
-  const request: BrokerRequest = {
+): QueryBackedBrokerRequest {
+  const request: QueryBackedBrokerRequest = {
     intent,
     outputMode: "markdown_only",
     capabilityQuery

@@ -1,9 +1,10 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
+import { isBrokerHost, type BrokerHost } from "../core/types.js";
 
 export type ManagedShellManifest = {
   managedBy: "skills-broker";
-  host: "claude-code" | "codex";
+  host: BrokerHost;
   version: string;
   brokerHome: string;
 };
@@ -51,7 +52,8 @@ function isManagedShellManifest(value: unknown): value is ManagedShellManifest {
 
   return (
     candidate.managedBy === "skills-broker" &&
-    (candidate.host === "claude-code" || candidate.host === "codex") &&
+    typeof candidate.host === "string" &&
+    isBrokerHost(candidate.host) &&
     typeof candidate.version === "string" &&
     typeof candidate.brokerHome === "string"
   );

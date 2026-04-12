@@ -480,7 +480,8 @@ async function presentCurrentStage(
         stageId: stage.id
       }
     },
-    context.request
+    context.request,
+    prepared.selection
   );
   const readySession: WorkflowSession = {
     ...session,
@@ -508,6 +509,7 @@ async function presentCurrentStage(
       hostAction: null,
       candidateCount: context.debug.candidateCount,
       winner: context.winner,
+      selected: stageCard,
       workflowId: context.recipe.id,
       runId: storedSession.runId,
       stageId: stage.id

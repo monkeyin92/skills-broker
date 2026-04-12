@@ -129,8 +129,17 @@ async function childDirectories(pathname: string): Promise<string[]> {
 function baseSearchRoots(
   input: HydratePackageAvailabilityOptions
 ): string[] {
+  const brokerManagedRoot =
+    input.brokerHomeDirectory === undefined
+      ? []
+      : [join(input.brokerHomeDirectory, "downstream", input.currentHost, "skills")];
+
   if (input.packageSearchRoots !== undefined) {
-    return unique(input.packageSearchRoots.map((root) => resolve(root)));
+    return unique(
+      [...input.packageSearchRoots, ...brokerManagedRoot].map((root) =>
+        resolve(root)
+      )
+    );
   }
 
   const cwd = resolve(input.cwd ?? process.cwd());
@@ -144,11 +153,7 @@ function baseSearchRoots(
     join(cwd, ".codex", "skills")
   ];
 
-  if (input.brokerHomeDirectory !== undefined) {
-    roots.push(
-      join(input.brokerHomeDirectory, "downstream", input.currentHost, "skills")
-    );
-  }
+  roots.push(...brokerManagedRoot);
 
   return unique(roots.map((root) => resolve(root)));
 }

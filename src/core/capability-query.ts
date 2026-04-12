@@ -2,7 +2,7 @@ import {
   BROKER_HOSTS,
   CAPABILITY_QUERY_KINDS,
   CAPABILITY_QUERY_TARGET_TYPES,
-  type BrokerHost,
+  isBrokerHost,
   type CapabilityQuery,
   type CapabilityQueryTarget
 } from "./types.js";
@@ -69,10 +69,7 @@ export function parseCapabilityQuery(value: unknown): CapabilityQuery {
     throw new Error("Expected capability query.goal to be a non-empty string.");
   }
 
-  if (
-    typeof value.host !== "string" ||
-    !BROKER_HOSTS.includes(value.host as BrokerHost)
-  ) {
+  if (typeof value.host !== "string" || !isBrokerHost(value.host)) {
     throw new Error(
       `Expected capability query.host to be one of ${BROKER_HOSTS.join(", ")}.`
     );
@@ -129,7 +126,7 @@ export function parseCapabilityQuery(value: unknown): CapabilityQuery {
   return {
     kind: value.kind as CapabilityQuery["kind"],
     goal: value.goal,
-    host: value.host as BrokerHost,
+    host: value.host,
     requestText: value.requestText,
     jobFamilies: value.jobFamilies,
     targets:

@@ -7,6 +7,7 @@ import { formatLifecycleResult } from "../shared-home/format.js";
 import { resolveLifecyclePaths } from "../shared-home/paths.js";
 import { removeSharedBrokerHome } from "../shared-home/remove.js";
 import { updateSharedBrokerHome } from "../shared-home/update.js";
+import { isBrokerHost, type BrokerHost } from "../core/types.js";
 
 const validCommands = ["update", "doctor", "remove"] as const;
 type ValidCommand = (typeof validCommands)[number];
@@ -37,7 +38,7 @@ export type LifecycleCliResult = {
   brokerHomeOverride?: string;
   claudeDirOverride?: string;
   codexDirOverride?: string;
-  hostOverride?: "claude-code" | "codex";
+  hostOverride?: BrokerHost;
   markerIdOverride?: string;
   operatorNote?: string;
   verificationNote?: string;
@@ -135,7 +136,7 @@ export async function runLifecycleCli(argv: string[]): Promise<LifecycleCliResul
     if (arg === "--host") {
       const host = readFlagValue(argv, index, "--host");
 
-      if (host !== "claude-code" && host !== "codex") {
+      if (!isBrokerHost(host)) {
         throw new Error(`Invalid value for --host: ${host}`);
       }
 
