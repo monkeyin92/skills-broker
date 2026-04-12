@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { mkdir, open, rm, stat } from "node:fs/promises";
 import { join } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
+import type { BrokerRequest } from "../core/types.js";
 import type { WorkflowSession } from "../core/workflow.js";
 import { readJsonFile, writeJsonFile } from "../shared-home/json-file.js";
 
@@ -26,9 +27,18 @@ type WorkflowSessionStoreOptions = {
   onBeforePersist?: (session: WorkflowSession) => Promise<void> | void;
 };
 
+function normalizeSessionRequest(request: BrokerRequest): BrokerRequest {
+  return {
+    outputMode: request.outputMode,
+    url: request.url,
+    capabilityQuery: request.capabilityQuery
+  };
+}
+
 function normalizeSession(session: WorkflowSession): WorkflowSession {
   return {
     ...session,
+    request: normalizeSessionRequest(session.request),
     revision: typeof session.revision === "number" ? session.revision : 0
   };
 }

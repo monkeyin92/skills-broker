@@ -6,6 +6,12 @@ import { buildHandoffEnvelope } from "./handoff.js";
 import { hydratePackageAvailability } from "./package-availability.js";
 import { prepareCandidate } from "./prepare.js";
 import {
+  legacyIntentCacheKey,
+  requestRoutingReasonCode,
+  resolveBrokerRequest,
+  type ResolvedBrokerRequest
+} from "./resolved-request.js";
+import {
   hasCapabilityQueryMatch,
   rankCapabilities
 } from "./rank.js";
@@ -48,7 +54,6 @@ import type {
   BrokerHostAction,
   BrokerIntent,
   BrokerOutcomeCode,
-  CapabilityQuery,
   PackageAcquisitionHint
 } from "../core/types.js";
 import { BROKER_HOSTS, isBrokerHost } from "../core/types.js";
@@ -65,7 +70,9 @@ type CachedWinnerCard = CapabilityCard & {
 type BrokerCacheRecord = {
   card: CachedWinnerCard;
   lastHost: string;
-  requestIntent: BrokerIntent;
+  compatibilityIntent?: BrokerIntent;
+  requestQueryIdentity?: string;
+  requestIntent?: BrokerIntent;
   requestCacheKey?: string;
   successfulRoutes: number;
 };
@@ -251,36 +258,6 @@ function prepareFailedMessage(): string {
   return "The broker selected a candidate but could not prepare a handoff. Explain the failure clearly and do not silently bypass the broker.";
 }
 
-function stableListKey(values: string[] | undefined): string {
-  return (values ?? []).slice().sort().join(",");
-}
-
-function buildRequestCacheKey(request: {
-  intent: BrokerIntent;
-  capabilityQuery?: {
-    jobFamilies?: string[];
-    artifacts?: string[];
-    preferredCapability?: string | null;
-    targets?: Array<{ type: string }>;
-  };
-}): string {
-  if (request.capabilityQuery === undefined) {
-    return `intent:${request.intent}`;
-  }
-
-  const targetTypes = stableListKey(
-    request.capabilityQuery.targets?.map((target) => target.type)
-  );
-
-  return [
-    `intent:${request.intent}`,
-    `families:${stableListKey(request.capabilityQuery.jobFamilies)}`,
-    `artifacts:${stableListKey(request.capabilityQuery.artifacts)}`,
-    `targetTypes:${targetTypes}`,
-    `preferred:${request.capabilityQuery.preferredCapability ?? ""}`
-  ].join("|");
-}
-
 function packageInstalled(card: CapabilityCard): boolean {
   return card.package.installState === "installed";
 }
@@ -311,25 +288,44 @@ function isResumeEnvelope(
   return "requestText" in input && input.workflowResume !== undefined;
 }
 
+function cacheRecordMatchesQueryIdentity(
+  record: BrokerCacheRecord,
+  request: ResolvedBrokerRequest
+): boolean {
+  return record.requestQueryIdentity === request.requestQueryIdentity;
+}
+
+function cacheRecordMatchesLegacyKey(
+  record: BrokerCacheRecord,
+  request: ResolvedBrokerRequest
+): boolean {
+  const legacyKey =
+    record.requestCacheKey ??
+    (record.requestIntent === undefined && record.compatibilityIntent === undefined
+      ? undefined
+      : legacyIntentCacheKey(record.requestIntent ?? record.compatibilityIntent!));
+
+  return (
+    legacyKey === request.legacyRequestCacheKey ||
+    legacyKey === request.legacyIntentCacheKey
+  );
+}
+
 async function discoverCapabilityCards(
-  request: {
-    intent: BrokerIntent;
-    capabilityQuery?: CapabilityQuery;
-  },
+  request: ResolvedBrokerRequest,
   hostCatalogFilePath: string,
   mcpRegistryFilePath: string
 ): Promise<DiscoverySnapshot> {
-  const useBroadHostDiscovery = request.capabilityQuery !== undefined;
   const [hostResult, workflowResult, mcpResult] = await Promise.allSettled([
-    loadHostSkillCandidates(
-      useBroadHostDiscovery ? undefined : request.intent,
-      hostCatalogFilePath
-    ),
-    loadHostWorkflowRecipes(
-      useBroadHostDiscovery ? undefined : request.intent,
-      hostCatalogFilePath
-    ),
-    searchMcpRegistry(request, mcpRegistryFilePath)
+    loadHostSkillCandidates(undefined, hostCatalogFilePath),
+    loadHostWorkflowRecipes(undefined, hostCatalogFilePath),
+    searchMcpRegistry(
+      {
+        intent: request.compatibilityIntent,
+        capabilityQuery: request.request.capabilityQuery
+      },
+      mcpRegistryFilePath
+    )
   ]);
 
   if (
@@ -358,16 +354,11 @@ async function discoverCapabilityCards(
     mcpCandidates
   )
     .map(toCapabilityCard)
-    .filter((candidate) => {
-      if (request.capabilityQuery === undefined) {
-        return candidate.compatibilityIntent === request.intent;
-      }
-
-      return (
-        candidate.compatibilityIntent === request.intent ||
-        hasCapabilityQueryMatch(candidate, request.capabilityQuery)
-      );
-    });
+    .filter(
+      (candidate) =>
+        candidate.compatibilityIntent === request.compatibilityIntent ||
+        hasCapabilityQueryMatch(candidate, request.request.capabilityQuery)
+    );
 
   return {
     candidates: mergedCandidates,
@@ -380,8 +371,7 @@ async function writeWinnerCache(
   winner: CapabilityCard,
   cachedCard: BrokerCacheRecord | null,
   currentHost: BrokerHost,
-  request: { intent: BrokerIntent },
-  requestCacheKey: string,
+  request: ResolvedBrokerRequest,
   now: Date
 ): Promise<void> {
   await cacheStore.write({
@@ -390,8 +380,8 @@ async function writeWinnerCache(
       fetchedAt: now.toISOString()
     },
     lastHost: currentHost,
-    requestIntent: request.intent,
-    requestCacheKey,
+    compatibilityIntent: request.compatibilityIntent,
+    requestQueryIdentity: request.requestQueryIdentity,
     successfulRoutes:
       cachedCard?.card.id === winner.id ? cachedCard.successfulRoutes + 1 : 1
   });
@@ -475,11 +465,17 @@ async function runWorkflowResume(
     );
   }
 
+  const resolvedRequest = resolveBrokerRequest(session.request);
+
   return resumeWorkflowRun({
     input,
     currentHost,
     now,
     request: session.request,
+    routingReasonCode: requestRoutingReasonCode(
+      workflowWinnerCard(recipe),
+      resolvedRequest
+    ),
     winner: workflowWinnerCard(recipe),
     recipe,
     sessionStore,
@@ -557,14 +553,20 @@ async function runSingleStep(
     throw error;
   }
 
-  const requestCacheKey = buildRequestCacheKey(request);
+  const resolvedRequest = resolveBrokerRequest(request);
 
   const cachedRecord = await cacheStore.read();
-  const cachedCard =
+  const exactCachedCard =
     cachedRecord !== null &&
-    cachedRecord.requestIntent === request.intent &&
-    (cachedRecord.requestCacheKey ?? `intent:${cachedRecord.requestIntent}`) ===
-      requestCacheKey &&
+    cacheRecordMatchesQueryIdentity(cachedRecord, resolvedRequest) &&
+    isWithinHardTtl(cachedRecord.card, now)
+      ? cachedRecord
+      : null;
+  const legacyMatchedCard =
+    exactCachedCard === null &&
+    cachedRecord !== null &&
+    cachedRecord.requestQueryIdentity === undefined &&
+    cacheRecordMatchesLegacyKey(cachedRecord, resolvedRequest) &&
     isWithinHardTtl(cachedRecord.card, now)
       ? cachedRecord
       : null;
@@ -573,25 +575,25 @@ async function runSingleStep(
   let candidates: CapabilityCard[] = [];
   let workflowsById = new Map<string, WorkflowRecipe>();
 
-  if (cachedCard !== null && !shouldRefreshToday(cachedCard.card, now)) {
+  if (exactCachedCard !== null && !shouldRefreshToday(exactCachedCard.card, now)) {
     cacheHit = true;
     candidates = [
       {
-        ...cachedCard.card
+        ...exactCachedCard.card
       }
     ];
   } else {
     try {
       const discovered = await discoverCapabilityCards(
-        request,
+        resolvedRequest,
         hostCatalogFilePath,
         mcpRegistryFilePath
       );
       candidates = discovered.candidates;
       workflowsById = discovered.workflowsById;
     } catch (error) {
-      if (cachedCard !== null) {
-        const action = handleRefreshFailure(cachedCard.card);
+      if (exactCachedCard !== null) {
+        const action = handleRefreshFailure(exactCachedCard.card);
 
         if (action.deleteCard) {
           await cacheStore.delete();
@@ -614,16 +616,16 @@ async function runSingleStep(
 
   const ranked = rankCapabilities({
     currentHost,
-    requestIntent: request.intent,
+    requestCompatibilityIntent: resolvedRequest.compatibilityIntent,
     requestCapabilityQuery: request.capabilityQuery,
     candidates,
     historyByCandidateId:
-      cachedCard === null
+      exactCachedCard === null
         ? undefined
         : {
-            [cachedCard.card.id]: {
+            [exactCachedCard.card.id]: {
               cacheHit,
-              successfulRoutes: cachedCard.successfulRoutes
+              successfulRoutes: exactCachedCard.successfulRoutes
             }
           }
   });
@@ -632,7 +634,7 @@ async function runSingleStep(
     return createNoCandidateResult(
       {
         cacheHit,
-        cachedCandidateId: cachedCard?.card.id,
+        cachedCandidateId: exactCachedCard?.card.id,
         candidateCount: 0
       },
       createBrokerRoutingTrace({
@@ -647,18 +649,20 @@ async function runSingleStep(
   }
 
   const winner = ranked[0];
+  const winnerReasonCode = requestRoutingReasonCode(winner, resolvedRequest);
   const debug: BrokerDebug = {
     cacheHit,
-    cachedCandidateId: cachedCard?.card.id,
+    cachedCandidateId: exactCachedCard?.card.id,
     candidateCount: ranked.length,
     decision: explainDecision(winner, {
       currentHost,
-      requestIntent: request.intent,
+      requestCompatibilityIntent: resolvedRequest.compatibilityIntent,
+      selectionReasonCode: winnerReasonCode,
       history:
-        cachedCard?.card.id === winner.id
+        exactCachedCard?.card.id === winner.id
           ? {
               cacheHit,
-              successfulRoutes: cachedCard.successfulRoutes
+              successfulRoutes: exactCachedCard.successfulRoutes
             }
           : undefined
     })
@@ -669,7 +673,7 @@ async function runSingleStep(
 
     if (recipe === undefined) {
       const loadedRecipes = await loadHostWorkflowRecipes(
-        request.capabilityQuery === undefined ? request.intent : undefined,
+        undefined,
         hostCatalogFilePath
       );
       recipe = loadedRecipes.find((candidate) => candidate.id === winner.id);
@@ -679,10 +683,9 @@ async function runSingleStep(
       await writeWinnerCache(
         cacheStore,
         winner,
-        cachedCard,
+        exactCachedCard ?? legacyMatchedCard,
         currentHost,
-        request,
-        requestCacheKey,
+        resolvedRequest,
         now
       );
 
@@ -691,6 +694,7 @@ async function runSingleStep(
         currentHost,
         now,
         request,
+        routingReasonCode: winnerReasonCode,
         winner,
         recipe,
         sessionStore: new WorkflowSessionStore(
@@ -754,10 +758,9 @@ async function runSingleStep(
   await writeWinnerCache(
     cacheStore,
     winner,
-    cachedCard,
+    exactCachedCard ?? legacyMatchedCard,
     currentHost,
-    request,
-    requestCacheKey,
+    resolvedRequest,
     now
   );
 
@@ -777,7 +780,8 @@ async function runSingleStep(
       now,
       hostAction: null,
       candidateCount: ranked.length,
-      winner
+      winner,
+      reasonCode: winnerReasonCode
     })
   };
 

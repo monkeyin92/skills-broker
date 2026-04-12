@@ -1,8 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { normalizeRequest } from "../../src/core/request";
 
+function expectQueryNativeRequest(
+  normalized: ReturnType<typeof normalizeRequest>
+): void {
+  expect(normalized).not.toHaveProperty("intent");
+}
+
 describe("normalizeRequest", () => {
-  it("normalizes webpage markdown requests to the web_content_to_markdown intent", () => {
+  it("normalizes webpage markdown requests into the query-native broker contract", () => {
     const normalized = normalizeRequest(
       {
         task: "turn this webpage into markdown",
@@ -11,7 +17,7 @@ describe("normalizeRequest", () => {
       "claude-code"
     );
 
-    expect(normalized.intent).toBe("web_content_to_markdown");
+    expectQueryNativeRequest(normalized);
   });
 
   it("normalizes webpage markdown requests to markdown_only output mode", () => {
@@ -47,7 +53,7 @@ describe("normalizeRequest", () => {
       "claude-code"
     );
 
-    expect(normalized.intent).toBe("web_content_to_markdown");
+    expectQueryNativeRequest(normalized);
     expect(normalized.outputMode).toBe("markdown_only");
   });
 

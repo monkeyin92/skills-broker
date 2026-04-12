@@ -8,6 +8,16 @@ import {
   runBrokerCli
 } from "../../src/cli";
 
+function expectQueryNativeRequest(
+  request: {
+    outputMode: string;
+    capabilityQuery: Record<string, unknown>;
+  }
+): void {
+  expect(request).not.toHaveProperty("intent");
+  expect(request.outputMode).toBe("markdown_only");
+}
+
 test("cli accepts a raw envelope for the current webpage flow", async () => {
   const runtimeDirectory = await mkdtemp(join(tmpdir(), "skills-broker-cli-"));
   const hostCatalogPath = join(runtimeDirectory, "host-skills.seed.json");
@@ -287,11 +297,10 @@ test("cli accepts a social-post envelope and returns HANDOFF_READY", async () =>
         chosenImplementation: {
           id: "baoyu.x_post_to_markdown"
         },
-        request: {
-          intent: "social_post_to_markdown"
-        }
+        request: {}
       }
     });
+    expectQueryNativeRequest(result.handoff.request);
   } finally {
     writeSpy.mockRestore();
     await rm(runtimeDirectory, { recursive: true, force: true });
@@ -313,11 +322,10 @@ test("cli accepts a social-post envelope and returns HANDOFF_READY", async () =>
       chosenImplementation: {
         id: "baoyu.x_post_to_markdown"
       },
-      request: {
-        intent: "social_post_to_markdown"
-      }
+      request: {}
     }
   });
+  expectQueryNativeRequest(JSON.parse(writes[0]).handoff.request);
 });
 
 test("cli accepts an explicit capability discovery envelope and returns HANDOFF_READY", async () => {
@@ -386,11 +394,10 @@ test("cli accepts an explicit capability discovery envelope and returns HANDOFF_
         chosenImplementation: {
           id: "skills_broker.capability_discovery"
         },
-        request: {
-          intent: "capability_discovery_or_install"
-        }
+        request: {}
       }
     });
+    expectQueryNativeRequest(result.handoff.request);
   } finally {
     writeSpy.mockRestore();
     await rm(runtimeDirectory, { recursive: true, force: true });
@@ -412,11 +419,10 @@ test("cli accepts an explicit capability discovery envelope and returns HANDOFF_
       chosenImplementation: {
         id: "skills_broker.capability_discovery"
       },
-      request: {
-        intent: "capability_discovery_or_install"
-      }
+      request: {}
     }
   });
+  expectQueryNativeRequest(JSON.parse(writes[0]).handoff.request);
 });
 
 test("cli accepts a structured capability query and routes it through discovery", async () => {
@@ -502,13 +508,13 @@ test("cli accepts a structured capability query and routes it through discovery"
           id: "gstack.office_hours"
         },
         request: {
-          intent: "capability_discovery_or_install",
           capabilityQuery: {
             jobFamilies: ["requirements_analysis"]
           }
         }
       }
     });
+    expectQueryNativeRequest(result.handoff.request);
   } finally {
     writeSpy.mockRestore();
     await rm(runtimeDirectory, { recursive: true, force: true });
@@ -606,7 +612,6 @@ test("cli routes raw requirements-analysis requests through discovery", async ()
           id: "gstack.office_hours"
         },
         request: {
-          intent: "capability_discovery_or_install",
           capabilityQuery: {
             jobFamilies: ["requirements_analysis"],
             targets: [
@@ -620,6 +625,7 @@ test("cli routes raw requirements-analysis requests through discovery", async ()
         }
       }
     });
+    expectQueryNativeRequest(result.handoff.request);
   } finally {
     writeSpy.mockRestore();
     await rm(runtimeDirectory, { recursive: true, force: true });
@@ -718,7 +724,6 @@ test("cli routes raw investigation requests through discovery", async () => {
           id: "gstack.investigate"
         },
         request: {
-          intent: "capability_discovery_or_install",
           capabilityQuery: {
             jobFamilies: ["investigation"],
             targets: [
@@ -732,6 +737,7 @@ test("cli routes raw investigation requests through discovery", async () => {
         }
       }
     });
+    expectQueryNativeRequest(result.handoff.request);
   } finally {
     writeSpy.mockRestore();
     await rm(runtimeDirectory, { recursive: true, force: true });

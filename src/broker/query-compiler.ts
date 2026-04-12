@@ -305,12 +305,10 @@ function looksAmbiguous(requestText: string): boolean {
 }
 
 function buildBrokerRequest(
-  intent: BrokerIntent,
   url: string | undefined,
   capabilityQuery: CapabilityQuery
 ): QueryBackedBrokerRequest {
   const request: QueryBackedBrokerRequest = {
-    intent,
     outputMode: "markdown_only",
     capabilityQuery
   };
@@ -540,6 +538,18 @@ export function compileCapabilityQueryRequest(
   query: CapabilityQuery
 ): QueryBackedBrokerRequest {
   const url = firstQueryUrl(query);
+  const compatibilityIntent = deriveCompatibilityIntent(query);
+
+  return buildBrokerRequest(
+    compatibilityIntent === "capability_discovery_or_install" ? undefined : url,
+    query
+  );
+}
+
+export function deriveCompatibilityIntent(
+  query: CapabilityQuery
+): BrokerIntent {
+  const url = firstQueryUrl(query);
   const capabilityWorkflowFamilies = [
     "requirements_analysis",
     "idea_brainstorming",
@@ -552,14 +562,14 @@ export function compileCapabilityQueryRequest(
     hasQueryArtifact(query, "installation_plan");
 
   if (explicitCapabilityDiscovery) {
-    return buildBrokerRequest("capability_discovery_or_install", undefined, query);
+    return "capability_discovery_or_install";
   }
 
   if (
     hasQueryArtifact(query, "markdown") &&
     (hasQueryFamily(query, "social_content_conversion") || isSocialUrl(url))
   ) {
-    return buildBrokerRequest("social_post_to_markdown", url, query);
+    return "social_post_to_markdown";
   }
 
   if (
@@ -568,7 +578,7 @@ export function compileCapabilityQueryRequest(
       hasQueryFamily(query, "content_acquisition") ||
       url !== undefined)
   ) {
-    return buildBrokerRequest("web_content_to_markdown", url, query);
+    return "web_content_to_markdown";
   }
 
   if (
@@ -580,7 +590,7 @@ export function compileCapabilityQueryRequest(
     hasQueryArtifact(query, "recommendation") ||
     hasQueryArtifact(query, "installation_plan")
   ) {
-    return buildBrokerRequest("capability_discovery_or_install", undefined, query);
+    return "capability_discovery_or_install";
   }
 
   throw new Error(`Unsupported broker capability query: ${query.requestText}`);

@@ -1,10 +1,12 @@
 import type { CapabilityCard } from "../core/capability-card.js";
 import type { BrokerIntent } from "../core/types.js";
+import type { RequestRoutingReasonCode } from "./resolved-request.js";
 import type { RoutingHistory } from "./rank.js";
 
 export type ExplainDecisionInput = {
   currentHost: string;
-  requestIntent: BrokerIntent;
+  requestCompatibilityIntent: BrokerIntent;
+  selectionReasonCode: RequestRoutingReasonCode;
   history?: RoutingHistory;
 };
 
@@ -20,13 +22,20 @@ export function explainDecision(
   const cacheReuse = history?.cacheHit ? "cache hit" : "no cache hit";
   const successfulRoutes = history?.successfulRoutes ?? 0;
   const intentMatch =
-    card.compatibilityIntent === input.requestIntent ? "match" : "mismatch";
+    card.compatibilityIntent === input.requestCompatibilityIntent
+      ? "match"
+      : "mismatch";
   const hostSupport = card.hosts.currentHostSupported ? "supported" : "unsupported";
+  const selectionBasis =
+    input.selectionReasonCode === "query_native"
+      ? "query-native match"
+      : `compatibility-assisted via ${input.requestCompatibilityIntent}`;
 
   return [
     `current host ${input.currentHost} selected ${card.label}`,
     `current host support: ${hostSupport}`,
-    `compatibility lane: ${intentMatch} for ${input.requestIntent}`,
+    `selection basis: ${selectionBasis}`,
+    `compatibility lane: ${intentMatch} for ${input.requestCompatibilityIntent}`,
     `preparation burden: ${preparationBurden(card)}`,
     `context cost: ${card.ranking.contextCost}`,
     `cache reuse: ${cacheReuse}, successful routing history: ${successfulRoutes}`,

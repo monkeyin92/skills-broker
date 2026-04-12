@@ -116,7 +116,13 @@ describe("workflow session store", () => {
   it("reads legacy session files and migrates updated runs into per-run storage", async () => {
     const directory = await mkdtemp(join(tmpdir(), "skills-broker-session-store-"));
     const filePath = join(directory, "workflow-sessions.json");
-    const legacy = createSession("legacy-run");
+    const legacy = {
+      ...createSession("legacy-run"),
+      request: {
+        intent: "capability_discovery_or_install" as const,
+        ...createSession("legacy-run").request
+      }
+    };
     const store = new WorkflowSessionStore(filePath);
 
     try {
@@ -126,7 +132,12 @@ describe("workflow session store", () => {
         "utf8"
       );
 
-      await expect(store.read(legacy.runId)).resolves.toEqual(legacy);
+      await expect(store.read(legacy.runId)).resolves.toMatchObject({
+        runId: legacy.runId,
+        request: createSession("legacy-run").request
+      });
+      const normalizedLegacy = await store.read(legacy.runId);
+      expect(normalizedLegacy?.request).not.toHaveProperty("intent");
 
       const updated = await store.write(
         {
@@ -149,6 +160,8 @@ describe("workflow session store", () => {
         revision: 1,
         activeStageId: "plan-ceo-review"
       });
+      const migrated = await store.read(legacy.runId);
+      expect(migrated?.request).not.toHaveProperty("intent");
 
       const legacyFile = JSON.parse(await readFile(filePath, "utf8")) as {
         sessions: Record<string, WorkflowSession>;
@@ -158,6 +171,7 @@ describe("workflow session store", () => {
         revision: 0,
         activeStageId: "office-hours"
       });
+      expect(legacyFile.sessions[legacy.runId].request).toHaveProperty("intent");
     } finally {
       await rm(directory, { recursive: true, force: true });
     }

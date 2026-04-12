@@ -153,10 +153,10 @@ describe("shared broker home smoke", () => {
         const codexResult = await runCodexAdapter(
           {
             requestText:
-              "turn this webpage into markdown: https://example.com/article?host=codex",
+              "turn this webpage into markdown: https://example.com/article",
             host: "codex",
             invocationMode: "explicit",
-            urls: ["https://example.com/article?host=codex"]
+            urls: ["https://example.com/article"]
           },
           {
             installDirectory: codexShellDirectory,
