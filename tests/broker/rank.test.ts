@@ -74,7 +74,7 @@ describe("rankCapabilities", () => {
 
     const ranked = rankCapabilities({
       currentHost: "codex",
-      requestIntent: "web_content_to_markdown",
+      requestCompatibilityIntent: "web_content_to_markdown",
       candidates: [unsupported, supported]
     });
 
@@ -93,7 +93,7 @@ describe("rankCapabilities", () => {
 
     const ranked = rankCapabilities({
       currentHost: "codex",
-      requestIntent: "web_content_to_markdown",
+      requestCompatibilityIntent: "web_content_to_markdown",
       candidates: [cold, warm],
       historyByCandidateId: {
         warm: {
@@ -132,7 +132,7 @@ describe("rankCapabilities", () => {
 
     const ranked = rankCapabilities({
       currentHost: "claude-code",
-      requestIntent: "capability_discovery_or_install",
+      requestCompatibilityIntent: "capability_discovery_or_install",
       requestCapabilityQuery: {
         kind: "capability_request",
         goal: "analyze a product requirement and produce a design doc",
@@ -188,7 +188,7 @@ describe("rankCapabilities", () => {
 
     const ranked = rankCapabilities({
       currentHost: "codex",
-      requestIntent: "capability_discovery_or_install",
+      requestCompatibilityIntent: "capability_discovery_or_install",
       requestCapabilityQuery: {
         kind: "capability_request",
         goal: "qa a website",
@@ -236,7 +236,7 @@ describe("rankCapabilities", () => {
 
     const ranked = rankCapabilities({
       currentHost: "claude-code",
-      requestIntent: "capability_discovery_or_install",
+      requestCompatibilityIntent: "capability_discovery_or_install",
       requestCapabilityQuery: {
         kind: "capability_request",
         goal: "discover or install a capability to convert web content to markdown",
@@ -261,6 +261,53 @@ describe("rankCapabilities", () => {
     expect(ranked.map((card) => card.id)[0]).toBe("discovery");
   });
 
+  it("uses the compatibility lane only as a late tie-break after query scores tie", () => {
+    const matching = createCard({
+      id: "matching",
+      label: "Matching lane",
+      compatibilityIntent: "capability_discovery_or_install",
+      query: {
+        jobFamilies: ["requirements_analysis"],
+        targetTypes: ["problem_statement", "text"],
+        artifacts: ["design_doc"],
+        examples: ["帮我分析这个需求"]
+      }
+    });
+    const mismatching = createCard({
+      id: "mismatching",
+      label: "Mismatching lane",
+      compatibilityIntent: "web_content_to_markdown",
+      query: {
+        jobFamilies: ["requirements_analysis"],
+        targetTypes: ["problem_statement", "text"],
+        artifacts: ["design_doc"],
+        examples: ["帮我分析这个需求"]
+      }
+    });
+
+    const ranked = rankCapabilities({
+      currentHost: "claude-code",
+      requestCompatibilityIntent: "capability_discovery_or_install",
+      requestCapabilityQuery: {
+        kind: "capability_request",
+        goal: "analyze a product requirement and produce a design doc",
+        host: "claude-code",
+        requestText: "帮我做需求分析并产出设计文档",
+        jobFamilies: ["requirements_analysis"],
+        targets: [
+          {
+            type: "problem_statement",
+            value: "skills-broker capability routing"
+          }
+        ],
+        artifacts: ["design_doc"]
+      },
+      candidates: [mismatching, matching]
+    });
+
+    expect(ranked.map((card) => card.id)[0]).toBe("matching");
+  });
+
   it("prefers installed packages when query strength is otherwise equal", () => {
     const installed = createCard({
       id: "installed",
@@ -279,7 +326,7 @@ describe("rankCapabilities", () => {
 
     const ranked = rankCapabilities({
       currentHost: "claude-code",
-      requestIntent: "web_content_to_markdown",
+      requestCompatibilityIntent: "web_content_to_markdown",
       candidates: [available, installed]
     });
 
@@ -296,7 +343,8 @@ describe("explainDecision", () => {
       }),
       {
         currentHost: "codex",
-        requestIntent: "web_content_to_markdown",
+        requestCompatibilityIntent: "web_content_to_markdown",
+        selectionReasonCode: "query_native_via_legacy_compat",
         history: {
           cacheHit: true,
           successfulRoutes: 3
@@ -306,6 +354,7 @@ describe("explainDecision", () => {
 
     expect(decision).toContain("current host");
     expect(decision).toContain("cache");
+    expect(decision).toContain("selection basis: compatibility-assisted");
     expect(decision).toContain("compatibility lane");
   });
 });

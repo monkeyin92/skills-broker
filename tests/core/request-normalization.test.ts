@@ -16,6 +16,13 @@ function expectRejected(
   }
 }
 
+function expectQueryNativeRequest(
+  normalized: ReturnType<typeof normalizeRequest>
+): void {
+  expect(normalized).not.toHaveProperty("intent");
+  expect(normalized.outputMode).toBe("markdown_only");
+}
+
 describe("normalizeRequest", () => {
   it("normalizes webpage content requests to web_content_to_markdown", () => {
     const normalized = normalizeRequest({
@@ -24,8 +31,7 @@ describe("normalizeRequest", () => {
       urls: ["https://example.com/post"]
     });
 
-    expect(normalized.intent).toBe("web_content_to_markdown");
-    expect(normalized.outputMode).toBe("markdown_only");
+    expectQueryNativeRequest(normalized);
     expect(normalized.url).toBe("https://example.com/post");
     expect(normalized.capabilityQuery).toMatchObject({
       goal: "convert web content to markdown",
@@ -48,8 +54,7 @@ describe("normalizeRequest", () => {
       urls: ["https://x.com/example/status/1"]
     });
 
-    expect(normalized.intent).toBe("social_post_to_markdown");
-    expect(normalized.outputMode).toBe("markdown_only");
+    expectQueryNativeRequest(normalized);
     expect(normalized.capabilityQuery).toMatchObject({
       goal: "convert social post to markdown",
       requestText: "save this X post as markdown: https://x.com/example/status/1",
@@ -70,8 +75,7 @@ describe("normalizeRequest", () => {
       host: "codex"
     });
 
-    expect(normalized.intent).toBe("capability_discovery_or_install");
-    expect(normalized.outputMode).toBe("markdown_only");
+    expectQueryNativeRequest(normalized);
     expect(normalized.capabilityQuery).toMatchObject({
       goal: "discover or install a capability to convert web content to markdown",
       requestText: "find a skill to save webpages as markdown",
@@ -97,8 +101,7 @@ describe("normalizeRequest", () => {
       urls: ["https://x.com/example/status/1"]
     });
 
-    expect(normalized.intent).toBe("social_post_to_markdown");
-    expect(normalized.outputMode).toBe("markdown_only");
+    expectQueryNativeRequest(normalized);
     expect(normalized.capabilityQuery).toMatchObject({
       goal: "convert social post to markdown",
       requestText: "convert this page to markdown",
@@ -132,8 +135,7 @@ describe("normalizeRequest", () => {
       "codex"
     );
 
-    expect(normalized.intent).toBe("web_content_to_markdown");
-    expect(normalized.outputMode).toBe("markdown_only");
+    expectQueryNativeRequest(normalized);
     expect(normalized.url).toBe("https://example.com/article");
     expect(normalized.capabilityQuery).toMatchObject({
       goal: "convert web content to markdown",
@@ -305,8 +307,7 @@ describe("normalizeRequest", () => {
       urls: ["https://x.com/example/status/1"]
     });
 
-    expect(normalized.intent).toBe("social_post_to_markdown");
-    expect(normalized.outputMode).toBe("markdown_only");
+    expectQueryNativeRequest(normalized);
   });
 
   it("normalizes a structured capability query for requirements analysis into the discovery lane", () => {
@@ -323,7 +324,7 @@ describe("normalizeRequest", () => {
       }
     });
 
-    expect(normalized.intent).toBe("capability_discovery_or_install");
+    expectQueryNativeRequest(normalized);
     expect(normalized.capabilityQuery).toMatchObject({
       jobFamilies: ["requirements_analysis"],
       artifacts: ["design_doc"]
@@ -354,7 +355,7 @@ describe("normalizeRequest", () => {
       }
     });
 
-    expect(normalized.intent).toBe("capability_discovery_or_install");
+    expectQueryNativeRequest(normalized);
     expect(normalized.capabilityQuery).toMatchObject({
       jobFamilies: [
         "capability_acquisition",
@@ -372,7 +373,7 @@ describe("normalizeRequest", () => {
       urls: ["http://116.63.15.60/#/login"]
     });
 
-    expect(normalized.intent).toBe("capability_discovery_or_install");
+    expectQueryNativeRequest(normalized);
     expect(normalized.capabilityQuery).toMatchObject({
       goal: "qa a website",
       requestText: "测下这个网站的质量",
@@ -393,7 +394,7 @@ describe("normalizeRequest", () => {
       host: "claude-code"
     });
 
-    expect(normalized.intent).toBe("capability_discovery_or_install");
+    expectQueryNativeRequest(normalized);
     expect(normalized.capabilityQuery).toMatchObject({
       goal: "analyze a product requirement and produce a design doc",
       requestText: "帮我做需求分析并产出设计文档",
@@ -414,7 +415,7 @@ describe("normalizeRequest", () => {
       host: "codex"
     });
 
-    expect(normalized.intent).toBe("capability_discovery_or_install");
+    expectQueryNativeRequest(normalized);
     expect(normalized.capabilityQuery).toMatchObject({
       goal: "analyze a product requirement and identify gaps",
       requestText: "帮我看看这个需求有没有漏洞",
@@ -436,7 +437,7 @@ describe("normalizeRequest", () => {
       urls: ["https://example.com"]
     });
 
-    expect(normalized.intent).toBe("capability_discovery_or_install");
+    expectQueryNativeRequest(normalized);
     expect(normalized.capabilityQuery).toMatchObject({
       goal: "investigate a site failure and identify root cause",
       requestText: "investigate this site failure with a reusable workflow",
@@ -457,7 +458,7 @@ describe("normalizeRequest", () => {
       host: "claude-code"
     });
 
-    expect(normalized.intent).toBe("capability_discovery_or_install");
+    expectQueryNativeRequest(normalized);
     expect(normalized.capabilityQuery).toMatchObject({
       goal: "turn a product idea into a reviewed execution plan",
       requestText: "我有一个想法：做一个自动串起评审和发版的工具",
@@ -483,7 +484,7 @@ describe("normalizeRequest", () => {
       host: "codex"
     });
 
-    expect(normalized.intent).toBe("capability_discovery_or_install");
+    expectQueryNativeRequest(normalized);
     expect(normalized.capabilityQuery).toMatchObject({
       goal: "turn a product idea into a reviewed execution plan",
       requestText: FREEFORM_IDEA_REQUEST,
@@ -544,7 +545,7 @@ describe("normalizeRequest", () => {
       }
     });
 
-    expect(normalized.intent).toBe("web_content_to_markdown");
+    expectQueryNativeRequest(normalized);
     expect(normalized.url).toBe("https://example.com/post");
   });
 });

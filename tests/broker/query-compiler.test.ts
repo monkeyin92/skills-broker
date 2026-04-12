@@ -4,6 +4,13 @@ import {
   compileEnvelopeRequest
 } from "../../src/broker/query-compiler";
 
+function expectQueryNativeRequest(
+  normalized: ReturnType<typeof compileCapabilityQueryRequest>
+): void {
+  expect(normalized).not.toHaveProperty("intent");
+  expect(normalized.outputMode).toBe("markdown_only");
+}
+
 describe("broker query compiler contract", () => {
   it("compiles supported raw envelope requests into capability queries", () => {
     const web = compileEnvelopeRequest({
@@ -146,9 +153,8 @@ describe("broker query compiler contract", () => {
       artifacts: ["markdown"]
     });
 
-    expect(web.intent).toBe("web_content_to_markdown");
+    expectQueryNativeRequest(web);
     expect(web.url).toBe("https://example.com/post");
-    expect(web.outputMode).toBe("markdown_only");
 
     const social = compileCapabilityQueryRequest({
       kind: "capability_request",
@@ -165,7 +171,7 @@ describe("broker query compiler contract", () => {
       artifacts: ["markdown"]
     });
 
-    expect(social.intent).toBe("social_post_to_markdown");
+    expectQueryNativeRequest(social);
     expect(social.capabilityQuery).toMatchObject({
       jobFamilies: ["content_acquisition", "social_content_conversion"],
       artifacts: ["markdown"]
@@ -180,7 +186,7 @@ describe("broker query compiler contract", () => {
       artifacts: ["design_doc"]
     });
 
-    expect(discovery.intent).toBe("capability_discovery_or_install");
+    expectQueryNativeRequest(discovery);
     expect(discovery.capabilityQuery).toMatchObject({
       jobFamilies: ["requirements_analysis"],
       artifacts: ["design_doc"]

@@ -98,7 +98,8 @@ describe("workflow runtime", () => {
         resultCode: "WORKFLOW_STAGE_READY",
         workflowId: "idea-to-ship",
         runId: result.workflow.runId,
-        stageId: "office-hours"
+        stageId: "office-hours",
+        reasonCode: "query_native"
       });
     } finally {
       await rm(runtime.directory, { recursive: true, force: true });
@@ -130,6 +131,13 @@ describe("workflow runtime", () => {
       expect(secondResult.workflow.runId).toBe(firstResult.workflow.runId);
       expect(secondResult.workflow.completedStageIds).toContain("office-hours");
       expect(secondResult.stage.id).toBe("plan-ceo-review");
+      expect(secondResult.trace).toMatchObject({
+        resultCode: "WORKFLOW_STAGE_READY",
+        workflowId: "idea-to-ship",
+        runId: firstResult.workflow.runId,
+        stageId: "plan-ceo-review",
+        reasonCode: "query_native"
+      });
     } finally {
       await rm(runtime.directory, { recursive: true, force: true });
     }
@@ -350,6 +358,13 @@ describe("workflow runtime", () => {
       expect(completed.ok).toBe(true);
       expect(completed.outcome.code).toBe("WORKFLOW_COMPLETED");
       expect(completed.workflow.status).toBe("completed");
+      expect(completed.trace).toMatchObject({
+        resultCode: "WORKFLOW_COMPLETED",
+        workflowId: "idea-to-ship",
+        runId: start.workflow.runId,
+        stageId: "ship",
+        reasonCode: "query_native"
+      });
 
       const terminalResume = await resumeWorkflow(
         runtime,

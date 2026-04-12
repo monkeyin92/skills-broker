@@ -12,7 +12,7 @@ export type RoutingHistory = {
 
 export type RankCapabilitiesInput = {
   currentHost: string;
-  requestIntent: BrokerIntent;
+  requestCompatibilityIntent: BrokerIntent;
   candidates: CapabilityCard[];
   requestCapabilityQuery?: CapabilityQuery;
   historyByCandidateId?: Record<string, RoutingHistory>;
@@ -154,8 +154,10 @@ function compareCards(
     return rightInstalled - leftInstalled;
   }
 
-  const leftIntentMatch = left.compatibilityIntent === input.requestIntent ? 1 : 0;
-  const rightIntentMatch = right.compatibilityIntent === input.requestIntent ? 1 : 0;
+  const leftIntentMatch =
+    left.compatibilityIntent === input.requestCompatibilityIntent ? 1 : 0;
+  const rightIntentMatch =
+    right.compatibilityIntent === input.requestCompatibilityIntent ? 1 : 0;
 
   if (leftIntentMatch !== rightIntentMatch) {
     return rightIntentMatch - leftIntentMatch;

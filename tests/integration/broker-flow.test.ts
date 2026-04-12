@@ -2,7 +2,9 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { buildLegacyRequestCacheKey, resolveBrokerRequest } from "../../src/broker/resolved-request";
 import { runBroker } from "../../src/broker/run";
+import { normalizeRequest } from "../../src/core/request";
 import { routingTraceLogFilePath } from "../../src/broker/trace-store";
 
 const validUrlRequest = {
@@ -18,6 +20,16 @@ async function createRuntimePaths() {
     brokerHomeDirectory: join(directory, ".skills-broker"),
     cacheFilePath: join(directory, "broker-cache.json")
   };
+}
+
+function expectQueryNativeRequest(
+  request: {
+    outputMode: string;
+    capabilityQuery: Record<string, unknown>;
+  }
+): void {
+  expect(request).not.toHaveProperty("intent");
+  expect(request.outputMode).toBe("markdown_only");
 }
 
 describe("runBroker", () => {
@@ -45,8 +57,8 @@ describe("runBroker", () => {
       });
       expect(result.handoff.brokerDone).toBe(true);
       expect(result.handoff.candidate.id).toBe(result.winner.id);
+      expectQueryNativeRequest(result.handoff.request);
       expect(result.handoff.request).toEqual({
-        intent: "web_content_to_markdown",
         outputMode: "markdown_only",
         url: validUrlRequest.url,
         capabilityQuery: {
@@ -87,7 +99,37 @@ describe("runBroker", () => {
     }
   });
 
-  it("uses cache-first routing for a repeat request", async () => {
+  it("uses cache-first routing for an identical repeat request", async () => {
+    const runtime = await createRuntimePaths();
+
+    try {
+      const firstResult = await runBroker(validUrlRequest, {
+        ...runtime,
+        now: new Date("2026-03-27T08:00:00.000Z")
+      });
+      const secondResult = await runBroker(
+        {
+          task: "turn this webpage into markdown",
+          url: validUrlRequest.url
+        },
+        {
+          ...runtime,
+          now: new Date("2026-03-27T12:00:00.000Z")
+        }
+      );
+
+      expect(firstResult.ok).toBe(true);
+      expect(secondResult.ok).toBe(true);
+      expect(secondResult.outcome.code).toBe("HANDOFF_READY");
+      expect(secondResult.winner.id).toBe(firstResult.winner.id);
+      expect(secondResult.debug.cacheHit).toBe(true);
+      expect(secondResult.debug.cachedCandidateId).toBe(firstResult.winner.id);
+    } finally {
+      await rm(runtime.directory, { recursive: true, force: true });
+    }
+  });
+
+  it("does not reuse cache across different target values even when the legacy intent matches", async () => {
     const runtime = await createRuntimePaths();
 
     try {
@@ -110,8 +152,69 @@ describe("runBroker", () => {
       expect(secondResult.ok).toBe(true);
       expect(secondResult.outcome.code).toBe("HANDOFF_READY");
       expect(secondResult.winner.id).toBe(firstResult.winner.id);
-      expect(secondResult.debug.cacheHit).toBe(true);
-      expect(secondResult.debug.cachedCandidateId).toBe(firstResult.winner.id);
+      expect(secondResult.debug.cacheHit).toBe(false);
+      expect(secondResult.debug.cachedCandidateId).toBeUndefined();
+    } finally {
+      await rm(runtime.directory, { recursive: true, force: true });
+    }
+  });
+
+  it("dual-reads legacy cache records and rewrites them forward with query identity", async () => {
+    const runtime = await createRuntimePaths();
+
+    try {
+      const initial = await runBroker(validUrlRequest, {
+        ...runtime,
+        now: new Date("2026-03-27T08:00:00.000Z")
+      });
+
+      expect(initial.ok).toBe(true);
+
+      const legacyRequest = normalizeRequest(validUrlRequest, "claude-code");
+      const resolvedLegacyRequest = resolveBrokerRequest(legacyRequest);
+      await writeFile(
+        runtime.cacheFilePath,
+        `${JSON.stringify(
+          {
+            card: {
+              ...initial.winner,
+              fetchedAt: "2026-03-27T08:00:00.000Z"
+            },
+            lastHost: "claude-code",
+            requestIntent: resolvedLegacyRequest.compatibilityIntent,
+            requestCacheKey: buildLegacyRequestCacheKey(
+              legacyRequest,
+              resolvedLegacyRequest.compatibilityIntent
+            ),
+            successfulRoutes: 2
+          },
+          null,
+          2
+        )}\n`,
+        "utf8"
+      );
+
+      const replay = await runBroker(validUrlRequest, {
+        ...runtime,
+        now: new Date("2026-03-27T12:00:00.000Z")
+      });
+      const rewritten = JSON.parse(
+        await readFile(runtime.cacheFilePath, "utf8")
+      ) as {
+        requestQueryIdentity?: string;
+        requestIntent?: string;
+        requestCacheKey?: string;
+        successfulRoutes: number;
+      };
+
+      expect(replay.ok).toBe(true);
+      expect(replay.debug.cacheHit).toBe(false);
+      expect(rewritten.requestQueryIdentity).toBe(
+        resolvedLegacyRequest.requestQueryIdentity
+      );
+      expect(rewritten.requestIntent).toBeUndefined();
+      expect(rewritten.requestCacheKey).toBeUndefined();
+      expect(rewritten.successfulRoutes).toBe(3);
     } finally {
       await rm(runtime.directory, { recursive: true, force: true });
     }
@@ -334,8 +437,8 @@ describe("runBroker", () => {
       expect(result.ok).toBe(true);
       expect(result.outcome.code).toBe("HANDOFF_READY");
       expect(result.winner.id).toBe("query-native-analysis");
+      expectQueryNativeRequest(result.handoff.request);
       expect(result.handoff.request).toMatchObject({
-        intent: "capability_discovery_or_install",
         capabilityQuery: {
           jobFamilies: ["requirements_analysis"],
           artifacts: ["design_doc", "analysis"]
@@ -346,7 +449,92 @@ describe("runBroker", () => {
         resultCode: "HANDOFF_READY",
         normalizedBy: "structured_query",
         requestSurface: "structured_query",
-        winnerId: "query-native-analysis"
+        winnerId: "query-native-analysis",
+        reasonCode: "query_native"
+      });
+    } finally {
+      await rm(runtime.directory, { recursive: true, force: true });
+    }
+  });
+
+  it("reports compatibility-assisted routing when only the legacy compatibility lane can admit the winner", async () => {
+    const runtime = await createRuntimePaths();
+    const hostCatalogFilePath = join(runtime.directory, "host.json");
+    const mcpRegistryFilePath = join(runtime.directory, "empty-mcp.json");
+
+    await writeFile(
+      hostCatalogFilePath,
+      JSON.stringify({
+        packages: [
+          {
+            packageId: "gstack",
+            label: "gstack",
+            installState: "installed",
+            acquisition: "local_skill_bundle"
+          }
+        ],
+        skills: [
+          {
+            id: "generic-discovery",
+            kind: "skill",
+            label: "Generic Discovery",
+            intent: "capability_discovery_or_install",
+            package: {
+              packageId: "gstack"
+            },
+            leaf: {
+              capabilityId: "gstack.find-skills",
+              packageId: "gstack",
+              subskillId: "find-skills"
+            },
+            query: {
+              jobFamilies: ["capability_acquisition"],
+              targetTypes: ["text"],
+              artifacts: ["installation_plan"],
+              examples: ["find a skill"]
+            },
+            implementation: {
+              id: "gstack.find_skills",
+              type: "local_skill",
+              ownerSurface: "broker_owned_downstream"
+            }
+          }
+        ]
+      }),
+      "utf8"
+    );
+    await writeFile(mcpRegistryFilePath, JSON.stringify({ servers: [] }), "utf8");
+
+    try {
+      const result = await runBroker(
+        {
+          requestText: "帮我做需求分析并产出设计文档",
+          host: "claude-code",
+          capabilityQuery: {
+            kind: "capability_request",
+            goal: "analyze a product requirement and produce a design doc",
+            host: "claude-code",
+            requestText: "帮我做需求分析并产出设计文档",
+            jobFamilies: ["requirements_analysis"],
+            artifacts: ["design_doc", "analysis"]
+          }
+        },
+        {
+          cacheFilePath: runtime.cacheFilePath,
+          hostCatalogFilePath,
+          mcpRegistryFilePath,
+          now: new Date("2026-04-01T08:30:00.000Z")
+        }
+      );
+
+      expect(result.ok).toBe(true);
+      expect(result.outcome.code).toBe("HANDOFF_READY");
+      expect(result.winner.id).toBe("generic-discovery");
+      expect(result.debug.decision).toContain("selection basis: compatibility-assisted");
+      expect(result.trace).toMatchObject({
+        resultCode: "HANDOFF_READY",
+        winnerId: "generic-discovery",
+        reasonCode: "query_native_via_legacy_compat"
       });
     } finally {
       await rm(runtime.directory, { recursive: true, force: true });

@@ -171,7 +171,7 @@ export type PackageAcquisitionHint = {
 };
 
 export type QueryBackedBrokerRequest = {
-  intent: BrokerIntent;
+  intent?: BrokerIntent;
   outputMode: BrokerOutputMode;
   url?: string;
   capabilityQuery: CapabilityQuery;

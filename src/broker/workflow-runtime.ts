@@ -11,6 +11,7 @@ import {
 } from "./result.js";
 import { prepareCandidate } from "./prepare.js";
 import { hydratePackageAvailability } from "./package-availability.js";
+import type { RequestRoutingReasonCode } from "./resolved-request.js";
 import { createBrokerRoutingTrace } from "./trace.js";
 import { toCapabilityCard } from "../core/capability-card.js";
 import type { NormalizeRequestInput } from "../core/request.js";
@@ -33,6 +34,7 @@ type WorkflowRuntimeContext = {
   currentHost: string;
   now: Date;
   request: BrokerRequest;
+  routingReasonCode: RequestRoutingReasonCode;
   winner: CapabilityCard;
   recipe: WorkflowRecipe;
   sessionStore: WorkflowSessionStore;
@@ -281,7 +283,8 @@ function createWorkflowCompletedResult(
       winner: context.winner,
       workflowId: context.recipe.id,
       runId: session.runId,
-      stageId
+      stageId,
+      reasonCode: context.routingReasonCode
     })
   };
 }
@@ -435,7 +438,8 @@ async function presentCurrentStage(
         winner: context.winner,
         workflowId: context.recipe.id,
         runId: storedSession.runId,
-        stageId: stage.id
+        stageId: stage.id,
+        reasonCode: context.routingReasonCode
       })
     };
   }
@@ -512,7 +516,8 @@ async function presentCurrentStage(
       selected: stageCard,
       workflowId: context.recipe.id,
       runId: storedSession.runId,
-      stageId: stage.id
+      stageId: stage.id,
+      reasonCode: context.routingReasonCode
     })
   };
 }

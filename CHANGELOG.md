@@ -2,6 +2,24 @@
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-04-12
+
+### Added
+
+- Added a broker-local resolved-request seam so the runtime now computes one canonical query identity, one explicit compatibility lane, and one routing reason code before cache, ranking, explain, trace, and workflow helpers touch the request.
+
+### Changed
+
+- Changed the public broker request contract so modern `capabilityQuery` requests no longer need to carry top-level `intent`; the runtime now derives compatibility intent internally while handoff, CLI, and installed-host flows stay query-native.
+- Changed cache reuse, explain output, ranking, and workflow resume so they key off canonical query identity first, then use compatibility intent only as an explicit late fallback or migration bridge.
+- Changed workflow/session persistence to single-write the new query-native request shape while still dual-reading one release of legacy intent-based session records.
+
+### Fixed
+
+- Fixed cache collisions so reordered arrays and normalized values still reuse the same winner, while different target values no longer incorrectly share the same legacy cache slot.
+- Fixed legacy cache/session migration so old records are reused once, rewritten forward into the new shape, and traced as compatibility-assisted instead of silently pretending they were always query-native.
+- Fixed broker contract coverage so unit, integration, CLI, and installed-shell smoke tests now assert query-native request payloads and explicit compatibility-assisted routing reasons.
+
 ## [0.1.13] - 2026-04-12
 
 ### Added

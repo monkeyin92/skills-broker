@@ -18,6 +18,16 @@ const maintainedFamilies = maintainedContract.maintainedFamilies.map(
   (family) => family.family
 );
 
+function expectQueryNativeRequest(
+  request: {
+    outputMode: string;
+    capabilityQuery: Record<string, unknown>;
+  }
+): void {
+  expect(request).not.toHaveProperty("intent");
+  expect(request.outputMode).toBe("markdown_only");
+}
+
 describe("installed host-shell routing smoke", () => {
   it(
     "covers routed and declined broker outcomes once the installed host shell is invoked",
@@ -172,11 +182,10 @@ describe("installed host-shell routing smoke", () => {
           code: "HANDOFF_READY"
         },
         handoff: {
-          request: {
-            intent: "social_post_to_markdown"
-          }
+          request: {}
         }
       });
+      expectQueryNativeRequest(socialResult.handoff.request);
 
       expect(discoveryResult).toMatchObject({
         ok: true,
@@ -184,11 +193,10 @@ describe("installed host-shell routing smoke", () => {
           code: "HANDOFF_READY"
         },
         handoff: {
-          request: {
-            intent: "capability_discovery_or_install"
-          }
+          request: {}
         }
       });
+      expectQueryNativeRequest(discoveryResult.handoff.request);
 
       expect(requirementsResult).toMatchObject({
         ok: true,
@@ -206,7 +214,6 @@ describe("installed host-shell routing smoke", () => {
             id: "gstack.office_hours"
           },
           request: {
-            intent: "capability_discovery_or_install",
             capabilityQuery: {
               goal: "analyze a product requirement and produce a design doc",
               jobFamilies: ["requirements_analysis"],
@@ -221,6 +228,7 @@ describe("installed host-shell routing smoke", () => {
           }
         }
       });
+      expectQueryNativeRequest(requirementsResult.handoff.request);
 
       expect(qaResult).toMatchObject({
         ok: true,
@@ -238,7 +246,6 @@ describe("installed host-shell routing smoke", () => {
             id: "gstack.qa"
           },
           request: {
-            intent: "capability_discovery_or_install",
             capabilityQuery: {
               goal: "qa a website",
               requestText: qualityAssuranceRequest,
@@ -254,6 +261,7 @@ describe("installed host-shell routing smoke", () => {
           }
         }
       });
+      expectQueryNativeRequest(qaResult.handoff.request);
 
       expect(investigationResult).toMatchObject({
         ok: true,
@@ -271,7 +279,6 @@ describe("installed host-shell routing smoke", () => {
             id: "gstack.investigate"
           },
           request: {
-            intent: "capability_discovery_or_install",
             capabilityQuery: {
               goal: "investigate a site failure and identify root cause",
               requestText: "investigate this site failure with a reusable workflow",
@@ -287,6 +294,7 @@ describe("installed host-shell routing smoke", () => {
           }
         }
       });
+      expectQueryNativeRequest(investigationResult.handoff.request);
 
       expect(unsupportedResult).toMatchObject({
         ok: false,
