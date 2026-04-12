@@ -38,6 +38,11 @@ describe("runBroker", () => {
         "url-to-markdown"
       );
       expect(result.handoff.chosenImplementation.id).toBe("baoyu.url_to_markdown");
+      expect(result.handoff.selection).toEqual({
+        package: result.handoff.chosenPackage,
+        leafCapability: result.handoff.chosenLeafCapability,
+        implementation: result.handoff.chosenImplementation
+      });
       expect(result.handoff.brokerDone).toBe(true);
       expect(result.handoff.candidate.id).toBe(result.winner.id);
       expect(result.handoff.request).toEqual({
@@ -67,9 +72,15 @@ describe("runBroker", () => {
         missLayer: null,
         normalizedBy: "legacy_intent",
         requestSurface: "legacy_task",
+        requestContract: "query_native_via_legacy_compat",
+        selectionMode: "explicit",
         candidateCount: result.debug.candidateCount,
         winnerId: "web-content-to-markdown",
-        winnerPackageId: "baoyu"
+        winnerPackageId: "baoyu",
+        selectedCapabilityId: "baoyu.url-to-markdown",
+        selectedLeafCapabilityId: "url-to-markdown",
+        selectedImplementationId: "baoyu.url_to_markdown",
+        selectedPackageInstallState: "installed"
       });
     } finally {
       await rm(runtime.directory, { recursive: true, force: true });
@@ -129,6 +140,7 @@ describe("runBroker", () => {
       expect(persisted).toHaveLength(1);
       expect(persisted[0]).toMatchObject({
         requestSurface: "legacy_task",
+        requestContract: "query_native_via_legacy_compat",
         routingOutcome: "hit"
       });
     } finally {
@@ -193,6 +205,7 @@ describe("runBroker", () => {
         missLayer: "retrieval",
         normalizedBy: "legacy_intent",
         requestSurface: "legacy_task",
+        requestContract: "query_native_via_legacy_compat",
         candidateCount: 0,
         winnerId: null,
         winnerPackageId: null
@@ -365,7 +378,7 @@ describe("runBroker", () => {
         cacheFilePath: runtime.cacheFilePath,
         hostCatalogFilePath: join(runtime.directory, "missing-host.json"),
         mcpRegistryFilePath,
-        currentHost: "open-code",
+        currentHost: "codex",
         packageSearchRoots: [runtime.directory],
         now: new Date("2026-03-27T08:00:00.000Z")
       });
@@ -1177,6 +1190,37 @@ describe("runBroker", () => {
         runId: firstResult.workflow.runId,
         stageId: "plan-ceo-review"
       });
+    } finally {
+      await rm(runtime.directory, { recursive: true, force: true });
+    }
+  });
+
+  it("rejects mixed capabilityQuery and workflowResume envelopes before resume routing", async () => {
+    const runtime = await createRuntimePaths();
+
+    try {
+      await expect(
+        runBroker(
+          {
+            requestText: "继续这个 workflow",
+            host: "claude-code",
+            capabilityQuery: {
+              kind: "capability_request",
+              goal: "continue a workflow",
+              host: "claude-code",
+              requestText: "继续这个 workflow"
+            },
+            workflowResume: {
+              runId: "run-123",
+              stageId: "office-hours",
+              decision: "confirm"
+            }
+          },
+          runtime
+        )
+      ).rejects.toThrow(
+        /Expected broker envelope\.capabilityQuery and broker envelope\.workflowResume to be mutually exclusive\./
+      );
     } finally {
       await rm(runtime.directory, { recursive: true, force: true });
     }

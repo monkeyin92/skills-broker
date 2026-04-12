@@ -51,6 +51,12 @@ export function formatLifecycleResult(
         `Routing metrics (last ${result.routingMetrics.windowDays}d): ${result.routingMetrics.observed} traces, ${result.routingMetrics.syntheticHostSkips} host skips`
       );
 
+      for (const contract of result.routingMetrics.contracts) {
+        lines.push(
+          `Routing contract ${contract.requestContract}: observed=${contract.observed}, hit=${contract.hitRate.toFixed(2)}, misroute=${contract.misrouteRate.toFixed(2)}, fallback=${contract.fallbackRate.toFixed(2)}`
+        );
+      }
+
       for (const surface of result.routingMetrics.surfaces) {
         lines.push(
           `Routing ${surface.requestSurface}: observed=${surface.observed}, hit=${surface.hitRate.toFixed(2)}, misroute=${surface.misrouteRate.toFixed(2)}, fallback=${surface.fallbackRate.toFixed(2)}`

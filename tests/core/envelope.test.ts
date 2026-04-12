@@ -75,6 +75,28 @@ describe("parseBrokerEnvelope", () => {
     });
   });
 
+  it("rejects envelopes that carry both a capability query and workflow resume", () => {
+    expect(() =>
+      parseBrokerEnvelope({
+        requestText: "继续这个 workflow",
+        host: "codex",
+        capabilityQuery: {
+          kind: "capability_request",
+          goal: "continue a broker workflow",
+          host: "codex",
+          requestText: "继续这个 workflow"
+        },
+        workflowResume: {
+          runId: "run-123",
+          stageId: "office-hours",
+          decision: "confirm"
+        }
+      })
+    ).toThrow(
+      /Expected broker envelope\.capabilityQuery and broker envelope\.workflowResume to be mutually exclusive\./
+    );
+  });
+
   it("rejects a workflow resume payload with an unknown decision", () => {
     expect(() =>
       parseBrokerEnvelope({

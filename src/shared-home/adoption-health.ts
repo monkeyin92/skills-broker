@@ -1,3 +1,5 @@
+import type { BrokerHost } from "../core/types.js";
+
 export type AdoptionHealthStatus = "green" | "blocked" | "inactive";
 
 export type AdoptionHealthReasonCode =
@@ -17,17 +19,17 @@ export type AdoptionHealthReasonCode =
 export type AdoptionHealthReason = {
   code: AdoptionHealthReasonCode;
   message: string;
-  host?: "claude-code" | "codex";
+  host?: BrokerHost;
 };
 
 export type AdoptionHealthResult = {
   status: AdoptionHealthStatus;
-  managedHosts: Array<"claude-code" | "codex">;
+  managedHosts: BrokerHost[];
   reasons: AdoptionHealthReason[];
 };
 
 type AdoptionHealthHost = {
-  name: "claude-code" | "codex";
+  name: BrokerHost;
   status: string;
   reason?: string;
   competingPeerSkills?: string[];

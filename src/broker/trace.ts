@@ -1,6 +1,10 @@
 import type { CapabilityCard } from "../core/capability-card.js";
 import type { NormalizeRequestInput } from "../core/request.js";
-import type { BrokerHostAction, BrokerOutcomeCode } from "../core/types.js";
+import type {
+  BrokerHostAction,
+  BrokerOutcomeCode,
+  CapabilityPackageInstallState
+} from "../core/types.js";
 
 export const BROKER_TRACE_VERSION = "2026-03-31" as const;
 
@@ -29,6 +33,11 @@ export type BrokerTraceRequestSurface =
   | "structured_query"
   | "raw_envelope"
   | "legacy_task";
+export type BrokerTraceRequestContract =
+  | "query_native"
+  | "query_native_via_legacy_compat"
+  | "raw_envelope_fallback";
+export type BrokerTraceSelectionMode = "explicit";
 
 export type BrokerRoutingTrace = {
   traceVersion: typeof BROKER_TRACE_VERSION;
@@ -40,10 +49,16 @@ export type BrokerRoutingTrace = {
   missLayer: BrokerTraceMissLayer | null;
   normalizedBy: BrokerTraceNormalizedBy | null;
   requestSurface: BrokerTraceRequestSurface | null;
+  requestContract: BrokerTraceRequestContract | null;
+  selectionMode: BrokerTraceSelectionMode | null;
   hostAction: BrokerHostAction | null;
   candidateCount: number | null;
   winnerId: string | null;
   winnerPackageId: string | null;
+  selectedCapabilityId: string | null;
+  selectedLeafCapabilityId: string | null;
+  selectedImplementationId: string | null;
+  selectedPackageInstallState: CapabilityPackageInstallState | null;
   workflowId: string | null;
   runId: string | null;
   stageId: string | null;
@@ -63,10 +78,22 @@ export type BrokerRoutingSurfaceSummary = {
   fallbackRate: number;
 };
 
+export type BrokerRoutingContractSummary = {
+  requestContract: BrokerTraceRequestContract;
+  observed: number;
+  hits: number;
+  misroutes: number;
+  fallbacks: number;
+  hitRate: number;
+  misrouteRate: number;
+  fallbackRate: number;
+};
+
 export type BrokerRoutingTraceSummary = {
   observed: number;
   syntheticHostSkips: number;
   surfaces: BrokerRoutingSurfaceSummary[];
+  contracts: BrokerRoutingContractSummary[];
 };
 
 type RuntimeTraceOptions = {
@@ -76,7 +103,8 @@ type RuntimeTraceOptions = {
   now: Date;
   hostAction: BrokerHostAction | null;
   candidateCount: number;
-  winner?: Pick<CapabilityCard, "id" | "package">;
+  winner?: Pick<CapabilityCard, "id" | "package" | "leaf" | "implementation">;
+  selected?: Pick<CapabilityCard, "package" | "leaf" | "implementation">;
   workflowId?: string;
   runId?: string;
   stageId?: string | null;
@@ -98,24 +126,28 @@ function requestTextFromInput(input: NormalizeRequestInput): string {
 function normalizationFromInput(input: NormalizeRequestInput): {
   normalizedBy: BrokerTraceNormalizedBy;
   requestSurface: BrokerTraceRequestSurface;
+  requestContract: BrokerTraceRequestContract;
 } {
   if ("task" in input) {
     return {
       normalizedBy: "legacy_intent",
-      requestSurface: "legacy_task"
+      requestSurface: "legacy_task",
+      requestContract: "query_native_via_legacy_compat"
     };
   }
 
   if (input.capabilityQuery !== undefined) {
     return {
       normalizedBy: "structured_query",
-      requestSurface: "structured_query"
+      requestSurface: "structured_query",
+      requestContract: "query_native"
     };
   }
 
   return {
     normalizedBy: "raw_request_fallback",
-    requestSurface: "raw_envelope"
+    requestSurface: "raw_envelope",
+    requestContract: "raw_envelope_fallback"
   };
 }
 
@@ -177,6 +209,11 @@ const REQUEST_SURFACE_ORDER: BrokerTraceRequestSurface[] = [
   "raw_envelope",
   "legacy_task"
 ];
+const REQUEST_CONTRACT_ORDER: BrokerTraceRequestContract[] = [
+  "query_native",
+  "query_native_via_legacy_compat",
+  "raw_envelope_fallback"
+];
 
 const REQUEST_SURFACE_NORMALIZATION: Record<
   BrokerTraceRequestSurface,
@@ -204,6 +241,10 @@ export function summarizeBrokerRoutingTraces(
     BrokerTraceRequestSurface,
     Omit<BrokerRoutingSurfaceSummary, "hitRate" | "misrouteRate" | "fallbackRate">
   >();
+  const perContract = new Map<
+    BrokerTraceRequestContract,
+    Omit<BrokerRoutingContractSummary, "hitRate" | "misrouteRate" | "fallbackRate">
+  >();
   let syntheticHostSkips = 0;
 
   for (let index = 0; index < filtered.length; index += 1) {
@@ -214,7 +255,11 @@ export function summarizeBrokerRoutingTraces(
       continue;
     }
 
-    if (trace.requestSurface === null || trace.normalizedBy === null) {
+    if (
+      trace.requestSurface === null ||
+      trace.normalizedBy === null ||
+      trace.requestContract === null
+    ) {
       continue;
     }
 
@@ -226,22 +271,34 @@ export function summarizeBrokerRoutingTraces(
       misroutes: 0,
       fallbacks: 0
     };
+    const contractSummary = perContract.get(trace.requestContract) ?? {
+      requestContract: trace.requestContract,
+      observed: 0,
+      hits: 0,
+      misroutes: 0,
+      fallbacks: 0
+    };
 
     surfaceSummary.observed += 1;
+    contractSummary.observed += 1;
 
     switch (trace.routingOutcome) {
       case "hit":
         surfaceSummary.hits += 1;
+        contractSummary.hits += 1;
         break;
       case "misroute":
         surfaceSummary.misroutes += 1;
+        contractSummary.misroutes += 1;
         break;
       case "fallback":
         surfaceSummary.fallbacks += 1;
+        contractSummary.fallbacks += 1;
         break;
     }
 
     perSurface.set(trace.requestSurface, surfaceSummary);
+    perContract.set(trace.requestContract, contractSummary);
   }
 
   return {
@@ -263,7 +320,23 @@ export function summarizeBrokerRoutingTraces(
         misrouteRate: rate(summary.misroutes, summary.observed),
         fallbackRate: rate(summary.fallbacks, summary.observed)
       };
-    }).filter((surface) => surface.observed > 0)
+    }).filter((surface) => surface.observed > 0),
+    contracts: REQUEST_CONTRACT_ORDER.map((requestContract) => {
+      const summary = perContract.get(requestContract) ?? {
+        requestContract,
+        observed: 0,
+        hits: 0,
+        misroutes: 0,
+        fallbacks: 0
+      };
+
+      return {
+        ...summary,
+        hitRate: rate(summary.hits, summary.observed),
+        misrouteRate: rate(summary.misroutes, summary.observed),
+        fallbackRate: rate(summary.fallbacks, summary.observed)
+      };
+    }).filter((contract) => contract.observed > 0)
   };
 }
 
@@ -271,6 +344,7 @@ export function createBrokerRoutingTrace(
   options: RuntimeTraceOptions
 ): BrokerRoutingTrace {
   const normalization = normalizationFromInput(options.input);
+  const selected = options.selected ?? options.winner;
 
   return {
     traceVersion: BROKER_TRACE_VERSION,
@@ -282,10 +356,16 @@ export function createBrokerRoutingTrace(
     missLayer: missLayerForResultCode(options.resultCode),
     normalizedBy: normalization.normalizedBy,
     requestSurface: normalization.requestSurface,
+    requestContract: normalization.requestContract,
+    selectionMode: selected === undefined ? null : "explicit",
     hostAction: options.hostAction,
     candidateCount: options.candidateCount,
     winnerId: options.winner?.id ?? null,
     winnerPackageId: options.winner?.package.packageId ?? null,
+    selectedCapabilityId: selected?.leaf.capabilityId ?? null,
+    selectedLeafCapabilityId: selected?.leaf.subskillId ?? null,
+    selectedImplementationId: selected?.implementation.id ?? null,
+    selectedPackageInstallState: selected?.package.installState ?? null,
     workflowId: options.workflowId ?? null,
     runId: options.runId ?? null,
     stageId: options.stageId ?? null,
@@ -307,10 +387,16 @@ export function createSyntheticHostSkippedBrokerTrace(
     missLayer: "host_selection",
     normalizedBy: null,
     requestSurface: null,
+    requestContract: null,
+    selectionMode: null,
     hostAction: options.hostAction ?? "continue_normally",
     candidateCount: null,
     winnerId: null,
     winnerPackageId: null,
+    selectedCapabilityId: null,
+    selectedLeafCapabilityId: null,
+    selectedImplementationId: null,
+    selectedPackageInstallState: null,
     workflowId: null,
     runId: null,
     stageId: null,

@@ -51,6 +51,7 @@ import type {
   CapabilityQuery,
   PackageAcquisitionHint
 } from "../core/types.js";
+import { BROKER_HOSTS, isBrokerHost } from "../core/types.js";
 import {
   loadHostSkillCandidates,
   loadHostWorkflowRecipes
@@ -88,6 +89,30 @@ export type RunBrokerOptions = {
 export type { RunBrokerResult } from "./result.js";
 
 const DEFAULT_CURRENT_HOST = "claude-code";
+
+function assertCurrentHost(value: string): BrokerHost {
+  if (!isBrokerHost(value)) {
+    throw new Error(
+      `Expected broker currentHost to be one of ${BROKER_HOSTS.join(", ")}.`
+    );
+  }
+
+  return value;
+}
+
+function assertEnvelopeMode(
+  input: NormalizeRequestInput
+): void {
+  if (
+    "requestText" in input &&
+    input.capabilityQuery !== undefined &&
+    input.workflowResume !== undefined
+  ) {
+    throw new Error(
+      "Expected broker envelope.capabilityQuery and broker envelope.workflowResume to be mutually exclusive."
+    );
+  }
+}
 
 function defaultHostCatalogFilePath(): string {
   return join(process.cwd(), "config/host-skills.seed.json");
@@ -722,7 +747,8 @@ async function runSingleStep(
   const handoff = buildHandoffEnvelope(
     prepared.candidate,
     prepared.context,
-    request
+    request,
+    prepared.selection
   );
 
   await writeWinnerCache(
@@ -762,7 +788,10 @@ export async function runBroker(
   input: NormalizeRequestInput,
   options: RunBrokerOptions = {}
 ): Promise<RunBrokerResult> {
-  const currentHost = options.currentHost ?? DEFAULT_CURRENT_HOST;
+  assertEnvelopeMode(input);
+  const currentHost = assertCurrentHost(
+    options.currentHost ?? DEFAULT_CURRENT_HOST
+  );
   const now = options.now ?? new Date();
   const hostCatalogFilePath =
     options.hostCatalogFilePath ?? defaultHostCatalogFilePath();

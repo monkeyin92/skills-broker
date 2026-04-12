@@ -9,7 +9,7 @@
 > Stop making users remember skill names.  
 > Let them ask for outcomes. Let the broker find the right capability.
 
-`skills-broker` is an open-source **skill router**, **MCP router**, and **agent capability broker** for code-native agent hosts such as **Claude Code**, **Codex**, and **OpenCode**.
+`skills-broker` is an open-source **skill router**, **MCP router**, and **agent capability broker** for code-native agent hosts such as **Claude Code** and **Codex**. **OpenCode** remains deferred until the thin-host contract is actually implemented.
 
 Instead of forcing users to browse catalogs, memorize tool names, or manually decide which capability to install next, `skills-broker` sits in front of the host and handles the capability decision at runtime.
 
@@ -128,7 +128,11 @@ This slice now also catches more free-form product-idea phrasing, so a natural s
 This is deliberately not "solve everything."  
 The point of v0 is to prove that a broker can pick and prepare the right capability better than a human manually browsing skills.
 
-**Current product phase:** prove and keep adoption health green, so Claude Code and Codex visibly keep `skills-broker` on the hot path instead of leaving it installed-but-ignored.
+**Current product phase:** keep adoption health green while finishing the query-native ingress tail and the package-vs-leaf migration tail, so Claude Code and Codex visibly keep `skills-broker` on the hot path instead of leaving it installed-but-ignored.
+
+**Migration note:** `capabilityQuery` is now the only public request contract the broker wants callers to depend on. `intent` still exists, but it is being retained as an internal compatibility lane label for ranking, explainability, maintained-family proof rails, and workflow/session compatibility during the migration tail.
+
+**Active DX bar for this packet:** make the supported-host truth obvious, get to first routed success in under 5 minutes, and make operator-facing failures point at problem, cause, and fix.
 
 ## Architecture At A Glance
 
@@ -172,6 +176,12 @@ Its job is meant to be:
 - repair existing host shells when needed
 - preserve cache, capability history, and successful routing records by default
 
+## Current Support Matrix
+
+- Supported now: Claude Code, Codex
+- Deferred but planned: OpenCode thin host shell
+- Not supported in v0: other hosts
+
 ## Why It Is Different
 
 `skills-broker` is **not**:
@@ -193,7 +203,7 @@ That distinction matters because the hardest part is not storing tools. The hard
 npx skills-broker update
 ```
 
-Use `npx skills-broker update` to initialize or refresh the shared broker home, attach thin host shells, and reuse the same routing cache across Claude Code and Codex. `update` and `doctor` now also emit a first-class `adoptionHealth` verdict:
+Use `npx skills-broker update` to initialize or refresh the shared broker home, attach thin host shells, and reuse the same routing cache across Claude Code and Codex. Today the published lifecycle CLI manages Claude Code and Codex only. Bare `npx skills-broker` currently behaves the same as `npx skills-broker update`, so scripts and docs should spell the subcommand explicitly. `update` and `doctor` now also emit a first-class `adoptionHealth` verdict:
 
 - `green`: at least one managed host is clean and the known proof surfaces are not red
 - `blocked`: the install is present but a named blocker exists, such as competing peers, manual recovery, gate drift, or an explicit missing host shell
@@ -207,6 +217,18 @@ By default, `update` detects official host roots before it writes anything:
 - Codex: `~/.codex`, then installs the thin shell at `~/.agents/skills/skills-broker`
 
 If a host root is not found, the CLI will explain that and tell you to use `--claude-dir` or `--codex-dir` for custom layouts. A missing default root keeps adoption health `inactive`; an explicitly targeted shell path that is missing shows up as a named `blocked` verdict.
+
+### 1.5 Verify the operator path first
+
+```bash
+npx skills-broker doctor --strict
+```
+
+This is the fastest way to confirm the shared-home install is real. For this packet, the success bar is simple:
+
+- you can tell in one command whether adoption health is `green`, `blocked`, or `inactive`
+- the support matrix only claims Claude Code and Codex
+- operator-facing failures tell you what broke and what to inspect next
 
 ### 2. Try explicit shared-home directories
 
@@ -258,14 +280,14 @@ This creates a self-contained local package containing:
 
 This is the **repo-local Claude Code development path**, not the primary published install flow.
 
-### 6. Try the installed runner
+### 6. First routed success on the contributor path
 
 ```bash
 /absolute/path/to/claude-code-plugin/bin/run-broker \
   '{"requestText":"turn this webpage into markdown: https://example.com/article","host":"claude-code","invocationMode":"explicit","urls":["https://example.com/article"]}'
 ```
 
-Expected output: a JSON payload containing the selected winner, handoff envelope, and debug information.
+Expected output: a JSON payload containing the selected winner, handoff envelope, and debug information. This is the contributor path, not the published host-shell path.
 
 ## Example Use Cases
 
@@ -298,7 +320,7 @@ Expected output: a JSON payload containing the selected winner, handoff envelope
 
 This project is especially relevant if you are:
 
-- building agent tooling on top of Claude Code, Codex, or OpenCode
+- building agent tooling on top of Claude Code or Codex today, or planning future hosts such as OpenCode
 - frustrated by skill sprawl and context bloat
 - experimenting with MCP-backed capability ecosystems
 - trying to make agents feel more outcome-driven than tool-driven
@@ -398,7 +420,7 @@ No. It is a broker and routing layer.
 
 ### Is this production-ready?
 
-Not yet. It is still a focused v0, but it now includes a shared broker home, published lifecycle CLI, Claude Code and Codex thin shells, and a small first routed lake. The current phase is improving real host auto-routing hit rate.
+Not yet. It is still a focused v0, but it now includes a shared broker home, published lifecycle CLI, Claude Code and Codex thin shells, a shipped adoption-proof rail, and a small first routed lake. The current phase is finishing the query-native and package-vs-leaf migration tail without letting real host auto-routing regress.
 
 ### Why Claude Code and Codex first?
 

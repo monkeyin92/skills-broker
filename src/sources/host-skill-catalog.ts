@@ -21,6 +21,43 @@ type HostSkillCatalog = {
   workflows?: HostWorkflowRecipeEntry[];
 };
 
+function mergePackageProbe(
+  base: CapabilityPackageRef["probe"] | undefined,
+  override: CapabilityPackageRef["probe"] | undefined
+): CapabilityPackageRef["probe"] | undefined {
+  if (base === undefined && override === undefined) {
+    return undefined;
+  }
+
+  return {
+    ...base,
+    ...override,
+    layouts: override?.layouts ?? base?.layouts ?? ["single_skill_directory"],
+    manifestFiles: override?.manifestFiles ?? base?.manifestFiles,
+    manifestNames: override?.manifestNames ?? base?.manifestNames,
+    aliases: override?.aliases ?? base?.aliases
+  };
+}
+
+function mergePackageRef(
+  base: Partial<CapabilityPackageRef> | undefined,
+  override: Partial<CapabilityPackageRef> | undefined
+): Partial<CapabilityPackageRef> | undefined {
+  if (base === undefined) {
+    return override;
+  }
+
+  if (override === undefined) {
+    return base;
+  }
+
+  return {
+    ...base,
+    ...override,
+    probe: mergePackageProbe(base.probe, override.probe)
+  };
+}
+
 const PACKAGE_INSTALL_STATES = new Set(["installed", "available"]);
 const PACKAGE_ACQUISITIONS = new Set([
   "local_skill_bundle",
@@ -468,10 +505,7 @@ export async function loadHostSkillCandidates(
 
       return {
         ...candidate,
-        package: {
-          ...packageRef,
-          ...candidate.package
-        }
+        package: mergePackageRef(packageRef, candidate.package)
       };
     });
 }
@@ -505,10 +539,7 @@ export async function loadHostWorkflowRecipes(
       const mergedPackage =
         packageId === undefined
           ? workflow.package
-          : {
-              ...packageMap.get(packageId),
-              ...workflow.package
-            };
+          : mergePackageRef(packageMap.get(packageId), workflow.package);
       const card = toCapabilityCard({
         ...workflow,
         package: mergedPackage
@@ -534,10 +565,13 @@ export async function loadHostWorkflowRecipes(
               ? undefined
               : {
                   ...stage.capability,
-                  package: {
-                    ...packageMap.get(stage.capability.packageId),
-                    packageId: stage.capability.packageId
-                  }
+                  package: mergePackageRef(
+                    packageMap.get(stage.capability.packageId),
+                    {
+                      ...stage.capability.package,
+                      packageId: stage.capability.packageId
+                    }
+                  )
                 }
         })),
         sourceMetadata: workflow.sourceMetadata

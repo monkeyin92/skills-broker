@@ -2,6 +2,11 @@ import { access, readdir, stat } from "node:fs/promises";
 import { readBrokerRoutingTraces, routingTraceLogFilePath } from "../broker/trace-store.js";
 import { summarizeBrokerRoutingTraces } from "../broker/trace.js";
 import {
+  BROKER_HOSTS,
+  brokerHostKnownShellEntries,
+  type BrokerHost
+} from "../core/types.js";
+import {
   evaluateBrokerFirstGate,
   type BrokerFirstGateDiagnosticResult
 } from "./broker-first-gate.js";
@@ -16,7 +21,10 @@ import {
   competingPeerSkillsWarning,
   inspectManagedPeerSurface
 } from "./host-surface.js";
-import { detectLifecycleHostTargets } from "./paths.js";
+import {
+  detectLifecycleHostTargets,
+  lifecycleHostTarget
+} from "./paths.js";
 import { evaluateStatusBoard, type DoctorStatusResult } from "./status.js";
 import type { PeerSurfaceIntegrityIssue } from "./peer-surface-audit.js";
 import type { PeerSurfaceManualRecoveryMarker } from "./peer-surface-audit.js";
@@ -31,10 +39,11 @@ export type DoctorLifecycleResult = {
     windowDays: number;
     observed: number;
     syntheticHostSkips: number;
+    contracts: ReturnType<typeof summarizeBrokerRoutingTraces>["contracts"];
     surfaces: ReturnType<typeof summarizeBrokerRoutingTraces>["surfaces"];
   };
   hosts: Array<{
-    name: "claude-code" | "codex";
+    name: BrokerHost;
     status: "detected" | "not_detected" | "not_writable" | "conflict";
     reason?: string;
     competingPeerSkills?: string[];
@@ -97,7 +106,7 @@ function conflictReason(
 }
 
 async function detectUnmanagedHostConflict(
-  name: "claude-code" | "codex",
+  name: BrokerHost,
   installDirectory: string
 ): Promise<string | undefined> {
   try {
@@ -121,12 +130,10 @@ async function detectUnmanagedHostConflict(
     return undefined;
   }
 
-  const knownHostFiles =
-    name === "claude-code"
-      ? ["SKILL.md", "package.json", ".claude-plugin", "skills", "bin"]
-      : ["SKILL.md", "bin", ".skills-broker.json"];
-
-  if (entries.some((entry) => knownHostFiles.includes(entry)) || entries.length > 0) {
+  if (
+    entries.some((entry) => brokerHostKnownShellEntries(name).includes(entry)) ||
+    entries.length > 0
+  ) {
     return "existing unmanaged host directory";
   }
 
@@ -134,7 +141,7 @@ async function detectUnmanagedHostConflict(
 }
 
 async function doctorHost(
-  name: "claude-code" | "codex",
+  name: BrokerHost,
   installDirectory: string | undefined,
   notDetectedReason: string | undefined,
   brokerHomeDirectory: string,
@@ -268,19 +275,19 @@ export async function doctorSharedBrokerHome(
     }
   );
   const hosts = [
-    await doctorHost(
-      "claude-code",
-      hostTargets.claudeCode.installDirectory,
-      hostTargets.claudeCode.reason,
-      options.brokerHomeDirectory,
-      warnings
-    ),
-    await doctorHost(
-      "codex",
-      hostTargets.codex.installDirectory,
-      hostTargets.codex.reason,
-      options.brokerHomeDirectory,
-      warnings
+    ...(
+      await Promise.all(
+        BROKER_HOSTS.map((host) => {
+          const target = lifecycleHostTarget(hostTargets, host);
+          return doctorHost(
+            host,
+            target.installDirectory,
+            target.reason,
+            options.brokerHomeDirectory,
+            warnings
+          );
+        })
+      )
     )
   ];
   const brokerFirstGate = await evaluateBrokerFirstGate({
@@ -306,6 +313,7 @@ export async function doctorSharedBrokerHome(
       windowDays: routingWindowDays,
       observed: routingSummary.observed,
       syntheticHostSkips: routingSummary.syntheticHostSkips,
+      contracts: routingSummary.contracts,
       surfaces: routingSummary.surfaces
     },
     hosts,

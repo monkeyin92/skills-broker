@@ -562,10 +562,16 @@ describe("doctor shared broker home", () => {
             missLayer: null,
             normalizedBy: "structured_query",
             requestSurface: "structured_query",
+            requestContract: "query_native",
+            selectionMode: "explicit",
             hostAction: null,
             candidateCount: 1,
             winnerId: "requirements-analysis",
             winnerPackageId: "gstack",
+            selectedCapabilityId: "gstack.office-hours",
+            selectedLeafCapabilityId: "office-hours",
+            selectedImplementationId: "gstack.office_hours",
+            selectedPackageInstallState: "installed",
             workflowId: null,
             runId: null,
             stageId: null,
@@ -582,10 +588,16 @@ describe("doctor shared broker home", () => {
             missLayer: "broker_normalization",
             normalizedBy: "raw_request_fallback",
             requestSurface: "raw_envelope",
+            requestContract: "raw_envelope_fallback",
+            selectionMode: null,
             hostAction: "continue_normally",
             candidateCount: 0,
             winnerId: null,
             winnerPackageId: null,
+            selectedCapabilityId: null,
+            selectedLeafCapabilityId: null,
+            selectedImplementationId: null,
+            selectedPackageInstallState: null,
             workflowId: null,
             runId: null,
             stageId: null,
@@ -602,10 +614,16 @@ describe("doctor shared broker home", () => {
             missLayer: "retrieval",
             normalizedBy: "legacy_intent",
             requestSurface: "legacy_task",
+            requestContract: "query_native_via_legacy_compat",
+            selectionMode: null,
             hostAction: "offer_capability_discovery",
             candidateCount: 0,
             winnerId: null,
             winnerPackageId: null,
+            selectedCapabilityId: null,
+            selectedLeafCapabilityId: null,
+            selectedImplementationId: null,
+            selectedPackageInstallState: null,
             workflowId: null,
             runId: null,
             stageId: null,
@@ -627,6 +645,38 @@ describe("doctor shared broker home", () => {
         windowDays: 7,
         observed: 3,
         syntheticHostSkips: 0,
+        contracts: [
+          {
+            requestContract: "query_native",
+            observed: 1,
+            hits: 1,
+            misroutes: 0,
+            fallbacks: 0,
+            hitRate: 1,
+            misrouteRate: 0,
+            fallbackRate: 0
+          },
+          {
+            requestContract: "query_native_via_legacy_compat",
+            observed: 1,
+            hits: 0,
+            misroutes: 0,
+            fallbacks: 1,
+            hitRate: 0,
+            misrouteRate: 0,
+            fallbackRate: 1
+          },
+          {
+            requestContract: "raw_envelope_fallback",
+            observed: 1,
+            hits: 0,
+            misroutes: 1,
+            fallbacks: 0,
+            hitRate: 0,
+            misrouteRate: 1,
+            fallbackRate: 0
+          }
+        ],
         surfaces: [
           {
             requestSurface: "structured_query",
@@ -664,6 +714,9 @@ describe("doctor shared broker home", () => {
         ]
       });
 
+      expect(formatLifecycleResult(result, "text")).toContain(
+        "Routing contract query_native: observed=1, hit=1.00, misroute=0.00, fallback=0.00"
+      );
       expect(formatLifecycleResult(result, "text")).toContain(
         "Routing structured_query: observed=1, hit=1.00, misroute=0.00, fallback=0.00"
       );

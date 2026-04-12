@@ -6,7 +6,7 @@ import {
 import { fileURLToPath } from "node:url";
 import { delimiter, resolve } from "node:path";
 import { parseBrokerEnvelope, type BrokerEnvelope } from "./core/envelope.js";
-import { BROKER_HOSTS, type BrokerHost } from "./core/types.js";
+import { BROKER_HOSTS, isBrokerHost } from "./core/types.js";
 
 export type RunBrokerCliInput = BrokerEnvelope;
 
@@ -24,6 +24,15 @@ function resolveCurrentHost(
   input: BrokerEnvelope,
   options: RunBrokerOptions
 ): RunBrokerOptions["currentHost"] {
+  if (
+    options.currentHost !== undefined &&
+    !isBrokerHost(options.currentHost)
+  ) {
+    throw new Error(
+      `Expected broker currentHost to be one of ${BROKER_HOSTS.join(", ")}.`
+    );
+  }
+
   if (options.currentHost !== undefined && options.currentHost !== input.host) {
     throw new Error(
       `Broker host conflict: envelope host "${input.host}" does not match currentHost "${options.currentHost}".`
@@ -69,8 +78,8 @@ function directRunOptions(includeTraceOverride = false): RunBrokerCliOptions {
   );
   const currentHost =
     process.env.BROKER_CURRENT_HOST !== undefined &&
-    BROKER_HOSTS.includes(process.env.BROKER_CURRENT_HOST as BrokerHost)
-      ? (process.env.BROKER_CURRENT_HOST as BrokerHost)
+    isBrokerHost(process.env.BROKER_CURRENT_HOST)
+      ? process.env.BROKER_CURRENT_HOST
       : undefined;
 
   return {

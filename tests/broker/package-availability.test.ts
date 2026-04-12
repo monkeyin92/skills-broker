@@ -275,4 +275,43 @@ describe("hydratePackageAvailability", () => {
       await rm(runtimeDirectory, { recursive: true, force: true });
     }
   });
+
+  it("still searches the managed broker downstream root when custom roots are provided", async () => {
+    const runtimeDirectory = await mkdtemp(join(tmpdir(), "skills-broker-package-downstream-"));
+
+    try {
+      const brokerHomeDirectory = join(runtimeDirectory, ".skills-broker");
+      const packageDirectory = join(
+        brokerHomeDirectory,
+        "downstream",
+        "codex",
+        "skills",
+        "gstack"
+      );
+      const managedSkillDirectory = join(packageDirectory, "office-hours");
+
+      await mkdir(managedSkillDirectory, { recursive: true });
+      await writeFile(
+        join(packageDirectory, "package.json"),
+        JSON.stringify({ name: "gstack", version: "0.13.8.0" }),
+        "utf8"
+      );
+      await writeFile(
+        join(managedSkillDirectory, "SKILL.md"),
+        "---\nname: office-hours\n---\n",
+        "utf8"
+      );
+
+      const [card] = await hydratePackageAvailability([createAvailableSkill()], {
+        currentHost: "codex",
+        brokerHomeDirectory,
+        packageSearchRoots: [join(runtimeDirectory, "custom-roots-only")]
+      });
+
+      expect(card.package.installState).toBe("installed");
+      expect(card.prepare.installRequired).toBe(false);
+    } finally {
+      await rm(runtimeDirectory, { recursive: true, force: true });
+    }
+  });
 });

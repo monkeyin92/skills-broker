@@ -113,15 +113,14 @@ describe("normalizeRequest", () => {
     });
   });
 
-  it("maps legacy webpage markdown tasks to web_content_to_markdown", () => {
-    const normalized = normalizeRequest({
-      task: "turn this webpage into markdown",
-      url: "https://example.com/article"
-    });
-
-    expect(normalized.intent).toBe("web_content_to_markdown");
-    expect(normalized.outputMode).toBe("markdown_only");
-    expect(normalized.url).toBe("https://example.com/article");
+  it("rejects legacy webpage markdown tasks when no fallback host is provided", () => {
+    expectRejected(
+      {
+        task: "turn this webpage into markdown",
+        url: "https://example.com/article"
+      },
+      "UNSUPPORTED_REQUEST"
+    );
   });
 
   it("maps legacy webpage markdown tasks into a synthesized capability query when a fallback host is available", () => {

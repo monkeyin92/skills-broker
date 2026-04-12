@@ -56,5 +56,49 @@ describe("prepareCandidate", () => {
     expect(result.candidate.package.packageId).toBe("baoyu");
     expect(result.candidate.leaf.subskillId).toBe("url-to-markdown");
     expect(result.candidate.implementation.id).toBe("baoyu.url_to_markdown");
+    expect(result.selection).toEqual({
+      package: result.candidate.package,
+      leafCapability: result.candidate.leaf,
+      implementation: result.candidate.implementation
+    });
+    expect(result.context.selectionMode).toBe("explicit");
+  });
+
+  it("fails closed when the package is not installed", async () => {
+    await expect(
+      prepareCandidate(
+        {
+          ...createWinner(),
+          package: {
+            ...createWinner().package,
+            installState: "available"
+          },
+          prepare: {
+            authRequired: false,
+            installRequired: true
+          }
+        },
+        {
+          currentHost: "codex"
+        }
+      )
+    ).rejects.toThrow(/is not ready for handoff/);
+  });
+
+  it("fails closed when package and implementation selection drift apart", async () => {
+    await expect(
+      prepareCandidate(
+        {
+          ...createWinner(),
+          implementation: {
+            ...createWinner().implementation,
+            id: "gstack.office_hours"
+          }
+        },
+        {
+          currentHost: "codex"
+        }
+      )
+    ).rejects.toThrow(/outside package "baoyu"/);
   });
 });
