@@ -2,6 +2,23 @@
 
 ## [Unreleased]
 
+## [0.1.13] - 2026-04-12
+
+### Added
+
+- Added an explicit broker `selection` contract so `prepare`, `handoff`, and workflow stage runtime now carry the chosen package, leaf capability, and implementation as first-class data instead of leaving that truth implicit in the winner card alone.
+- Added query-native routing-trace truth fields so broker traces now record request contract, explicit selection mode, and selected capability/package details, and surface those rollups through `skills-broker doctor`.
+
+### Changed
+
+- Changed shared-home lifecycle host support handling so default roots, install paths, override flags, and known shell markers now come from a single broker-side host support matrix shared across CLI parsing, doctor, update, remove, and peer-surface audit flows.
+- Changed the operator-facing docs and planning surfaces to reflect the current support matrix, the query-native migration tail, and the current contributor/operator success path.
+
+### Fixed
+
+- Fixed package availability lookup so custom package search roots still include broker-managed downstream skills instead of silently dropping capabilities that were already installed behind the broker.
+- Fixed host-skill package probe merging so stage and workflow overrides deep-merge onto the base package probe instead of clobbering layout and manifest metadata.
+
 ## [0.1.12] - 2026-04-04
 
 ### Added
