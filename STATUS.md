@@ -10,7 +10,7 @@ This file is the repo-native execution board for `skills-broker`.
 
 - Phase 1 adoption proof is now shipped on `origin/main`: `update` / `doctor` expose `adoptionHealth`, installed-shell smoke keeps that proof honest, and repo docs mirror the operator-facing verdict.
 - Compatibility-intent routing metrics are shipped on `origin/main`.
-- The query-native request migration tail is now shipped on this branch: top-level public requests stay `capabilityQuery`-native, and legacy cache/session records migrate forward without hiding compatibility-assisted routing.
+- The query-native request migration tail is now shipped on the active shipping ref: top-level public requests stay `capabilityQuery`-native, and legacy cache/session records migrate forward without hiding compatibility-assisted routing.
 - The coarse broker-first host boundary tightening is now shipped on the active shipping ref.
 - The Phase 2 / Phase 3 broker-first compiler, gate, and recovery slice is now shipped on `origin/main`.
 
@@ -89,7 +89,7 @@ This file is the repo-native execution board for `skills-broker`.
       "id": "query-native-request-tail",
       "title": "Query-native request migration tail",
       "summary": "Modern broker requests now stay query-native end to end, while legacy cache and workflow/session records dual-read once and rewrite forward with explicit compatibility-assisted trace semantics.",
-      "status": "shipped_local",
+      "status": "shipped_remote",
       "proofs": [
         {
           "type": "commit",
