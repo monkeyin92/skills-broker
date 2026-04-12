@@ -134,9 +134,9 @@ v0 当前包含：
 这不是为了“什么都支持”。  
 v0 的目标是证明：在一个具体任务上，broker 可以比人手动翻 skills 更准确地选到并准备好正确能力。
 
-**当前产品阶段：**在保持 adoption health 绿色的前提下，收完 query-native ingress 尾巴和 package-vs-leaf migration 尾巴，让 Claude Code 和 Codex 在真实使用里持续把 `skills-broker` 放在热路径上，而不是停留在“装上了但经常没被用到”。
+**当前产品阶段：**在保持 adoption health 绿色的前提下，继续收 package-vs-leaf migration 尾巴，并把 discovery/install 做成更强的复用飞轮，让 Claude Code 和 Codex 持续把 `skills-broker` 放在热路径上，同时让 broker 可触达的能力面随使用一起增长。
 
-**迁移说明：**`capabilityQuery` 现在是唯一应该让调用方依赖的公开请求契约。`intent` 还在，但它正在被收成一个内部兼容层标签，用在 ranking、explain、maintained-family proof rail 和 workflow/session 兼容上。
+**迁移说明：**`capabilityQuery` 现在是唯一应该让调用方依赖的公开请求契约。`intent` 还在，但现在只作为内部兼容层标签保留给 supplier adapter、显式的晚期 tie-break、maintained-family proof rail，以及 legacy workflow/session 连续性。
 
 **这个 packet 的 DX bar：**把支持矩阵说清楚，把 first routed success 压到 5 分钟内，并让 operator-facing 错误至少说清“出了什么问题、原因是什么、下一步看哪里”。
 

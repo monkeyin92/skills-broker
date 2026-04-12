@@ -128,9 +128,9 @@ This slice now also catches more free-form product-idea phrasing, so a natural s
 This is deliberately not "solve everything."  
 The point of v0 is to prove that a broker can pick and prepare the right capability better than a human manually browsing skills.
 
-**Current product phase:** keep adoption health green while finishing the query-native ingress tail and the package-vs-leaf migration tail, so Claude Code and Codex visibly keep `skills-broker` on the hot path instead of leaving it installed-but-ignored.
+**Current product phase:** keep adoption health green while finishing the package-vs-leaf migration tail and turning discovery/install into a stronger reuse flywheel, so Claude Code and Codex visibly keep `skills-broker` on the hot path and the broker compounds reachable capability surface over time.
 
-**Migration note:** `capabilityQuery` is now the only public request contract the broker wants callers to depend on. `intent` still exists, but it is being retained as an internal compatibility lane label for ranking, explainability, maintained-family proof rails, and workflow/session compatibility during the migration tail.
+**Migration note:** `capabilityQuery` is now the only public request contract the broker wants callers to depend on. `intent` still exists, but it now survives only as an internal compatibility lane label for supplier adapters, explicit late tie-breaks, maintained-family proof rails, and legacy workflow/session continuity.
 
 **Active DX bar for this packet:** make the supported-host truth obvious, get to first routed success in under 5 minutes, and make operator-facing failures point at problem, cause, and fix.
 
