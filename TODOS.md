@@ -1,6 +1,63 @@
 # TODOS
 
+## Broker Runtime
+
+### Finish the package lifecycle vs routed subskill migration
+
+**What:** Finish moving from flattened implementation ids to a two-layer model where packages are the lifecycle unit and leaf capabilities are the routing unit.
+
+**Why:** The foundations shipped, but flattening still survives in compatibility bridges. That will become product drag once packages expose more sibling subskills or multiple packages compete for the same job family.
+
+**Context:** Explicit package / leaf identity, package-aware probing, package-aware handoff and acquisition hints, MCP alignment, and broker-owned downstream ownership are already in `main`. The remaining work is to keep removing flattened compatibility bridges, broaden package-aware acquisition behavior, and continue shrinking the host-visible peer surface.
+
+**Effort:** M
+**Priority:** P0
+**Depends on:** capability-query migration tail, richer seed/catalog modeling, and package-aware acquisition / handoff cleanup
+
+## Ecosystem
+
+### Turn discovery and install into a real flywheel
+
+**What:** Evolve `capability_discovery_or_install` from a secondary fallback path into a stronger acquisition loop that can discover, install, and reuse new capabilities across hosts.
+
+**Why:** This is the long-term moat. A broker becomes strategically valuable when it can expand its own reachable capability surface and remember what worked.
+
+**Context:** Shared home, shared cache, and cross-host reuse are already in place. What is still missing is a fuller discovery/acquisition loop that compounds over time.
+
+**Effort:** L
+**Priority:** P1
+**Depends on:** stronger discovery sources, install flow refinement, and clear post-install persistence semantics
+
+## Host Expansion
+
+### Add OpenCode as the third thin host shell
+
+**What:** Extend the same shared broker contract to OpenCode without splitting the runtime or capability memory.
+
+**Why:** This validates that the current host-agnostic design is real, not just "Claude plus Codex with some duplication."
+
+**Context:** The current supported host matrix is still Claude Code plus Codex only. OpenCode remains the next deferred thin-host shell once the query-native ingress and package-vs-leaf migration tail stop leaking compatibility debt.
+
+**Effort:** M
+**Priority:** P2
+**Depends on:** the current host shell contract staying thin and stable
+
 ## Completed
+
+### Finish the capability-query migration and retire the legacy intent gate
+
+**What:** Remove the remaining top-boundary legacy-intent compatibility bridge so modern broker-first requests stay query-native end to end.
+
+**Why:** The compiler seam is shipped, but `BrokerIntent` still survives as an internal compatibility contract across ranking, explain output, workflow persistence, and maintained-family rails. That still keeps future routing growth tied to old lane labels longer than it should.
+
+**Context:** Query-led discovery, the broker-owned raw-request compiler, maintained bilingual eval coverage, and workflow routing are already in `main`. The remaining gap is to finish shrinking `intent` down to a clearly internal compatibility lane label, remove the remaining compatibility consumers that still act like it is a product boundary, and keep workflow/session compatibility explicit while that migration tail is still live.
+
+**Shipped:** broker-local resolved-request compatibility seam, canonical query identity, one-release legacy cache/session dual-read with forward rewrite, explicit compatibility-assisted explain/trace semantics, and query-native request contract coverage across unit, integration, CLI, and installed-host smoke tests.
+
+**Effort:** L
+**Priority:** P0
+**Depends on:** coarse broker-first host boundary, broker-owned query compilation, and bilingual eval coverage for new families
+**Completed:** v0.2.0 (2026-04-12)
 
 ### Added Codex as the second thin host shell on top of the shared broker home
 
@@ -81,53 +138,3 @@
 **Why:** The product bottleneck was no longer "can the broker route" but "can an operator tell in one step whether the broker is really on the hot path." This closes that gap with a green / blocked / inactive verdict instead of scattered lifecycle clues.
 
 **Shipped:** shared adoption-health derivation in shared-home lifecycle commands, strict doctor closure for explicit host blockers, installed-shell confidence smoke, and repo truth mirroring in `STATUS.md`, `README.md`, and `TODOS.md`.
-
-## Next
-
-### Finish the capability-query migration and retire the legacy intent gate
-
-**What:** Remove the remaining top-boundary legacy-intent compatibility bridge so modern broker-first requests stay query-native end to end.
-
-**Why:** The compiler seam is shipped, but `BrokerIntent` still survives as an internal compatibility contract across ranking, explain output, workflow persistence, and maintained-family rails. That still keeps future routing growth tied to old lane labels longer than it should.
-
-**Context:** Query-led discovery, the broker-owned raw-request compiler, maintained bilingual eval coverage, and workflow routing are already in `main`. The remaining gap is to finish shrinking `intent` down to a clearly internal compatibility lane label, remove the remaining compatibility consumers that still act like it is a product boundary, and keep workflow/session compatibility explicit while that migration tail is still live.
-
-**Effort:** L
-**Priority:** P0
-**Depends on:** coarse broker-first host boundary, broker-owned query compilation, and bilingual eval coverage for new families
-
-### Finish the package lifecycle vs routed subskill migration
-
-**What:** Finish moving from flattened implementation ids to a two-layer model where packages are the lifecycle unit and leaf capabilities are the routing unit.
-
-**Why:** The foundations shipped, but flattening still survives in compatibility bridges. That will become product drag once packages expose more sibling subskills or multiple packages compete for the same job family.
-
-**Context:** Explicit package / leaf identity, package-aware probing, package-aware handoff and acquisition hints, MCP alignment, and broker-owned downstream ownership are already in `main`. The remaining work is to keep removing flattened compatibility bridges, broaden package-aware acquisition behavior, and continue shrinking the host-visible peer surface.
-
-**Effort:** M
-**Priority:** P0
-**Depends on:** capability-query migration tail, richer seed/catalog modeling, and package-aware acquisition / handoff cleanup
-
-### Turn discovery and install into a real flywheel
-
-**What:** Evolve `capability_discovery_or_install` from a secondary fallback path into a stronger acquisition loop that can discover, install, and reuse new capabilities across hosts.
-
-**Why:** This is the long-term moat. A broker becomes strategically valuable when it can expand its own reachable capability surface and remember what worked.
-
-**Context:** Shared home, shared cache, and cross-host reuse are already in place. What is still missing is a fuller discovery/acquisition loop that compounds over time.
-
-**Effort:** L
-**Priority:** P1
-**Depends on:** stronger discovery sources, install flow refinement, and clear post-install persistence semantics
-
-### Add OpenCode as the third thin host shell
-
-**What:** Extend the same shared broker contract to OpenCode without splitting the runtime or capability memory.
-
-**Why:** This validates that the current host-agnostic design is real, not just "Claude plus Codex with some duplication."
-
-**Context:** The current supported host matrix is still Claude Code plus Codex only. OpenCode remains the next deferred thin-host shell once the query-native ingress and package-vs-leaf migration tail stop leaking compatibility debt.
-
-**Effort:** M
-**Priority:** P2
-**Depends on:** the current host shell contract staying thin and stable
