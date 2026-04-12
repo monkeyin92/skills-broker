@@ -93,7 +93,7 @@ This file is the repo-native execution board for `skills-broker`.
       "proofs": [
         {
           "type": "commit",
-          "ref": "ff86b3c",
+          "ref": "94805e0",
           "label": "feat: finish query-native broker request migration"
         },
         {
