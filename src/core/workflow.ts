@@ -19,14 +19,27 @@ export type WorkflowResume = {
   artifacts?: string[];
 };
 
-export type WorkflowStageCapability = {
+export type WorkflowStageCapabilityIdentity = {
   packageId: string;
   capabilityId: string;
   subskillId: string;
+};
+
+export type WorkflowStageCapability = WorkflowStageCapabilityIdentity & {
   implementationId: string;
   package?: Partial<CapabilityPackageRef>;
   probe?: LeafCapabilityProbe;
 };
+
+export function workflowStageCapabilityIdentity(
+  capability: WorkflowStageCapability
+): WorkflowStageCapabilityIdentity {
+  return {
+    packageId: capability.packageId,
+    capabilityId: capability.capabilityId,
+    subskillId: capability.subskillId
+  };
+}
 
 export type WorkflowStage = {
   id: string;

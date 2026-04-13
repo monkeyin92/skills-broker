@@ -15,6 +15,7 @@ import type { RequestRoutingReasonCode } from "./resolved-request.js";
 import { createBrokerRoutingTrace } from "./trace.js";
 import { toCapabilityCard } from "../core/capability-card.js";
 import type { NormalizeRequestInput } from "../core/request.js";
+import { workflowStageCapabilityIdentity } from "../core/workflow.js";
 import type {
   WorkflowFailureReasonCode,
   WorkflowRecipe,
@@ -342,6 +343,8 @@ function stageCapabilityCard(
     throw new Error(`Workflow stage "${stage.id}" has no capability metadata.`);
   }
 
+  const identity = workflowStageCapabilityIdentity(stage.capability);
+
   return toCapabilityCard({
     id: `${recipe.id}:${stage.id}`,
     kind: "skill",
@@ -349,12 +352,12 @@ function stageCapabilityCard(
     intent: recipe.compatibilityIntent,
     package: {
       ...stage.capability.package,
-      packageId: stage.capability.packageId
+      packageId: identity.packageId
     },
     leaf: {
-      capabilityId: stage.capability.capabilityId,
-      packageId: stage.capability.packageId,
-      subskillId: stage.capability.subskillId,
+      capabilityId: identity.capabilityId,
+      packageId: identity.packageId,
+      subskillId: identity.subskillId,
       probe: stage.capability.probe
     },
     query: recipe.query,

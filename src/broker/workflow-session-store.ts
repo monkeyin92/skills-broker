@@ -20,6 +20,13 @@ const SESSION_LOCK_RETRY_MS = 10;
 const SESSION_LOCK_STALE_MS = 5_000;
 const SESSION_LOCK_HEARTBEAT_MS = 1_000;
 
+export function workflowSessionRunFilePath(
+  filePath: string,
+  runId: string
+): string {
+  return join(`${filePath}.d`, `${encodeURIComponent(runId)}.json`);
+}
+
 type WorkflowSessionStoreOptions = {
   lockRetryMs?: number;
   lockStaleMs?: number;
@@ -158,7 +165,7 @@ export class WorkflowSessionStore {
   }
 
   private sessionFilePath(runId: string): string {
-    return join(this.sessionDirectoryPath(), `${encodeURIComponent(runId)}.json`);
+    return workflowSessionRunFilePath(this.filePath, runId);
   }
 
   private sessionDirectoryPath(): string {

@@ -4,7 +4,12 @@ import {
   toCapabilityCard,
   type CapabilityCandidate
 } from "../core/capability-card.js";
-import type { WorkflowRecipe, WorkflowStage } from "../core/workflow.js";
+import {
+  workflowStageCapabilityIdentity,
+  type WorkflowRecipe,
+  type WorkflowStage,
+  type WorkflowStageCapability
+} from "../core/workflow.js";
 import {
   CAPABILITY_PACKAGE_LAYOUTS,
   type BrokerIntent,
@@ -93,6 +98,28 @@ function isBrokerManagedHostCatalog(filePath: string): boolean {
 
 function normalizePath(value: string): string {
   return value.replace(/\\/g, "/");
+}
+
+function packageIdFromCapabilityId(
+  capabilityId: string | undefined
+): string | undefined {
+  if (capabilityId === undefined || !capabilityId.includes(".")) {
+    return undefined;
+  }
+
+  const [packageId] = capabilityId.split(".", 1);
+
+  return packageId;
+}
+
+function subskillIdFromCapabilityId(
+  capabilityId: string | undefined
+): string | undefined {
+  if (capabilityId === undefined || !capabilityId.includes(".")) {
+    return undefined;
+  }
+
+  return capabilityId.split(".").slice(1).join(".");
 }
 
 type ValidateSkillEntryOptions = {
@@ -328,6 +355,51 @@ function validateWorkflowStageCapability(
   ] as const) {
     if (typeof value[key] !== "string" || value[key].trim().length === 0) {
       fail(filePath, `${path}.${key}`, "expected a non-empty string");
+    }
+  }
+
+  const identity = workflowStageCapabilityIdentity(
+    value as WorkflowStageCapability
+  );
+  const capabilityPackageId = packageIdFromCapabilityId(identity.capabilityId);
+  const capabilitySubskillId = subskillIdFromCapabilityId(identity.capabilityId);
+
+  if (
+    capabilityPackageId !== undefined &&
+    capabilityPackageId !== identity.packageId
+  ) {
+    fail(
+      filePath,
+      `${path}.capabilityId`,
+      "expected capabilityId to stay inside packageId"
+    );
+  }
+
+  if (
+    capabilitySubskillId !== undefined &&
+    capabilitySubskillId !== identity.subskillId
+  ) {
+    fail(
+      filePath,
+      `${path}.subskillId`,
+      "expected subskillId to match capabilityId"
+    );
+  }
+
+  if (value.package !== undefined) {
+    if (!isRecord(value.package)) {
+      fail(filePath, `${path}.package`, "expected an object");
+    }
+
+    if (
+      value.package.packageId !== undefined &&
+      value.package.packageId !== identity.packageId
+    ) {
+      fail(
+        filePath,
+        `${path}.package.packageId`,
+        "expected package.packageId to match capability.packageId"
+      );
     }
   }
 
@@ -606,6 +678,47 @@ function buildHostWorkflowRecipes(
         ...workflow,
         package: mergedPackage
       });
+      const normalizeStageCapability = (
+        stage: WorkflowStage
+      ): WorkflowStageCapability | undefined => {
+        if (stage.capability === undefined) {
+          return undefined;
+        }
+
+        const stageCard = toCapabilityCard({
+          id: `${card.id}:${stage.id}`,
+          kind: "skill",
+          label: stage.label,
+          intent: card.compatibilityIntent,
+          package: mergePackageRef(packageMap.get(stage.capability.packageId), {
+            ...stage.capability.package,
+            packageId: stage.capability.packageId
+          }),
+          leaf: {
+            ...workflowStageCapabilityIdentity(stage.capability),
+            packageId: stage.capability.packageId,
+            probe: stage.capability.probe
+          },
+          query: card.query,
+          implementation: {
+            id: stage.capability.implementationId,
+            type: "local_skill",
+            ownerSurface: card.implementation.ownerSurface
+          }
+        });
+
+        return {
+          ...workflowStageCapabilityIdentity({
+            ...stage.capability,
+            packageId: stageCard.package.packageId,
+            capabilityId: stageCard.leaf.capabilityId,
+            subskillId: stageCard.leaf.subskillId
+          }),
+          implementationId: stageCard.implementation.id,
+          package: stageCard.package,
+          probe: stageCard.leaf.probe
+        };
+      };
 
       return {
         id: card.id,
@@ -622,19 +735,7 @@ function buildHostWorkflowRecipes(
         startStageId: workflow.startStageId,
         stages: workflow.stages.map((stage) => ({
           ...stage,
-          capability:
-            stage.capability === undefined
-              ? undefined
-              : {
-                  ...stage.capability,
-                  package: mergePackageRef(
-                    packageMap.get(stage.capability.packageId),
-                    {
-                      ...stage.capability.package,
-                      packageId: stage.capability.packageId
-                    }
-                  )
-                }
+          capability: normalizeStageCapability(stage)
         })),
         sourceMetadata: workflow.sourceMetadata
       };

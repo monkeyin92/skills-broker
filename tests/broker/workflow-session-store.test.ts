@@ -5,7 +5,8 @@ import { setTimeout as delay } from "node:timers/promises";
 import { describe, expect, it } from "vitest";
 import {
   WorkflowSessionConflictError,
-  WorkflowSessionStore
+  WorkflowSessionStore,
+  workflowSessionRunFilePath
 } from "../../src/broker/workflow-session-store";
 import { normalizeRequest } from "../../src/core/request";
 import type { WorkflowSession } from "../../src/core/workflow";
@@ -166,6 +167,17 @@ describe("workflow session store", () => {
       const legacyFile = JSON.parse(await readFile(filePath, "utf8")) as {
         sessions: Record<string, WorkflowSession>;
       };
+      const rewrittenRunFile = JSON.parse(
+        await readFile(workflowSessionRunFilePath(filePath, legacy.runId), "utf8")
+      ) as WorkflowSession;
+
+      expect(rewrittenRunFile).toMatchObject({
+        runId: legacy.runId,
+        revision: 1,
+        activeStageId: "plan-ceo-review",
+        request: createSession("legacy-run").request
+      });
+      expect(rewrittenRunFile.request).not.toHaveProperty("intent");
       expect(legacyFile.sessions[legacy.runId]).toMatchObject({
         runId: legacy.runId,
         revision: 0,
