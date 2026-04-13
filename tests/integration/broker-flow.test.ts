@@ -384,9 +384,9 @@ describe("runBroker", () => {
               packageId: "gstack"
             },
             leaf: {
-              capabilityId: "gstack.office-hours",
+              capabilityId: "gstack",
               packageId: "gstack",
-              subskillId: "office-hours"
+              subskillId: "gstack"
             },
             query: {
               jobFamilies: ["requirements_analysis"],
@@ -452,6 +452,108 @@ describe("runBroker", () => {
         winnerId: "query-native-analysis",
         reasonCode: "query_native"
       });
+    } finally {
+      await rm(runtime.directory, { recursive: true, force: true });
+    }
+  });
+
+  it("keeps the first normalized winner when host and MCP sources collapse to the same leaf capability", async () => {
+    const runtime = await createRuntimePaths();
+    const hostCatalogFilePath = join(runtime.directory, "host.json");
+    const mcpRegistryFilePath = join(runtime.directory, "mcp.json");
+
+    await writeFile(
+      hostCatalogFilePath,
+      JSON.stringify({
+        packages: [
+          {
+            packageId: "gstack",
+            label: "gstack",
+            installState: "installed",
+            acquisition: "local_skill_bundle"
+          }
+        ],
+        skills: [
+          {
+            id: "requirements-analysis",
+            kind: "skill",
+            label: "Requirements Analysis",
+            intent: "capability_discovery_or_install",
+            package: {
+              packageId: "gstack"
+            },
+            leaf: {
+              capabilityId: "gstack",
+              packageId: "gstack",
+              subskillId: "gstack"
+            },
+            query: {
+              jobFamilies: ["requirements_analysis"],
+              targetTypes: ["problem_statement", "text"],
+              artifacts: ["design_doc", "analysis"],
+              examples: ["帮我分析这个需求并产出设计文档"]
+            },
+            implementation: {
+              id: "gstack.office_hours",
+              type: "local_skill",
+              ownerSurface: "broker_owned_downstream"
+            }
+          }
+        ]
+      }),
+      "utf8"
+    );
+    await writeFile(
+      mcpRegistryFilePath,
+      JSON.stringify({
+        servers: [
+          {
+            server: {
+              name: "gstack",
+              title: "Office Hours",
+              description: "Requirements analysis design doc brainstorming assistant."
+            }
+          }
+        ]
+      }),
+      "utf8"
+    );
+
+    try {
+      const result = await runBroker(
+        {
+          requestText: "帮我分析这个需求并产出设计文档",
+          host: "claude-code",
+          capabilityQuery: {
+            kind: "capability_request",
+            goal: "analyze a product requirement and produce a design doc",
+            host: "claude-code",
+            requestText: "帮我分析这个需求并产出设计文档",
+            jobFamilies: ["requirements_analysis"],
+            targets: [
+              {
+                type: "problem_statement",
+                value: "skills-broker identity flip"
+              }
+            ],
+            artifacts: ["design_doc", "analysis"],
+            preferredCapability: "gstack"
+          }
+        },
+        {
+          cacheFilePath: runtime.cacheFilePath,
+          hostCatalogFilePath,
+          mcpRegistryFilePath,
+          now: new Date("2026-04-01T09:00:00.000Z")
+        }
+      );
+
+      expect(result.ok).toBe(true);
+      expect(result.outcome.code).toBe("HANDOFF_READY");
+      expect(result.winner.id).toBe("requirements-analysis");
+      expect(result.handoff.chosenLeafCapability.capabilityId).toBe("gstack");
+      expect(result.handoff.chosenImplementation.id).toBe("gstack.office_hours");
+      expect(result.debug.candidateCount).toBe(1);
     } finally {
       await rm(runtime.directory, { recursive: true, force: true });
     }

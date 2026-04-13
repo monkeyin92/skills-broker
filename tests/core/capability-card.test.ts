@@ -93,6 +93,36 @@ describe("toCapabilityCard", () => {
     });
   });
 
+  it("prefers explicit package and leaf identity over a conflicting implementation id", () => {
+    const card = toCapabilityCard({
+      kind: "skill",
+      id: "requirements-analysis",
+      label: "Requirements Analysis",
+      intent: "capability_discovery_or_install",
+      package: {
+        packageId: "gstack"
+      },
+      leaf: {
+        capabilityId: "gstack.office-hours",
+        packageId: "gstack",
+        subskillId: "office-hours"
+      },
+      implementation: {
+        id: "legacy_bundle.requirements_analysis",
+        type: "local_skill",
+        ownerSurface: "broker_owned_downstream"
+      }
+    });
+
+    expect(card.package.packageId).toBe("gstack");
+    expect(card.leaf).toMatchObject({
+      capabilityId: "gstack.office-hours",
+      packageId: "gstack",
+      subskillId: "office-hours"
+    });
+    expect(card.implementation.id).toBe("legacy_bundle.requirements_analysis");
+  });
+
   it("merges explicit candidate query metadata over defaults", () => {
     const card = toCapabilityCard({
       kind: "skill",

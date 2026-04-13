@@ -166,12 +166,88 @@ function implementationSubskillId(
   return implementationId.split(".").slice(1).join(".");
 }
 
+function nonEmptyString(value: string | undefined): string | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  const trimmed = value.trim();
+
+  return trimmed.length > 0 ? trimmed : undefined;
+}
+
+function capabilityPackageId(
+  capabilityId: string | undefined
+): string | undefined {
+  if (capabilityId === undefined || !capabilityId.includes(".")) {
+    return undefined;
+  }
+
+  const [packageId] = capabilityId.split(".", 1);
+
+  return packageId;
+}
+
+function capabilitySubskillId(
+  capabilityId: string | undefined
+): string | undefined {
+  if (capabilityId === undefined || !capabilityId.includes(".")) {
+    return undefined;
+  }
+
+  return capabilityId.split(".").slice(1).join(".");
+}
+
+type ExplicitCapabilityIdentity = {
+  packageId: string;
+  capabilityId: string;
+  subskillId: string;
+};
+
+function explicitCapabilityIdentity(
+  candidate: CapabilityCandidate
+): ExplicitCapabilityIdentity | undefined {
+  const explicitCapabilityId = nonEmptyString(candidate.leaf?.capabilityId);
+  const explicitLeafPackageId = nonEmptyString(candidate.leaf?.packageId);
+  const explicitPackageId = nonEmptyString(candidate.package?.packageId);
+  const explicitSubskillId = nonEmptyString(candidate.leaf?.subskillId);
+  const capabilityIdPackageId = capabilityPackageId(explicitCapabilityId);
+  const capabilityIdSubskillId = capabilitySubskillId(explicitCapabilityId);
+  const packageId =
+    explicitPackageId ?? explicitLeafPackageId ?? capabilityIdPackageId;
+  const leafPackageId =
+    explicitLeafPackageId ?? explicitPackageId ?? capabilityIdPackageId;
+  const subskillId = explicitSubskillId ?? capabilityIdSubskillId;
+  const capabilityId =
+    explicitCapabilityId ??
+    (leafPackageId !== undefined && subskillId !== undefined
+      ? `${leafPackageId}.${subskillId}`
+      : undefined);
+
+  if (
+    packageId === undefined ||
+    leafPackageId === undefined ||
+    subskillId === undefined ||
+    capabilityId === undefined
+  ) {
+    return undefined;
+  }
+
+  return {
+    packageId,
+    capabilityId,
+    subskillId
+  };
+}
+
 function defaultPackageRef(
   candidate: CapabilityCandidate,
-  implementationId: string
+  implementationId: string,
+  explicitIdentity: ExplicitCapabilityIdentity | undefined
 ): CapabilityPackageRef {
   const packageId =
     candidate.package?.packageId ??
+    explicitIdentity?.packageId ??
     (typeof candidate.sourceMetadata?.packageId === "string"
       ? candidate.sourceMetadata.packageId
       : undefined) ??
@@ -242,21 +318,24 @@ function defaultPackageProbe(
 function defaultLeafRef(
   candidate: CapabilityCandidate,
   packageRef: CapabilityPackageRef,
-  implementationId: string
+  implementationId: string,
+  explicitIdentity: ExplicitCapabilityIdentity | undefined
 ): LeafCapabilityRef {
   const leafProbe = candidate.leaf?.probe;
   const sourceSkillName =
     typeof candidate.sourceMetadata?.skillName === "string"
       ? candidate.sourceMetadata.skillName
       : undefined;
-  const subskillId = normalizeIdentifier(
-    candidate.leaf?.subskillId ??
-      (typeof candidate.sourceMetadata?.subskillId === "string"
-        ? candidate.sourceMetadata.subskillId
-        : undefined) ??
-      implementationSubskillId(implementationId) ??
-      candidate.id
-  );
+  const subskillId =
+    explicitIdentity?.subskillId ??
+    normalizeIdentifier(
+      candidate.leaf?.subskillId ??
+        (typeof candidate.sourceMetadata?.subskillId === "string"
+          ? candidate.sourceMetadata.subskillId
+          : undefined) ??
+        implementationSubskillId(implementationId) ??
+        candidate.id
+    );
 
   const defaultLeafProbe: LeafCapabilityProbe | undefined =
     candidate.kind === "skill"
@@ -280,8 +359,13 @@ function defaultLeafRef(
 
   return {
     capabilityId:
-      candidate.leaf?.capabilityId ?? `${packageRef.packageId}.${subskillId}`,
-    packageId: candidate.leaf?.packageId ?? packageRef.packageId,
+      explicitIdentity?.capabilityId ??
+      candidate.leaf?.capabilityId ??
+      `${packageRef.packageId}.${subskillId}`,
+    packageId:
+      explicitIdentity?.packageId ??
+      candidate.leaf?.packageId ??
+      packageRef.packageId,
     subskillId,
     probe: defaultLeafProbe
   };
@@ -291,8 +375,14 @@ export function toCapabilityCard(candidate: CapabilityCandidate): CapabilityCard
   const kind = candidate.kind;
   const defaults = defaultQueryMetadata(candidate.intent);
   const implementationId = candidate.implementation?.id ?? candidate.id;
-  const packageRef = defaultPackageRef(candidate, implementationId);
-  const leafRef = defaultLeafRef(candidate, packageRef, implementationId);
+  const explicitIdentity = explicitCapabilityIdentity(candidate);
+  const packageRef = defaultPackageRef(candidate, implementationId, explicitIdentity);
+  const leafRef = defaultLeafRef(
+    candidate,
+    packageRef,
+    implementationId,
+    explicitIdentity
+  );
   const implementation: CapabilityImplementation = {
     id: implementationId,
     type: candidate.implementation?.type ?? defaultImplementationType(kind),

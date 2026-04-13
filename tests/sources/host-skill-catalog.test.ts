@@ -1,4 +1,4 @@
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -175,6 +175,50 @@ describe("loadHostSkillCandidates", () => {
         loadHostSkillCandidates("capability_discovery_or_install", fixturePath)
       ).rejects.toThrow(
         `Invalid host skill catalog at ${fixturePath} (skills[0].leaf.probe.aliases[0])`
+      );
+    } finally {
+      await rm(runtimeDirectory, { recursive: true, force: true });
+    }
+  });
+
+  it("fails fast when the broker-managed seed omits explicit identity", async () => {
+    const runtimeDirectory = await mkdtemp(
+      join(tmpdir(), "skills-broker-managed-seed-invariant-")
+    );
+    const fixtureDirectory = join(runtimeDirectory, "config");
+    const fixturePath = join(fixtureDirectory, "host-skills.seed.json");
+
+    await mkdir(fixtureDirectory, { recursive: true });
+
+    await writeFile(
+      fixturePath,
+      JSON.stringify({
+        packages: [],
+        skills: [
+          {
+            id: "requirements-analysis",
+            kind: "skill",
+            label: "Requirements Analysis",
+            intent: "capability_discovery_or_install",
+            implementation: {
+              id: "gstack.office_hours",
+              type: "local_skill",
+              ownerSurface: "broker_owned_downstream"
+            }
+          }
+        ]
+      }),
+      "utf8"
+    );
+
+    try {
+      await expect(
+        loadHostSkillCandidates("capability_discovery_or_install", fixturePath)
+      ).rejects.toBeInstanceOf(HostSkillCatalogValidationError);
+      await expect(
+        loadHostSkillCandidates("capability_discovery_or_install", fixturePath)
+      ).rejects.toThrow(
+        `Invalid host skill catalog at ${fixturePath} (skills[0].package.packageId)`
       );
     } finally {
       await rm(runtimeDirectory, { recursive: true, force: true });
