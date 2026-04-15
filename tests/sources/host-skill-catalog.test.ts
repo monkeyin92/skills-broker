@@ -1,4 +1,4 @@
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -175,6 +175,123 @@ describe("loadHostSkillCandidates", () => {
         loadHostSkillCandidates("capability_discovery_or_install", fixturePath)
       ).rejects.toThrow(
         `Invalid host skill catalog at ${fixturePath} (skills[0].leaf.probe.aliases[0])`
+      );
+    } finally {
+      await rm(runtimeDirectory, { recursive: true, force: true });
+    }
+  });
+
+  it("fails fast when the broker-managed seed omits explicit identity", async () => {
+    const runtimeDirectory = await mkdtemp(
+      join(tmpdir(), "skills-broker-managed-seed-invariant-")
+    );
+    const fixtureDirectory = join(runtimeDirectory, "config");
+    const fixturePath = join(fixtureDirectory, "host-skills.seed.json");
+
+    await mkdir(fixtureDirectory, { recursive: true });
+
+    await writeFile(
+      fixturePath,
+      JSON.stringify({
+        packages: [],
+        skills: [
+          {
+            id: "requirements-analysis",
+            kind: "skill",
+            label: "Requirements Analysis",
+            intent: "capability_discovery_or_install",
+            implementation: {
+              id: "gstack.office_hours",
+              type: "local_skill",
+              ownerSurface: "broker_owned_downstream"
+            }
+          }
+        ]
+      }),
+      "utf8"
+    );
+
+    try {
+      await expect(
+        loadHostSkillCandidates("capability_discovery_or_install", fixturePath)
+      ).rejects.toBeInstanceOf(HostSkillCatalogValidationError);
+      await expect(
+        loadHostSkillCandidates("capability_discovery_or_install", fixturePath)
+      ).rejects.toThrow(
+        `Invalid host skill catalog at ${fixturePath} (skills[0].package.packageId)`
+      );
+    } finally {
+      await rm(runtimeDirectory, { recursive: true, force: true });
+    }
+  });
+
+  it("fails fast when a broker-managed workflow stage has inconsistent explicit identity", async () => {
+    const runtimeDirectory = await mkdtemp(
+      join(tmpdir(), "skills-broker-managed-workflow-stage-invariant-")
+    );
+    const fixtureDirectory = join(runtimeDirectory, "config");
+    const fixturePath = join(fixtureDirectory, "host-skills.seed.json");
+
+    await mkdir(fixtureDirectory, { recursive: true });
+
+    await writeFile(
+      fixturePath,
+      JSON.stringify({
+        packages: [
+          {
+            packageId: "skills_broker",
+            label: "skills_broker",
+            installState: "installed",
+            acquisition: "broker_native"
+          }
+        ],
+        workflows: [
+          {
+            id: "idea-to-ship",
+            kind: "skill",
+            label: "Idea to Ship",
+            intent: "capability_discovery_or_install",
+            package: {
+              packageId: "skills_broker"
+            },
+            leaf: {
+              capabilityId: "skills_broker.idea-to-ship",
+              packageId: "skills_broker",
+              subskillId: "idea-to-ship"
+            },
+            implementation: {
+              id: "skills_broker.idea_to_ship",
+              type: "broker_workflow",
+              ownerSurface: "broker_owned_downstream"
+            },
+            startStageId: "office-hours",
+            stages: [
+              {
+                id: "office-hours",
+                label: "Office Hours",
+                kind: "capability",
+                capability: {
+                  packageId: "gstack",
+                  capabilityId: "gstack.office-hours",
+                  subskillId: "plan-eng-review",
+                  implementationId: "gstack.office_hours"
+                }
+              }
+            ]
+          }
+        ]
+      }),
+      "utf8"
+    );
+
+    try {
+      await expect(
+        loadHostWorkflowRecipes("capability_discovery_or_install", fixturePath)
+      ).rejects.toBeInstanceOf(HostSkillCatalogValidationError);
+      await expect(
+        loadHostWorkflowRecipes("capability_discovery_or_install", fixturePath)
+      ).rejects.toThrow(
+        `Invalid host skill catalog at ${fixturePath} (workflows[0].stages[0].capability.subskillId)`
       );
     } finally {
       await rm(runtimeDirectory, { recursive: true, force: true });

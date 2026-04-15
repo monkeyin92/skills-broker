@@ -128,7 +128,7 @@ This slice now also catches more free-form product-idea phrasing, so a natural s
 This is deliberately not "solve everything."  
 The point of v0 is to prove that a broker can pick and prepare the right capability better than a human manually browsing skills.
 
-**Current product phase:** keep adoption health green while finishing the package-vs-leaf migration tail and turning discovery/install into a stronger reuse flywheel, so Claude Code and Codex visibly keep `skills-broker` on the hot path and the broker compounds reachable capability surface over time.
+**Current product phase:** keep adoption health green while turning discovery/install into a stronger reuse flywheel, so Claude Code and Codex visibly keep `skills-broker` on the hot path and the broker compounds reachable capability surface over time without reopening the identity migration work that just shipped.
 
 **Migration note:** `capabilityQuery` is now the only public request contract the broker wants callers to depend on. `intent` still exists, but it now survives only as an internal compatibility lane label for supplier adapters, explicit late tie-breaks, maintained-family proof rails, and legacy workflow/session continuity.
 
@@ -420,7 +420,7 @@ No. It is a broker and routing layer.
 
 ### Is this production-ready?
 
-Not yet. It is still a focused v0, but it now includes a shared broker home, published lifecycle CLI, Claude Code and Codex thin shells, a shipped adoption-proof rail, and a small first routed lake. The current phase is finishing the query-native and package-vs-leaf migration tail without letting real host auto-routing regress.
+Not yet. It is still a focused v0, but it now includes a shared broker home, published lifecycle CLI, Claude Code and Codex thin shells, a shipped adoption-proof rail, and a small first routed lake. The current phase is keeping real host auto-routing green while turning discovery/install into a stronger reuse flywheel, now that both the query-native and package-vs-leaf migration tails are shipped.
 
 ### Why Claude Code and Codex first?
 

@@ -1,19 +1,5 @@
 # TODOS
 
-## Broker Runtime
-
-### Finish the package lifecycle vs routed subskill migration
-
-**What:** Finish moving from flattened implementation ids to a two-layer model where packages are the lifecycle unit and leaf capabilities are the routing unit.
-
-**Why:** The foundations shipped, but flattening still survives in compatibility bridges. That will become product drag once packages expose more sibling subskills or multiple packages compete for the same job family.
-
-**Context:** Explicit package / leaf identity, package-aware probing, package-aware handoff and acquisition hints, MCP alignment, and broker-owned downstream ownership are already in `main`. The remaining work is to keep removing flattened compatibility bridges, broaden package-aware acquisition behavior, and continue shrinking the host-visible peer surface.
-
-**Effort:** M
-**Priority:** P0
-**Depends on:** capability-query migration tail, richer seed/catalog modeling, and package-aware acquisition / handoff cleanup
-
 ## Ecosystem
 
 ### Turn discovery and install into a real flywheel
@@ -43,6 +29,19 @@
 **Depends on:** the current host shell contract staying thin and stable
 
 ## Completed
+
+### Finish the package lifecycle vs routed subskill migration
+
+**What:** Finish moving from flattened implementation ids to a two-layer model where packages are the lifecycle unit and leaf capabilities are the routing unit.
+
+**Why:** The foundations shipped, but flattening still survives in compatibility bridges. That will become product drag once packages expose more sibling subskills or multiple packages compete for the same job family.
+
+**Shipped:** canonical package-plus-leaf identity now wins over conflicting implementation metadata, discovery dedupes on routed leaf capability, broker-managed host seeds fail fast on inconsistent explicit identity, workflow stages keep identity separate from execution metadata, and legacy workflow sessions rewrite forward into normalized per-run records.
+
+**Effort:** M
+**Priority:** P0
+**Depends on:** capability-query migration tail, richer seed/catalog modeling, and package-aware acquisition / handoff cleanup
+**Completed:** v0.2.1 (2026-04-15)
 
 ### Finish the capability-query migration and retire the legacy intent gate
 

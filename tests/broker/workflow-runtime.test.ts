@@ -106,6 +106,41 @@ describe("workflow runtime", () => {
     }
   });
 
+  it("keeps explicit stage identity even when implementation metadata points at a different leaf", async () => {
+    const runtime = await createRuntimePaths();
+    await seedHostCatalog(runtime.hostCatalogFilePath, (catalog) => {
+      const workflows = catalog.workflows as Array<Record<string, unknown>>;
+      const ideaToShip = workflows.find((workflow) => workflow.id === "idea-to-ship");
+      const stages = ideaToShip?.stages as Array<Record<string, unknown>> | undefined;
+      const officeHours = stages?.find((stage) => stage.id === "office-hours");
+      const capability = officeHours?.capability as Record<string, unknown> | undefined;
+
+      if (capability !== undefined) {
+        capability.implementationId = "gstack.plan_ceo_review";
+      }
+    });
+
+    try {
+      const result = await runBroker(ideaRequest, {
+        ...runtime,
+        now: new Date("2026-03-31T08:00:00.000Z")
+      });
+
+      expect(result.ok).toBe(true);
+      expect(result.outcome.code).toBe("WORKFLOW_STAGE_READY");
+      expect(result.stage.handoff?.chosenLeafCapability).toMatchObject({
+        capabilityId: "gstack.office-hours",
+        packageId: "gstack",
+        subskillId: "office-hours"
+      });
+      expect(result.stage.handoff?.chosenImplementation.id).toBe(
+        "gstack.plan_ceo_review"
+      );
+    } finally {
+      await rm(runtime.directory, { recursive: true, force: true });
+    }
+  });
+
   it("resumes the same run and advances to the next stage", async () => {
     const runtime = await createRuntimePaths();
     await seedHostCatalog(runtime.hostCatalogFilePath);

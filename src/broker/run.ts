@@ -58,6 +58,7 @@ import type {
 } from "../core/types.js";
 import { BROKER_HOSTS, isBrokerHost } from "../core/types.js";
 import {
+  loadHostDiscoverySnapshot,
   loadHostSkillCandidates,
   loadHostWorkflowRecipes
 } from "../sources/host-skill-catalog.js";
@@ -316,9 +317,8 @@ async function discoverCapabilityCards(
   hostCatalogFilePath: string,
   mcpRegistryFilePath: string
 ): Promise<DiscoverySnapshot> {
-  const [hostResult, workflowResult, mcpResult] = await Promise.allSettled([
-    loadHostSkillCandidates(undefined, hostCatalogFilePath),
-    loadHostWorkflowRecipes(undefined, hostCatalogFilePath),
+  const [hostDiscoveryResult, mcpResult] = await Promise.allSettled([
+    loadHostDiscoverySnapshot(undefined, hostCatalogFilePath),
     searchMcpRegistry(
       {
         intent: request.compatibilityIntent,
@@ -328,32 +328,33 @@ async function discoverCapabilityCards(
     )
   ]);
 
-  if (
-    hostResult.status === "rejected" &&
-    workflowResult.status === "rejected" &&
-    mcpResult.status === "rejected"
-  ) {
+  if (hostDiscoveryResult.status === "rejected" && mcpResult.status === "rejected") {
     throw new AggregateError(
-      [hostResult.reason, workflowResult.reason, mcpResult.reason],
+      [hostDiscoveryResult.reason, mcpResult.reason],
       "All discovery sources failed."
     );
   }
 
   const hostCandidates =
-    hostResult.status === "fulfilled" ? hostResult.value : [];
+    hostDiscoveryResult.status === "fulfilled"
+      ? hostDiscoveryResult.value.skillCandidates
+      : [];
   const workflowRecipes =
-    workflowResult.status === "fulfilled" ? workflowResult.value : [];
+    hostDiscoveryResult.status === "fulfilled"
+      ? hostDiscoveryResult.value.workflowRecipes
+      : [];
   const mcpCandidates =
     mcpResult.status === "fulfilled" ? mcpResult.value : [];
 
+  const normalizedHostCandidates = hostCandidates.map(toCapabilityCard);
+  const normalizedWorkflowCandidates = workflowRecipes
+    .map((recipe) => workflowCandidate(recipe))
+    .map(toCapabilityCard);
+  const normalizedMcpCandidates = mcpCandidates.map(toCapabilityCard);
   const mergedCandidates = discoverCandidates(
-    [
-      ...hostCandidates,
-      ...workflowRecipes.map((recipe) => workflowCandidate(recipe))
-    ],
-    mcpCandidates
+    [...normalizedHostCandidates, ...normalizedWorkflowCandidates],
+    normalizedMcpCandidates
   )
-    .map(toCapabilityCard)
     .filter(
       (candidate) =>
         candidate.compatibilityIntent === request.compatibilityIntent ||

@@ -134,7 +134,7 @@ v0 当前包含：
 这不是为了“什么都支持”。  
 v0 的目标是证明：在一个具体任务上，broker 可以比人手动翻 skills 更准确地选到并准备好正确能力。
 
-**当前产品阶段：**在保持 adoption health 绿色的前提下，继续收 package-vs-leaf migration 尾巴，并把 discovery/install 做成更强的复用飞轮，让 Claude Code 和 Codex 持续把 `skills-broker` 放在热路径上，同时让 broker 可触达的能力面随使用一起增长。
+**当前产品阶段：**在保持 adoption health 绿色的前提下，把 discovery/install 做成更强的复用飞轮，让 Claude Code 和 Codex 持续把 `skills-broker` 放在热路径上，同时让 broker 可触达的能力面随使用一起增长，不再回头重开这次已经发货的 identity migration。
 
 **迁移说明：**`capabilityQuery` 现在是唯一应该让调用方依赖的公开请求契约。`intent` 还在，但现在只作为内部兼容层标签保留给 supplier adapter、显式的晚期 tie-break、maintained-family proof rail，以及 legacy workflow/session 连续性。
 
@@ -430,7 +430,7 @@ npx vitest run
 
 ### 它已经能直接生产使用了吗？
 
-还没有。现在仍然是一个聚焦型 v0，但已经有共享 broker home、已发布的 lifecycle CLI、Claude Code 和 Codex 两个薄宿主壳、已经发货的 adoption-proof rail，以及一个小而清楚的 routed lake。当前阶段重点是在不让真实宿主 auto-routing 回退的前提下，收完 query-native 和 package-vs-leaf 这两条迁移尾巴。
+还没有。现在仍然是一个聚焦型 v0，但已经有共享 broker home、已发布的 lifecycle CLI、Claude Code 和 Codex 两个薄宿主壳、已经发货的 adoption-proof rail，以及一个小而清楚的 routed lake。当前阶段重点是在不让真实宿主 auto-routing 回退的前提下，把 discovery/install 做成更强的复用飞轮，因为 query-native 和 package-vs-leaf 这两条迁移尾巴已经发货。
 
 ### 为什么先做 Claude Code 和 Codex？
 

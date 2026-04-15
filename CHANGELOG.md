@@ -2,6 +2,18 @@
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-04-15
+
+### Changed
+
+- Changed broker discovery to normalize host skills, workflows, and MCP candidates into canonical capability cards before deduping, so the winner is chosen by routed leaf capability instead of flat candidate ids.
+- Changed workflow stages and host-catalog normalization to carry explicit package-plus-leaf identity through runtime selection while keeping `implementationId` as execution metadata only.
+
+### Fixed
+
+- Fixed broker-managed seed validation so missing or inconsistent package/leaf identity fails fast instead of silently reconstructing it from implementation metadata.
+- Fixed legacy workflow session migration so old session files still read once, then rewrite forward into normalized per-run records without reviving the legacy request contract.
+
 ## [0.2.0] - 2026-04-12
 
 ### Added

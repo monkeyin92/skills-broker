@@ -11,6 +11,7 @@ This file is the repo-native execution board for `skills-broker`.
 - Phase 1 adoption proof is now shipped on `origin/main`: `update` / `doctor` expose `adoptionHealth`, installed-shell smoke keeps that proof honest, and repo docs mirror the operator-facing verdict.
 - Compatibility-intent routing metrics are shipped on `origin/main`.
 - The query-native request migration tail is now shipped on the active shipping ref: top-level public requests stay `capabilityQuery`-native, and legacy cache/session records migrate forward without hiding compatibility-assisted routing.
+- The package-vs-leaf identity migration tail is now shipped on the active shipping ref: discovery, workflow stages, managed host seeds, and legacy workflow sessions all keep package-plus-leaf identity explicit and treat `implementation.id` as execution metadata only.
 - The coarse broker-first host boundary tightening is now shipped on the active shipping ref.
 - The Phase 2 / Phase 3 broker-first compiler, gate, and recovery slice is now shipped on `origin/main`.
 
@@ -115,6 +116,44 @@ This file is the repo-native execution board for `skills-broker`.
           "type": "test",
           "path": "tests/broker/workflow-session-store.test.ts",
           "label": "legacy workflow session migration coverage"
+        }
+      ]
+    },
+    {
+      "id": "package-leaf-identity-tail",
+      "title": "Package-vs-leaf identity migration tail",
+      "summary": "Discovery, workflow stages, managed host seeds, and legacy workflow sessions now keep package-plus-leaf identity explicit and treat implementation ids as execution metadata only.",
+      "status": "shipped_remote",
+      "proofs": [
+        {
+          "type": "commit",
+          "ref": "302e6c0",
+          "label": "refactor: normalize discovery identity by package leaf"
+        },
+        {
+          "type": "commit",
+          "ref": "b16ee2a",
+          "label": "refactor: normalize workflow stage identity"
+        },
+        {
+          "type": "file",
+          "path": "src/core/capability-card.ts",
+          "label": "explicit package-plus-leaf identity wins over implementation metadata"
+        },
+        {
+          "type": "test",
+          "path": "tests/broker/discover.test.ts",
+          "label": "discovery dedupe canonical leaf coverage"
+        },
+        {
+          "type": "test",
+          "path": "tests/broker/workflow-runtime.test.ts",
+          "label": "workflow stage identity coverage"
+        },
+        {
+          "type": "test",
+          "path": "tests/broker/workflow-session-store.test.ts",
+          "label": "legacy session write-forward coverage"
         }
       ]
     },
