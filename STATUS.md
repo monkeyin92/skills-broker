@@ -123,7 +123,7 @@ This file is the repo-native execution board for `skills-broker`.
       "id": "package-leaf-identity-tail",
       "title": "Package-vs-leaf identity migration tail",
       "summary": "Discovery, workflow stages, managed host seeds, and legacy workflow sessions now keep package-plus-leaf identity explicit and treat implementation ids as execution metadata only.",
-      "status": "shipped_local",
+      "status": "shipped_remote",
       "proofs": [
         {
           "type": "commit",
