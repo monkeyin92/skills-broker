@@ -14,6 +14,12 @@ export type HydratePackageAvailabilityOptions = {
   cwd?: string;
 };
 
+export type InstalledLeafLocation = {
+  root: string;
+  skillDirectory: string;
+  packageRoot?: string;
+};
+
 async function directoryExists(pathname: string): Promise<boolean> {
   try {
     const pathnameStat = await stat(pathname);
@@ -296,12 +302,12 @@ function hasNameIntersection(
 async function packageContainsMatchingSkill(
   packageRoot: string,
   card: CapabilityCard
-): Promise<boolean> {
+): Promise<string | undefined> {
   const probe = packageProbe(card);
   const packageManifestNames = await readPackageManifestNames(packageRoot, card);
 
   if (!hasNameIntersection(packageManifestNames, candidatePackageNames(card))) {
-    return false;
+    return undefined;
   }
 
   const skillDirectoryGroups: Promise<string[]>[] = [];
@@ -327,17 +333,17 @@ async function packageContainsMatchingSkill(
         candidateSkillNames(card)
       )
     ) {
-      return true;
+      return skillDirectory;
     }
   }
 
-  return false;
+  return undefined;
 }
 
-async function searchRootContainsInstalledLeaf(
+async function searchRootInstalledLeafLocation(
   root: string,
   card: CapabilityCard
-): Promise<boolean> {
+): Promise<InstalledLeafLocation | undefined> {
   const probe = packageProbe(card);
 
   if (probe.layouts.includes("single_skill_directory")) {
@@ -347,12 +353,20 @@ async function searchRootContainsInstalledLeaf(
         candidateSkillNames(card)
       )
     ) {
-      return true;
+      return {
+        root,
+        skillDirectory: root
+      };
     }
   }
 
-  if (await packageContainsMatchingSkill(root, card)) {
-    return true;
+  const rootPackageSkillDirectory = await packageContainsMatchingSkill(root, card);
+  if (rootPackageSkillDirectory !== undefined) {
+    return {
+      root,
+      packageRoot: root,
+      skillDirectory: rootPackageSkillDirectory
+    };
   }
 
   for (const childDirectory of await childDirectories(root)) {
@@ -363,33 +377,50 @@ async function searchRootContainsInstalledLeaf(
           candidateSkillNames(card)
         )
       ) {
-        return true;
+        return {
+          root,
+          skillDirectory: childDirectory
+        };
       }
     }
 
-    if (await packageContainsMatchingSkill(childDirectory, card)) {
-      return true;
+    const packageSkillDirectory = await packageContainsMatchingSkill(childDirectory, card);
+    if (packageSkillDirectory !== undefined) {
+      return {
+        root,
+        packageRoot: childDirectory,
+        skillDirectory: packageSkillDirectory
+      };
     }
   }
 
-  return false;
+  return undefined;
+}
+
+export async function findInstalledLeafLocation(
+  card: CapabilityCard,
+  input: HydratePackageAvailabilityOptions
+): Promise<InstalledLeafLocation | undefined> {
+  for (const root of baseSearchRoots(input)) {
+    const location = await searchRootInstalledLeafLocation(root, card);
+
+    if (location !== undefined) {
+      return location;
+    }
+  }
+
+  return undefined;
 }
 
 async function canUpgradeToInstalled(
   card: CapabilityCard,
   input: HydratePackageAvailabilityOptions
 ): Promise<boolean> {
-  if (card.kind !== "skill" || card.package.installState !== "available") {
+  if (card.package.installState !== "available") {
     return false;
   }
 
-  for (const root of baseSearchRoots(input)) {
-    if (await searchRootContainsInstalledLeaf(root, card)) {
-      return true;
-    }
-  }
-
-  return false;
+  return (await findInstalledLeafLocation(card, input)) !== undefined;
 }
 
 export async function hydratePackageAvailability(

@@ -1,4 +1,10 @@
 import { access, readdir, stat } from "node:fs/promises";
+import { join } from "node:path";
+import {
+  AcquisitionMemoryStore,
+  acquisitionMemoryFilePath
+} from "../broker/acquisition-memory.js";
+import { loadVerifiedDownstreamCandidates } from "../broker/downstream-manifest-source.js";
 import { readBrokerRoutingTraces, routingTraceLogFilePath } from "../broker/trace-store.js";
 import { summarizeBrokerRoutingTraces } from "../broker/trace.js";
 import {
@@ -35,10 +41,27 @@ export type DoctorLifecycleResult = {
     path: string;
     exists: boolean;
   };
+  acquisitionMemory: {
+    path: string;
+    exists: boolean;
+    entries: number;
+    successfulRoutes: number;
+    firstReuseRecorded: number;
+    crossHostReuse: number;
+  };
+  verifiedDownstreamManifests: {
+    rootPath: string;
+    manifests: number;
+    hosts: Array<{
+      name: BrokerHost;
+      manifests: number;
+    }>;
+  };
   routingMetrics: {
     windowDays: number;
     observed: number;
     syntheticHostSkips: number;
+    acquisition: ReturnType<typeof summarizeBrokerRoutingTraces>["acquisition"];
     contracts: ReturnType<typeof summarizeBrokerRoutingTraces>["contracts"];
     surfaces: ReturnType<typeof summarizeBrokerRoutingTraces>["surfaces"];
   };
@@ -86,6 +109,85 @@ async function pathExists(pathname: string): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+async function summarizeDoctorAcquisitionMemory(
+  brokerHomeDirectory: string,
+  warnings: string[]
+): Promise<DoctorLifecycleResult["acquisitionMemory"]> {
+  const filePath = acquisitionMemoryFilePath(brokerHomeDirectory);
+  const exists = await pathExists(filePath);
+
+  try {
+    const memory = await new AcquisitionMemoryStore(filePath).read();
+
+    return {
+      path: filePath,
+      exists,
+      entries: memory.entries.length,
+      successfulRoutes: memory.entries.reduce(
+        (total, entry) => total + entry.successfulRoutes,
+        0
+      ),
+      firstReuseRecorded: memory.entries.filter(
+        (entry) => entry.firstReuseAt !== undefined
+      ).length,
+      crossHostReuse: memory.entries.filter(
+        (entry) => entry.verifiedHosts.length > 1
+      ).length
+    };
+  } catch (error) {
+    const reason =
+      error instanceof Error ? error.message : "unknown acquisition memory failure";
+    warnings.push(`acquisition-memory: unreadable (${reason})`);
+
+    return {
+      path: filePath,
+      exists,
+      entries: 0,
+      successfulRoutes: 0,
+      firstReuseRecorded: 0,
+      crossHostReuse: 0
+    };
+  }
+}
+
+async function summarizeDoctorVerifiedDownstreamManifests(
+  brokerHomeDirectory: string,
+  warnings: string[]
+): Promise<DoctorLifecycleResult["verifiedDownstreamManifests"]> {
+  const hosts = await Promise.all(
+    BROKER_HOSTS.map(async (host) => {
+      try {
+        return {
+          name: host,
+          manifests: (
+            await loadVerifiedDownstreamCandidates({
+              brokerHomeDirectory,
+              currentHost: host
+            })
+          ).length
+        };
+      } catch (error) {
+        const reason =
+          error instanceof Error
+            ? error.message
+            : "unknown downstream manifest failure";
+        warnings.push(`downstream-manifests:${host}: unreadable (${reason})`);
+
+        return {
+          name: host,
+          manifests: 0
+        };
+      }
+    })
+  );
+
+  return {
+    rootPath: join(brokerHomeDirectory, "downstream"),
+    manifests: hosts.reduce((total, host) => total + host.manifests, 0),
+    hosts
+  };
 }
 
 function conflictReason(
@@ -274,6 +376,15 @@ export async function doctorSharedBrokerHome(
       )
     }
   );
+  const acquisitionMemory = await summarizeDoctorAcquisitionMemory(
+    options.brokerHomeDirectory,
+    warnings
+  );
+  const verifiedDownstreamManifests =
+    await summarizeDoctorVerifiedDownstreamManifests(
+      options.brokerHomeDirectory,
+      warnings
+    );
   const hosts = [
     ...(
       await Promise.all(
@@ -309,10 +420,13 @@ export async function doctorSharedBrokerHome(
       path: options.brokerHomeDirectory,
       exists: sharedHomeExists
     },
+    acquisitionMemory,
+    verifiedDownstreamManifests,
     routingMetrics: {
       windowDays: routingWindowDays,
       observed: routingSummary.observed,
       syntheticHostSkips: routingSummary.syntheticHostSkips,
+      acquisition: routingSummary.acquisition,
       contracts: routingSummary.contracts,
       surfaces: routingSummary.surfaces
     },

@@ -186,7 +186,8 @@ If you are not confident, omit \`capabilityQuery\` and still send the raw envelo
 
 - If the broker returns \`UNSUPPORTED_REQUEST\`, continue normally.
 - If the broker returns \`AMBIGUOUS_REQUEST\`, ask a clarifying question.
-- If the broker returns \`NO_CANDIDATE\`, offer capability discovery or install help.
+- If the broker returns \`NO_CANDIDATE\`, offer capability discovery help.
+- If the broker returns \`INSTALL_REQUIRED\`, offer package install help using the broker-provided install plan.
 - If the broker returns \`WORKFLOW_STAGE_READY\` or \`WORKFLOW_BLOCKED\`, keep following the broker-owned workflow contract instead of switching to a host-native plan.
 - If the broker returns \`PREPARE_FAILED\`, explain the failure clearly and do not silently substitute a native tool path.
 

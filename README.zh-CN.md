@@ -123,6 +123,7 @@ v0 当前包含：
 - 共享 broker home 的 install / update / remove / doctor 链路
 - Claude Code 和 Codex 薄宿主壳支持
 - Claude Code 和 Codex 之间的跨宿主 cache 复用
+- verified downstream manifest 现在也是 advisory discovery source，已经验证过的 broker-owned downstream winner 不必完全依赖当前 catalog 才能再被找回
 - CI 和 live discovery smoke 覆盖
 - capability-query 主导的 host catalog / MCP / workflow 发现，所以结构化 broker 请求不再那么依赖 legacy `intent` 的严格相等
 - modern web / social / capability discovery 请求走 query-first 归一化，所以 `capabilityQuery` 现在承载主要 broker 语义，`intent` 更多只保留为兼容层标签
@@ -130,6 +131,8 @@ v0 当前包含：
 - repo 只要接入 canonical `STATUS.md`，`skills-broker doctor` 还可以做 proof 校验，并在 strict 模式下区分 `shipped_local` 和 `shipped_remote`
 
 这一版也补宽了 free-form product idea 的命中面，所以用户用更自然的一句话描述产品想法时，更容易直接进入 broker 自管的 `idea-to-ship` workflow，而不是掉回 unsupported。
+
+这次 packet 还有一条必须说真话的边界：catalog 里现在仍然保留了 `capability-discovery` 这个 helper identity，但它今天代表的是 broker 引导的 discovery/install helper contract，而且实现形态是一个本地 helper skill，不是完整 broker 自管的 acquisition workflow。v0 里唯一真正完整的 broker 自管 workflow 仍然是 `idea-to-ship`。
 
 这不是为了“什么都支持”。  
 v0 的目标是证明：在一个具体任务上，broker 可以比人手动翻 skills 更准确地选到并准备好正确能力。
@@ -210,7 +213,7 @@ skills-broker update
 npx skills-broker update
 ```
 
-使用 `npx skills-broker update` 可以初始化或刷新共享 broker home，接上薄宿主壳，并让 Claude Code 和 Codex 复用同一份路由缓存。当前发布态 lifecycle CLI 只管理 Claude Code 和 Codex。裸跑 `npx skills-broker` 目前等价于 `npx skills-broker update`，所以脚本和文档里应该把子命令写全。`npx skills-broker update --repair-host-surface` 现在会把 peer surface 修复写成 typed audit event，`npx skills-broker update --clear-manual-recovery --host <host> --marker-id <id> ...` 则是修复失败后给 operator 用的显式解封路径。`npx skills-broker doctor` 用来只读诊断环境，如果 shared home 里已经有 routing trace，还会顺手汇总最近的 broker 命中率 / 误路由率 / fallback 率，显示 broker-first gate 新鲜度和 manual recovery blocker；如果当前 repo 接入了 canonical `STATUS.md`，它还可以顺手校验 shipped proof，并在 strict 模式下区分 `shipped_local` 和 `shipped_remote`，适合挂到 CI gate。`npx skills-broker remove` 默认只拆卸受管宿主壳而不删除共享历史，`npx skills-broker remove --purge` 会把共享 broker home 一起清掉。
+使用 `npx skills-broker update` 可以初始化或刷新共享 broker home，接上薄宿主壳，并让 Claude Code 和 Codex 复用同一份路由缓存。当前发布态 lifecycle CLI 只管理 Claude Code 和 Codex。裸跑 `npx skills-broker` 目前等价于 `npx skills-broker update`，所以脚本和文档里应该把子命令写全。`npx skills-broker update --repair-host-surface` 现在会把 peer surface 修复写成 typed audit event，`npx skills-broker update --clear-manual-recovery --host <host> --marker-id <id> ...` 则是修复失败后给 operator 用的显式解封路径。`npx skills-broker doctor` 用来只读诊断环境，如果 shared home 里已经有 routing trace，还会顺手汇总最近的 broker 命中率 / 误路由率 / fallback 率，同时把 acquisition memory 和 verified downstream manifests 作为两条独立 advisory discovery source 打出来，显示 broker-first gate 新鲜度和 manual recovery blocker；如果当前 repo 接入了 canonical `STATUS.md`，它还可以顺手校验 shipped proof，并在 strict 模式下区分 `shipped_local` 和 `shipped_remote`，适合挂到 CI gate。`npx skills-broker remove` 默认只拆卸受管宿主壳而不删除共享历史，`npx skills-broker remove --reset-acquisition-memory` 只清 advisory acquisition-memory store，`npx skills-broker remove --purge` 会把共享 broker home 一起清掉。
 
 `update` 和 `doctor` 现在还会输出一个一等公民的 `adoptionHealth` verdict：
 
@@ -255,7 +258,42 @@ npx skills-broker update \
 
 如果你要接到自动化或 CI，所有 lifecycle 命令也都支持 `--json`。
 
-### 3. 为本地开发克隆仓库并安装依赖
+### 3. 走一遍 install-required -> verify -> reuse 闭环
+
+这是 discovery/install 飞轮在发布态薄宿主壳上真正要证明自己的地方。
+
+1. 在 Claude Code 或 Codex 里发一个受支持的 broker-first 请求，最好落在 maintained family，比如 requirements analysis、网站 QA 或 investigation。
+2. 如果当前最佳 package 还没装，宿主应该收到一个 `INSTALL_REQUIRED` outcome，同时带 `hostAction=offer_package_install`。这和真正的 `NO_CANDIDATE` 不一样：前者表示 broker 已经找到了赢家，只是在要求宿主先安装。
+3. 同意安装后，把同一个请求再发一次。broker 这次应该验证已安装赢家并直接 handoff，而不是重新掉回 fallback。
+4. 跑 `npx skills-broker doctor`，确认 shared home 已经开始记录 reuse，也能看见后续可 replay 的 verified downstream manifests。
+
+第一次被 install 挡住时，宿主侧 outcome 应该类似：
+
+```json
+{
+  "outcome": {
+    "code": "INSTALL_REQUIRED",
+    "hostAction": "offer_package_install"
+  }
+}
+```
+
+在第一次验证后的复用发生后，`doctor` 里应该能看到类似：
+
+```text
+Acquisition memory: present, entries=2, successful_routes=3, first_reuse_after_install=1, cross_host_reuse=1
+Verified downstream manifests: total=2, claude-code=1, codex=1
+```
+
+如果你之后把 acquisition memory 清掉，另一个 host 仍然应该能靠这份 verified downstream manifest 恢复出 `INSTALL_REQUIRED`，而不是一路退化回 `NO_CANDIDATE`。
+
+如果你只想把这份 advisory memory 清掉，再从头重跑这个闭环，可以用：
+
+```bash
+npx skills-broker remove --reset-acquisition-memory
+```
+
+### 4. 为本地开发克隆仓库并安装依赖
 
 ```bash
 git clone https://github.com/monkeyin92/skills-broker.git
@@ -263,14 +301,14 @@ cd skills-broker
 npm ci
 ```
 
-### 4. 构建并验证本地 checkout
+### 5. 构建并验证本地 checkout
 
 ```bash
 npm run build
 npx vitest run
 ```
 
-### 5. 安装仓库内的 Claude Code 本地包
+### 6. 安装仓库内的 Claude Code 本地包
 
 ```bash
 ./scripts/install-claude-code.sh /absolute/path/to/claude-code-plugin
@@ -287,7 +325,7 @@ npx vitest run
 
 这条链路是 **仓库内的 Claude Code 开发路径**，不是当前主推的发布态安装入口。
 
-### 6. 在 contributor 路径上拿到 first routed success
+### 7. 在 contributor 路径上拿到 first routed success
 
 ```bash
 /absolute/path/to/claude-code-plugin/bin/run-broker \

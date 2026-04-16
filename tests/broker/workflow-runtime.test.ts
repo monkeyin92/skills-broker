@@ -443,7 +443,17 @@ describe("workflow runtime", () => {
       expect(blocked.block).toMatchObject({
         kind: "install_required",
         reasonCode: "INSTALL_REQUIRED",
-        retryable: true
+        retryable: true,
+        install: {
+          reason: "package_not_installed",
+          installPlan: {
+            retry: {
+              mode: "resume_workflow_stage",
+              runId: blocked.workflow.runId,
+              stageId: "office-hours"
+            }
+          }
+        }
       });
       expect(blocked.workflow.activeStageId).toBe("office-hours");
 

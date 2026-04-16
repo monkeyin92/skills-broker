@@ -8,6 +8,7 @@ This file is the repo-native execution board for `skills-broker`.
 
 ## Human Summary
 
+- The discovery/install flywheel packet is now shipped on the active shipping ref: install-required is a first-class outcome, acquisition memory and verified downstream manifests both compound reuse, and `doctor` / repo docs now tell the same operator truth.
 - Phase 1 adoption proof is now shipped on `origin/main`: `update` / `doctor` expose `adoptionHealth`, installed-shell smoke keeps that proof honest, and repo docs mirror the operator-facing verdict.
 - Compatibility-intent routing metrics are shipped on `origin/main`.
 - The query-native request migration tail is now shipped on the active shipping ref: top-level public requests stay `capabilityQuery`-native, and legacy cache/session records migrate forward without hiding compatibility-assisted routing.
@@ -20,6 +21,59 @@ This file is the repo-native execution board for `skills-broker`.
 {
   "schemaVersion": 1,
   "items": [
+    {
+      "id": "discovery-install-flywheel",
+      "title": "Discovery/install flywheel packet",
+      "summary": "Install-required is now a first-class broker outcome, acquisition memory and verified downstream manifests compound reuse across hosts, and doctor plus repo docs expose that truth end to end.",
+      "status": "shipped_remote",
+      "proofs": [
+        {
+          "type": "file",
+          "path": "README.md",
+          "label": "quickstart and operator truth"
+        },
+        {
+          "type": "file",
+          "path": "TODOS.md",
+          "label": "backlog truth mirrored"
+        },
+        {
+          "type": "file",
+          "path": "src/broker/run.ts",
+          "label": "install-required and downstream-manifest retrieval contract"
+        },
+        {
+          "type": "file",
+          "path": "src/broker/acquisition-memory.ts",
+          "label": "shared-home acquisition memory store"
+        },
+        {
+          "type": "file",
+          "path": "src/broker/downstream-manifest-source.ts",
+          "label": "verified downstream manifest source"
+        },
+        {
+          "type": "test",
+          "path": "tests/integration/broker-flow.test.ts",
+          "label": "install, verify, reuse, and cross-host manifest replay coverage"
+        },
+        {
+          "type": "test",
+          "path": "tests/broker/acquisition-memory.test.ts",
+          "label": "acquisition memory schema and replay coverage"
+        },
+        {
+          "type": "test",
+          "path": "tests/shared-home/doctor.test.ts",
+          "label": "doctor acquisition and downstream-manifest coverage"
+        },
+        {
+          "type": "test",
+          "path": "tests/cli/lifecycle-cli.test.ts",
+          "label": "CLI lifecycle and doctor contract coverage"
+        }
+      ]
+    },
     {
       "id": "adoption-proof",
       "title": "Phase 1 adoption proof",
@@ -125,16 +179,6 @@ This file is the repo-native execution board for `skills-broker`.
       "summary": "Discovery, workflow stages, managed host seeds, and legacy workflow sessions now keep package-plus-leaf identity explicit and treat implementation ids as execution metadata only.",
       "status": "shipped_remote",
       "proofs": [
-        {
-          "type": "commit",
-          "ref": "302e6c0",
-          "label": "refactor: normalize discovery identity by package leaf"
-        },
-        {
-          "type": "commit",
-          "ref": "b16ee2a",
-          "label": "refactor: normalize workflow stage identity"
-        },
         {
           "type": "file",
           "path": "src/core/capability-card.ts",

@@ -71,7 +71,8 @@ describe("host shell installers", () => {
       expect(claudeSkill).toContain('--debug \'{"requestText":"QA this website https://example.com"');
       expect(claudeSkill).toContain("If the broker returns `UNSUPPORTED_REQUEST`, continue normally.");
       expect(claudeSkill).toContain("If the broker returns `AMBIGUOUS_REQUEST`, ask a clarifying question.");
-      expect(claudeSkill).toContain("If the broker returns `NO_CANDIDATE`, offer capability discovery or install help.");
+      expect(claudeSkill).toContain("If the broker returns `NO_CANDIDATE`, offer capability discovery help.");
+      expect(claudeSkill).toContain("If the broker returns `INSTALL_REQUIRED`, offer package install help using the broker-provided install plan.");
       expect(claudeSkill).toContain("If the broker returns `PREPARE_FAILED`, explain the failure clearly");
       expect(claudeSkill).toContain('"requestText":"turn this webpage into markdown: https://example.com/article"');
       expect(codexSkill).toContain("Route coarse capability-boundary decisions through skills-broker");
@@ -101,7 +102,8 @@ describe("host shell installers", () => {
       expect(codexSkill).toContain('--debug \'{"requestText":"QA this website https://example.com"');
       expect(codexSkill).toContain("If the broker returns `UNSUPPORTED_REQUEST`, continue normally.");
       expect(codexSkill).toContain("If the broker returns `AMBIGUOUS_REQUEST`, ask a clarifying question.");
-      expect(codexSkill).toContain("If the broker returns `NO_CANDIDATE`, offer capability discovery or install help.");
+      expect(codexSkill).toContain("If the broker returns `NO_CANDIDATE`, offer capability discovery help.");
+      expect(codexSkill).toContain("If the broker returns `INSTALL_REQUIRED`, offer package install help using the broker-provided install plan.");
       expect(codexSkill).toContain("If the broker returns `PREPARE_FAILED`, explain the failure clearly");
       expect(codexSkill).toContain('"host":"codex"');
       expect(claudeSkill).not.toContain("maintainedFamilies");

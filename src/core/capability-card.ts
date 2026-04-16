@@ -288,15 +288,16 @@ function defaultPackageProbe(
   kind: CapabilityCardKind,
   packageId: string
 ): CapabilityPackageProbe | undefined {
+  const packageProbe = candidate.package?.probe;
+
   if (kind !== "skill") {
-    return undefined;
+    return packageProbe;
   }
 
   const sourcePackageName =
     typeof candidate.sourceMetadata?.packageName === "string"
       ? candidate.sourceMetadata.packageName
       : undefined;
-  const packageProbe = candidate.package?.probe;
 
   return {
     layouts: packageProbe?.layouts ?? ["single_skill_directory"],
@@ -355,7 +356,7 @@ function defaultLeafRef(
               : `${packageRef.packageId}-${sourceSkillName}`
           ].filter((value): value is string => value !== undefined))
         }
-      : undefined;
+      : leafProbe;
 
   return {
     capabilityId:

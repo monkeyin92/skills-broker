@@ -1,4 +1,7 @@
 import { buildHandoffEnvelope } from "./handoff.js";
+import { buildPackageAcquisitionHint } from "./acquisition.js";
+import { AcquisitionMemoryStore } from "./acquisition-memory.js";
+import { writeVerifiedDownstreamManifest } from "./downstream-manifest-source.js";
 import {
   type BrokerDebug,
   type BrokerFailureResult,
@@ -24,7 +27,7 @@ import type {
   WorkflowStage
 } from "../core/workflow.js";
 import type { CapabilityCard } from "../core/capability-card.js";
-import type { BrokerRequest, PackageAcquisitionHint } from "../core/types.js";
+import type { BrokerHost, BrokerRequest } from "../core/types.js";
 import {
   WorkflowSessionConflictError,
   WorkflowSessionStore
@@ -32,7 +35,7 @@ import {
 
 type WorkflowRuntimeContext = {
   input: NormalizeRequestInput;
-  currentHost: string;
+  currentHost: BrokerHost;
   now: Date;
   request: BrokerRequest;
   routingReasonCode: RequestRoutingReasonCode;
@@ -41,6 +44,8 @@ type WorkflowRuntimeContext = {
   sessionStore: WorkflowSessionStore;
   packageSearchRoots?: string[];
   brokerHomeDirectory?: string;
+  requestQueryIdentity: string;
+  acquisitionMemoryStore?: AcquisitionMemoryStore;
   debug: BrokerDebug;
 };
 
@@ -50,6 +55,46 @@ type WorkflowResumeContext = WorkflowRuntimeContext & {
 
 function unique(values: string[]): string[] {
   return Array.from(new Set(values));
+}
+
+async function persistAcquisitionMemoryIfConfigured(
+  store: AcquisitionMemoryStore | undefined,
+  input: {
+    canonicalKey: string;
+    winner: CapabilityCard;
+    currentHost: BrokerHost;
+    compatibilityIntent: WorkflowRecipe["compatibilityIntent"];
+    now: Date;
+  }
+): Promise<void> {
+  if (store === undefined) {
+    return;
+  }
+
+  try {
+    await store.recordVerifiedWinner({
+      canonicalKey: input.canonicalKey,
+      compatibilityIntent: input.compatibilityIntent,
+      winner: input.winner,
+      currentHost: input.currentHost,
+      now: input.now
+    });
+  } catch {
+    // Acquisition memory is advisory only.
+  }
+}
+
+async function persistVerifiedDownstreamManifestIfConfigured(input: {
+  brokerHomeDirectory?: string;
+  winner: CapabilityCard;
+  currentHost: BrokerHost;
+  now: Date;
+}): Promise<void> {
+  try {
+    await writeVerifiedDownstreamManifest(input);
+  } catch {
+    // Verified downstream manifests are advisory only.
+  }
 }
 
 function sessionView(session: WorkflowSession): WorkflowRunView {
@@ -290,14 +335,6 @@ function createWorkflowCompletedResult(
   };
 }
 
-function installHintFromCard(card: CapabilityCard): PackageAcquisitionHint {
-  return {
-    reason: "package_not_installed",
-    package: card.package,
-    leafCapability: card.leaf
-  };
-}
-
 function missingStagePrerequisite(
   session: WorkflowSession,
   stage: WorkflowStage
@@ -470,7 +507,11 @@ async function presentCurrentStage(
       reasonCode: "INSTALL_REQUIRED",
       message: `Workflow stage "${stage.id}" needs package "${stageCard.package.packageId}" before it can run.`,
       retryable: true,
-      install: installHintFromCard(stageCard)
+      install: buildPackageAcquisitionHint(stageCard, {
+        retryMode: "resume_workflow_stage",
+        runId: storedSession.runId,
+        stageId: stage.id
+      })
     });
   }
 
@@ -497,6 +538,19 @@ async function presentCurrentStage(
   };
 
   const storedSession = await context.sessionStore.write(readySession);
+  await persistAcquisitionMemoryIfConfigured(context.acquisitionMemoryStore, {
+    canonicalKey: context.requestQueryIdentity,
+    winner: stageCard,
+    currentHost: context.currentHost,
+    compatibilityIntent: context.recipe.compatibilityIntent,
+    now: context.now
+  });
+  await persistVerifiedDownstreamManifestIfConfigured({
+    brokerHomeDirectory: context.brokerHomeDirectory,
+    winner: stageCard,
+    currentHost: context.currentHost,
+    now: context.now
+  });
 
   return {
     ok: true,

@@ -2,6 +2,21 @@
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-04-16
+
+### Added
+
+- Added a broker-managed acquisition memory store plus verified downstream manifests that replay prior winners as advisory discovery sources, including cross-host reuse.
+
+### Changed
+
+- Changed broker discovery and decline semantics so uninstalled winners now surface a first-class `INSTALL_REQUIRED` outcome with one shared install plan contract across one-shot routing, workflows, hosts, and CLI/operator surfaces.
+- Changed operator truth so `skills-broker doctor`, `remove --reset-acquisition-memory`, `README`, `README.zh-CN`, `TODOS`, and `STATUS` all expose the discovery/install flywheel explicitly.
+
+### Fixed
+
+- Fixed package verification and reuse so broker-managed downstream packages and MCP bundles can be installed, verified, remembered, and later recovered without collapsing back into `NO_CANDIDATE`.
+
 ## [0.2.1] - 2026-04-15
 
 ### Changed

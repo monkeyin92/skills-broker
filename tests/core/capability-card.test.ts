@@ -93,6 +93,49 @@ describe("toCapabilityCard", () => {
     });
   });
 
+  it("preserves explicit MCP probes instead of dropping them during normalization", () => {
+    const card = toCapabilityCard({
+      kind: "mcp",
+      id: "io.example/website-qa",
+      label: "Website QA",
+      intent: "capability_discovery_or_install",
+      package: {
+        packageId: "io.example/website-qa",
+        label: "Website QA",
+        installState: "available",
+        acquisition: "mcp_bundle",
+        probe: {
+          layouts: ["single_skill_directory"],
+          manifestNames: ["io.example/website-qa", "Website QA"]
+        }
+      },
+      leaf: {
+        capabilityId: "io.example/website-qa",
+        packageId: "io.example/website-qa",
+        subskillId: "website-qa",
+        probe: {
+          manifestNames: ["io.example/website-qa", "Website QA"],
+          aliases: ["website-qa"]
+        }
+      },
+      implementation: {
+        id: "io.example/website-qa",
+        type: "mcp_server",
+        ownerSurface: "broker_owned_downstream"
+      }
+    });
+
+    expect(card.package.probe).toEqual({
+      layouts: ["single_skill_directory"],
+      manifestNames: ["io.example/website-qa", "Website QA"]
+    });
+    expect(card.leaf.probe).toEqual({
+      manifestNames: ["io.example/website-qa", "Website QA"],
+      aliases: ["website-qa"]
+    });
+    expect(card.prepare.installRequired).toBe(true);
+  });
+
   it("prefers explicit package and leaf identity over a conflicting implementation id", () => {
     const card = toCapabilityCard({
       kind: "skill",

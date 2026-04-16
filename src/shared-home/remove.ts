@@ -1,4 +1,5 @@
 import { access, readdir, rm, stat } from "node:fs/promises";
+import { acquisitionMemoryFilePath } from "../broker/acquisition-memory.js";
 import {
   BROKER_HOSTS,
   brokerHostKnownShellEntries,
@@ -15,10 +16,11 @@ export type RemoveLifecycleResult = {
   sharedHome: {
     path: string;
     status: "preserved" | "purged";
+    acquisitionMemory: "preserved" | "cleared" | "already_absent";
   };
   hosts: Array<{
     name: BrokerHost;
-    status: "removed" | "already_absent" | "skipped_conflict";
+    status: "removed" | "preserved" | "already_absent" | "skipped_conflict";
     reason?: string;
   }>;
   warnings: string[];
@@ -30,6 +32,7 @@ export type RemoveSharedBrokerHomeOptions = {
   claudeCodeInstallDirectory?: string;
   codexInstallDirectory?: string;
   purgeSharedHome?: boolean;
+  resetAcquisitionMemory?: boolean;
 };
 
 type RemoveHostEntry = RemoveLifecycleResult["hosts"][number];
@@ -154,6 +157,64 @@ async function removeHost(
   };
 }
 
+async function preserveHost(
+  name: BrokerHost,
+  installDirectory: string | undefined,
+  warnings: string[]
+): Promise<RemoveHostEntry> {
+  if (installDirectory === undefined) {
+    return {
+      name,
+      status: "already_absent"
+    };
+  }
+
+  const manifestState = await readManagedShellManifest(installDirectory);
+  if (manifestState.status === "managed") {
+    return {
+      name,
+      status: "preserved"
+    };
+  }
+
+  if (
+    manifestState.status === "foreign" ||
+    manifestState.status === "invalid-json" ||
+    manifestState.status === "invalid-manifest" ||
+    manifestState.status === "unreadable"
+  ) {
+    const reason = conflictReason(manifestState);
+    warnings.push(`${name}: ${reason}`);
+    return {
+      name,
+      status: "skipped_conflict",
+      reason
+    };
+  }
+
+  if (!(await pathExists(installDirectory))) {
+    return {
+      name,
+      status: "already_absent"
+    };
+  }
+
+  const unmanagedConflictReason = await detectUnmanagedHostConflict(name, installDirectory);
+  if (unmanagedConflictReason !== undefined) {
+    warnings.push(`${name}: ${unmanagedConflictReason}`);
+    return {
+      name,
+      status: "skipped_conflict",
+      reason: unmanagedConflictReason
+    };
+  }
+
+  return {
+    name,
+    status: "already_absent"
+  };
+}
+
 export async function removeSharedBrokerHome(
   options: RemoveSharedBrokerHomeOptions
 ): Promise<RemoveLifecycleResult> {
@@ -165,14 +226,28 @@ export async function removeSharedBrokerHome(
   });
   const warnings: string[] = [];
   const hosts: RemoveLifecycleResult["hosts"] = await Promise.all(
-    BROKER_HOSTS.map((host) =>
-      removeHost(
-        host,
-        lifecycleHostTarget(hostTargets, host).installDirectory,
-        warnings
-      )
-    )
+    BROKER_HOSTS.map((host) => {
+      const installDirectory = lifecycleHostTarget(hostTargets, host).installDirectory;
+
+      return options.resetAcquisitionMemory
+        ? preserveHost(host, installDirectory, warnings)
+        : removeHost(host, installDirectory, warnings);
+    })
   );
+  const memoryPath = acquisitionMemoryFilePath(options.brokerHomeDirectory);
+  let acquisitionMemoryStatus: RemoveLifecycleResult["sharedHome"]["acquisitionMemory"] =
+    "preserved";
+
+  if (options.purgeSharedHome) {
+    acquisitionMemoryStatus = (await pathExists(memoryPath)) ? "cleared" : "already_absent";
+  } else if (options.resetAcquisitionMemory) {
+    if (await pathExists(memoryPath)) {
+      await rm(memoryPath, { force: true });
+      acquisitionMemoryStatus = "cleared";
+    } else {
+      acquisitionMemoryStatus = "already_absent";
+    }
+  }
 
   if (options.purgeSharedHome) {
     await rm(options.brokerHomeDirectory, { recursive: true, force: true });
@@ -182,7 +257,8 @@ export async function removeSharedBrokerHome(
     command: "remove",
     sharedHome: {
       path: options.brokerHomeDirectory,
-      status: options.purgeSharedHome ? "purged" : "preserved"
+      status: options.purgeSharedHome ? "purged" : "preserved",
+      acquisitionMemory: acquisitionMemoryStatus
     },
     hosts,
     warnings

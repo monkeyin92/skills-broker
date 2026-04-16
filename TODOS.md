@@ -2,18 +2,6 @@
 
 ## Ecosystem
 
-### Turn discovery and install into a real flywheel
-
-**What:** Evolve `capability_discovery_or_install` from a secondary fallback path into a stronger acquisition loop that can discover, install, and reuse new capabilities across hosts.
-
-**Why:** This is the long-term moat. A broker becomes strategically valuable when it can expand its own reachable capability surface and remember what worked.
-
-**Context:** Shared home, shared cache, and cross-host reuse are already in place. What is still missing is a fuller discovery/acquisition loop that compounds over time.
-
-**Effort:** L
-**Priority:** P1
-**Depends on:** stronger discovery sources, install flow refinement, and clear post-install persistence semantics
-
 ## Host Expansion
 
 ### Add OpenCode as the third thin host shell
@@ -29,6 +17,19 @@
 **Depends on:** the current host shell contract staying thin and stable
 
 ## Completed
+
+### Turn discovery and install into a real flywheel
+
+**What:** Evolve `capability_discovery_or_install` from a secondary fallback path into a stronger acquisition loop that can discover, install, and reuse new capabilities across hosts.
+
+**Why:** This is the long-term moat. A broker becomes strategically valuable when it can expand its own reachable capability surface and remember what worked.
+
+**Shipped locally:** `INSTALL_REQUIRED` is now first-class instead of being flattened into `NO_CANDIDATE`, broker/host/workflow share one install contract, shared-home acquisition memory is versioned and advisory, verified downstream manifests are now a real discovery source, and `doctor` / README expose reuse plus cross-host replay truth.
+
+**Effort:** L
+**Priority:** P1
+**Depends on:** stronger discovery sources, install flow refinement, and clear post-install persistence semantics
+**Completed:** v0.3.0 (2026-04-16)
 
 ### Finish the package lifecycle vs routed subskill migration
 

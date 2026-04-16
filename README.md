@@ -117,6 +117,7 @@ v0 currently includes:
 - shared broker home install/update/remove/doctor flow
 - Claude Code and Codex thin host shell support
 - cross-host cache reuse between Claude Code and Codex
+- verified downstream manifests as an advisory discovery source for already-proven broker-owned downstream winners
 - CI and live discovery smoke coverage
 - capability-query-led host-catalog, MCP, and workflow discovery, so structured broker requests are less tightly coupled to exact legacy `intent` equality
 - query-first normalization for modern web, social, and capability-discovery requests, so `capabilityQuery` now carries the primary broker semantics and `intent` mainly remains as a compatibility lane
@@ -124,6 +125,8 @@ v0 currently includes:
 - repo-scoped canonical `STATUS.md` proof checks in `skills-broker doctor`, including strict shipped-local versus shipped-remote evaluation for CI or release gates
 
 This slice now also catches more free-form product-idea phrasing, so a natural sentence is more likely to start the broker-owned `idea-to-ship` workflow instead of falling through as unsupported.
+
+Important truth in this packet: the catalog still carries a `capability-discovery` helper identity, but today that path is a broker-guided discovery/install helper contract implemented as a local helper skill, not a full broker-owned acquisition workflow. In v0, the only complete broker-owned workflow is still `idea-to-ship`.
 
 This is deliberately not "solve everything."  
 The point of v0 is to prove that a broker can pick and prepare the right capability better than a human manually browsing skills.
@@ -209,7 +212,7 @@ Use `npx skills-broker update` to initialize or refresh the shared broker home, 
 - `blocked`: the install is present but a named blocker exists, such as competing peers, manual recovery, gate drift, or an explicit missing host shell
 - `inactive`: no managed host is installed yet, but nothing is broken
 
-`npx skills-broker update --repair-host-surface` records typed peer-surface repair events, and `npx skills-broker update --clear-manual-recovery --host <host> --marker-id <id> ...` is the explicit operator path for unblocking a host after a failed repair. `npx skills-broker doctor` inspects the environment without writing, summarizes recent broker hit / misroute / fallback rates when shared-home routing traces exist, surfaces broker-first gate freshness plus manual-recovery blockers, and, inside repos that opt into a canonical `STATUS.md`, can also validate shipped-local versus shipped-remote proof state for strict CI gates. `npx skills-broker remove` detaches only the managed host shells by default, and `npx skills-broker remove --purge` fully removes the shared broker home.
+`npx skills-broker update --repair-host-surface` records typed peer-surface repair events, and `npx skills-broker update --clear-manual-recovery --host <host> --marker-id <id> ...` is the explicit operator path for unblocking a host after a failed repair. `npx skills-broker doctor` inspects the environment without writing, summarizes recent broker hit / misroute / fallback rates when shared-home routing traces exist, reports both acquisition-memory reuse and verified downstream manifests as distinct advisory discovery sources, surfaces broker-first gate freshness plus manual-recovery blockers, and, inside repos that opt into a canonical `STATUS.md`, can also validate shipped-local versus shipped-remote proof state for strict CI gates. `npx skills-broker remove` detaches only the managed host shells by default, `npx skills-broker remove --reset-acquisition-memory` clears only the advisory acquisition-memory store, and `npx skills-broker remove --purge` fully removes the shared broker home.
 
 By default, `update` detects official host roots before it writes anything:
 
@@ -248,7 +251,42 @@ This will:
 
 For automation or CI, every lifecycle command also supports `--json`.
 
-### 3. Clone the repository for local development
+### 3. Watch the install-required -> verify -> reuse loop
+
+This is the published host-shell path where the discovery/install flywheel is supposed to prove itself.
+
+1. In Claude Code or Codex, send a supported broker-first request from a maintained family such as requirements analysis, website QA, or investigation.
+2. If the best package is not installed yet, the host should receive an `INSTALL_REQUIRED` outcome with `hostAction=offer_package_install`. That is different from a true `NO_CANDIDATE`: the broker found a winner and is asking the host to install it.
+3. Approve the install, then send the same request again. The broker should verify the installed winner and hand off instead of falling back.
+4. Run `npx skills-broker doctor` to confirm the shared-home state is recording reuse and any verified downstream manifests that can be replayed later.
+
+On the first blocked pass, the host-side outcome should look like:
+
+```json
+{
+  "outcome": {
+    "code": "INSTALL_REQUIRED",
+    "hostAction": "offer_package_install"
+  }
+}
+```
+
+After the first verified reuse, `doctor` should include a line like:
+
+```text
+Acquisition memory: present, entries=2, successful_routes=3, first_reuse_after_install=1, cross_host_reuse=1
+Verified downstream manifests: total=2, claude-code=1, codex=1
+```
+
+If you later clear acquisition memory, a verified downstream manifest from one host should still be enough for another host to recover `INSTALL_REQUIRED` instead of falling all the way back to `NO_CANDIDATE`.
+
+If you want to clear only that advisory memory and re-run the loop from scratch, use:
+
+```bash
+npx skills-broker remove --reset-acquisition-memory
+```
+
+### 4. Clone the repository for local development
 
 ```bash
 git clone https://github.com/monkeyin92/skills-broker.git
@@ -256,14 +294,14 @@ cd skills-broker
 npm ci
 ```
 
-### 4. Build and verify the local checkout
+### 5. Build and verify the local checkout
 
 ```bash
 npm run build
 npx vitest run
 ```
 
-### 5. Install the repo-local Claude Code package
+### 6. Install the repo-local Claude Code package
 
 ```bash
 ./scripts/install-claude-code.sh /absolute/path/to/claude-code-plugin
@@ -280,7 +318,7 @@ This creates a self-contained local package containing:
 
 This is the **repo-local Claude Code development path**, not the primary published install flow.
 
-### 6. First routed success on the contributor path
+### 7. First routed success on the contributor path
 
 ```bash
 /absolute/path/to/claude-code-plugin/bin/run-broker \

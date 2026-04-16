@@ -2,6 +2,7 @@ import { chmod, mkdtemp, mkdir, realpath, rm, writeFile } from "node:fs/promises
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { acquisitionMemoryFilePath } from "../../src/broker/acquisition-memory";
 import { loadMaintainedBrokerFirstContract } from "../../src/core/maintained-broker-first";
 import {
   brokerFirstGateArtifactPath,
@@ -74,6 +75,151 @@ async function writeFreshGateArtifact(
   await writeFile(
     artifactPath,
     `${JSON.stringify(artifact, null, 2)}\n`,
+    "utf8"
+  );
+}
+
+async function writeAcquisitionMemoryFixture(
+  brokerHomeDirectory: string
+): Promise<void> {
+  const filePath = acquisitionMemoryFilePath(brokerHomeDirectory);
+  await mkdir(join(brokerHomeDirectory, "state"), { recursive: true });
+  await writeFile(
+    filePath,
+    `${JSON.stringify(
+      {
+        version: "2026-04-16",
+        entries: [
+          {
+            canonicalKey: "query:v2|families:requirements_analysis",
+            compatibilityIntent: "capability_discovery_or_install",
+            candidateId: "gstack.office-hours",
+            packageId: "gstack",
+            leafCapabilityId: "gstack.office-hours",
+            successfulRoutes: 2,
+            installedAt: "2026-04-16T03:00:00.000Z",
+            verifiedAt: "2026-04-16T04:00:00.000Z",
+            firstReuseAt: "2026-04-16T04:00:00.000Z",
+            verifiedHosts: ["codex", "claude-code"],
+            provenance: "package_probe"
+          },
+          {
+            canonicalKey: "query:v2|families:quality_assurance",
+            compatibilityIntent: "capability_discovery_or_install",
+            candidateId: "gstack.qa",
+            packageId: "gstack",
+            leafCapabilityId: "gstack.qa",
+            successfulRoutes: 1,
+            installedAt: "2026-04-16T05:00:00.000Z",
+            verifiedAt: "2026-04-16T05:00:00.000Z",
+            verifiedHosts: ["codex"],
+            provenance: "package_probe"
+          }
+        ]
+      },
+      null,
+      2
+    )}\n`,
+    "utf8"
+  );
+}
+
+async function writeVerifiedDownstreamManifestFixture(
+  brokerHomeDirectory: string
+): Promise<void> {
+  const claudeSkillDirectory = join(
+    brokerHomeDirectory,
+    "downstream",
+    "claude-code",
+    "skills",
+    "gstack",
+    ".agents",
+    "skills",
+    "gstack-office-hours"
+  );
+  const codexSkillDirectory = join(
+    brokerHomeDirectory,
+    "downstream",
+    "codex",
+    "skills",
+    "gstack",
+    ".agents",
+    "skills",
+    "gstack-qa"
+  );
+
+  await mkdir(claudeSkillDirectory, { recursive: true });
+  await mkdir(codexSkillDirectory, { recursive: true });
+  await writeFile(
+    join(claudeSkillDirectory, ".skills-broker.json"),
+    `${JSON.stringify(
+      {
+        schemaVersion: 1,
+        verifiedAt: "2026-04-16T04:00:00.000Z",
+        skillName: "office-hours",
+        verifiedCandidate: {
+          id: "remembered-analysis",
+          kind: "skill",
+          label: "Remembered Analysis",
+          intent: "capability_discovery_or_install",
+          package: {
+            packageId: "gstack",
+            installState: "installed"
+          },
+          leaf: {
+            capabilityId: "gstack.office-hours",
+            packageId: "gstack",
+            subskillId: "office-hours"
+          },
+          implementation: {
+            id: "gstack.office_hours",
+            type: "local_skill",
+            ownerSurface: "broker_owned_downstream"
+          },
+          sourceMetadata: {
+            skillName: "office-hours"
+          }
+        }
+      },
+      null,
+      2
+    )}\n`,
+    "utf8"
+  );
+  await writeFile(
+    join(codexSkillDirectory, ".skills-broker.json"),
+    `${JSON.stringify(
+      {
+        schemaVersion: 1,
+        verifiedAt: "2026-04-16T05:00:00.000Z",
+        skillName: "qa",
+        verifiedCandidate: {
+          id: "remembered-qa",
+          kind: "skill",
+          label: "Remembered QA",
+          intent: "capability_discovery_or_install",
+          package: {
+            packageId: "gstack",
+            installState: "installed"
+          },
+          leaf: {
+            capabilityId: "gstack.qa",
+            packageId: "gstack",
+            subskillId: "qa"
+          },
+          implementation: {
+            id: "gstack.qa",
+            type: "local_skill",
+            ownerSurface: "broker_owned_downstream"
+          },
+          sourceMetadata: {
+            skillName: "qa"
+          }
+        }
+      },
+      null,
+      2
+    )}\n`,
     "utf8"
   );
 }
@@ -321,6 +467,108 @@ describe("doctor shared broker home", () => {
       await rm(runtimeDirectory, { recursive: true, force: true });
     }
   }, 30_000);
+
+  it("reports acquisition memory reuse metrics in doctor output", async () => {
+    const runtimeDirectory = await mkdtemp(join(tmpdir(), "skills-broker-doctor-acq-memory-"));
+    const brokerHomeDirectory = join(runtimeDirectory, ".skills-broker");
+
+    try {
+      await installSharedBrokerHome({
+        brokerHomeDirectory,
+        projectRoot: process.cwd()
+      });
+      await writeAcquisitionMemoryFixture(brokerHomeDirectory);
+
+      const result = await doctorSharedBrokerHome({
+        brokerHomeDirectory,
+        homeDirectory: runtimeDirectory,
+        cwd: runtimeDirectory
+      });
+      const rendered = formatLifecycleResult(result, "text");
+
+      expect(result.acquisitionMemory).toEqual({
+        path: acquisitionMemoryFilePath(brokerHomeDirectory),
+        exists: true,
+        entries: 2,
+        successfulRoutes: 3,
+        firstReuseRecorded: 1,
+        crossHostReuse: 1
+      });
+      expect(rendered).toContain(
+        "Acquisition memory: present, entries=2, successful_routes=3, first_reuse_after_install=1, cross_host_reuse=1"
+      );
+
+      const parsed = JSON.parse(formatLifecycleResult(result, "json")) as typeof result;
+      expect(parsed.acquisitionMemory).toEqual({
+        path: acquisitionMemoryFilePath(brokerHomeDirectory),
+        exists: true,
+        entries: 2,
+        successfulRoutes: 3,
+        firstReuseRecorded: 1,
+        crossHostReuse: 1
+      });
+    } finally {
+      await rm(runtimeDirectory, { recursive: true, force: true });
+    }
+  });
+
+  it("reports verified downstream manifests in doctor output", async () => {
+    const runtimeDirectory = await mkdtemp(
+      join(tmpdir(), "skills-broker-doctor-downstream-manifests-")
+    );
+    const brokerHomeDirectory = join(runtimeDirectory, ".skills-broker");
+
+    try {
+      await installSharedBrokerHome({
+        brokerHomeDirectory,
+        projectRoot: process.cwd()
+      });
+      await writeVerifiedDownstreamManifestFixture(brokerHomeDirectory);
+
+      const result = await doctorSharedBrokerHome({
+        brokerHomeDirectory,
+        homeDirectory: runtimeDirectory,
+        cwd: runtimeDirectory
+      });
+      const rendered = formatLifecycleResult(result, "text");
+
+      expect(result.verifiedDownstreamManifests).toEqual({
+        rootPath: join(brokerHomeDirectory, "downstream"),
+        manifests: 2,
+        hosts: [
+          {
+            name: "claude-code",
+            manifests: 1
+          },
+          {
+            name: "codex",
+            manifests: 1
+          }
+        ]
+      });
+      expect(rendered).toContain(
+        "Verified downstream manifests: total=2, claude-code=1, codex=1"
+      );
+
+      const parsed = JSON.parse(formatLifecycleResult(result, "json")) as typeof result;
+      expect(parsed.verifiedDownstreamManifests).toEqual({
+        rootPath: join(brokerHomeDirectory, "downstream"),
+        manifests: 2,
+        hosts: [
+          {
+            name: "claude-code",
+            manifests: 1
+          },
+          {
+            name: "codex",
+            manifests: 1
+          }
+        ]
+      });
+    } finally {
+      await rm(runtimeDirectory, { recursive: true, force: true });
+    }
+  });
 
   it("reports green adoption health when a managed host and repo truth are both clean", async () => {
     const runtimeDirectory = await mkdtemp(join(tmpdir(), "skills-broker-doctor-adoption-green-"));
@@ -629,6 +877,32 @@ describe("doctor shared broker home", () => {
             stageId: null,
             reasonCode: null,
             timestamp: "2026-03-31T11:10:00.000Z"
+          }),
+          JSON.stringify({
+            traceVersion: "2026-03-31",
+            requestText: "install required",
+            host: "codex",
+            hostDecision: "broker_first",
+            resultCode: "INSTALL_REQUIRED",
+            routingOutcome: "fallback",
+            missLayer: "retrieval",
+            normalizedBy: "structured_query",
+            requestSurface: "structured_query",
+            requestContract: "query_native",
+            selectionMode: "explicit",
+            hostAction: "offer_package_install",
+            candidateCount: 2,
+            winnerId: "website-qa",
+            winnerPackageId: "io.example/website-qa",
+            selectedCapabilityId: "io.example/website-qa",
+            selectedLeafCapabilityId: "website-qa",
+            selectedImplementationId: "io.example/website-qa",
+            selectedPackageInstallState: "available",
+            workflowId: null,
+            runId: null,
+            stageId: null,
+            reasonCode: "package_not_installed",
+            timestamp: "2026-03-31T11:15:00.000Z"
           })
         ].join("\n"),
         "utf8"
@@ -643,18 +917,22 @@ describe("doctor shared broker home", () => {
 
       expect(result.routingMetrics).toEqual({
         windowDays: 7,
-        observed: 3,
+        observed: 4,
         syntheticHostSkips: 0,
+        acquisition: {
+          trueNoCandidate: 1,
+          installRequired: 1
+        },
         contracts: [
           {
             requestContract: "query_native",
-            observed: 1,
+            observed: 2,
             hits: 1,
             misroutes: 0,
-            fallbacks: 0,
-            hitRate: 1,
+            fallbacks: 1,
+            hitRate: 0.5,
             misrouteRate: 0,
-            fallbackRate: 0
+            fallbackRate: 0.5
           },
           {
             requestContract: "query_native_via_legacy_compat",
@@ -681,13 +959,13 @@ describe("doctor shared broker home", () => {
           {
             requestSurface: "structured_query",
             normalizedBy: "structured_query",
-            observed: 1,
+            observed: 2,
             hits: 1,
             misroutes: 0,
-            fallbacks: 0,
-            hitRate: 1,
+            fallbacks: 1,
+            hitRate: 0.5,
             misrouteRate: 0,
-            fallbackRate: 0
+            fallbackRate: 0.5
           },
           {
             requestSurface: "raw_envelope",
@@ -715,10 +993,13 @@ describe("doctor shared broker home", () => {
       });
 
       expect(formatLifecycleResult(result, "text")).toContain(
-        "Routing contract query_native: observed=1, hit=1.00, misroute=0.00, fallback=0.00"
+        "Routing contract query_native: observed=2, hit=0.50, misroute=0.00, fallback=0.50"
       );
       expect(formatLifecycleResult(result, "text")).toContain(
-        "Routing structured_query: observed=1, hit=1.00, misroute=0.00, fallback=0.00"
+        "Routing structured_query: observed=2, hit=0.50, misroute=0.00, fallback=0.50"
+      );
+      expect(formatLifecycleResult(result, "text")).toContain(
+        "Acquisition routing: true_no_candidate=1, install_required=1"
       );
     } finally {
       await rm(runtimeDirectory, { recursive: true, force: true });

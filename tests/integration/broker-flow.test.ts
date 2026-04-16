@@ -2,6 +2,7 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { acquisitionMemoryFilePath } from "../../src/broker/acquisition-memory";
 import { buildLegacyRequestCacheKey, resolveBrokerRequest } from "../../src/broker/resolved-request";
 import { runBroker } from "../../src/broker/run";
 import { normalizeRequest } from "../../src/core/request";
@@ -277,6 +278,1031 @@ describe("runBroker", () => {
     }
   });
 
+  it("reuses acquisition memory across hosts even when the exact cache file is different", async () => {
+    const runtime = await createRuntimePaths();
+    const firstHostCatalogFilePath = join(runtime.directory, "host-first.json");
+    const secondHostCatalogFilePath = join(runtime.directory, "host-second.json");
+    const mcpRegistryFilePath = join(runtime.directory, "empty-mcp.json");
+    const request = {
+      requestText: "帮我做需求分析并产出设计文档",
+      host: "claude-code" as const,
+      capabilityQuery: {
+        kind: "capability_request" as const,
+        goal: "analyze a product requirement and produce a design doc",
+        host: "claude-code" as const,
+        requestText: "帮我做需求分析并产出设计文档",
+        jobFamilies: ["requirements_analysis"],
+        artifacts: ["design_doc"]
+      }
+    };
+
+    await writeFile(
+      firstHostCatalogFilePath,
+      JSON.stringify({
+        packages: [
+          {
+            packageId: "gstack",
+            label: "gstack",
+            installState: "installed",
+            acquisition: "local_skill_bundle"
+          }
+        ],
+        skills: [
+          {
+            id: "remembered-analysis",
+            kind: "skill",
+            label: "Remembered Analysis",
+            intent: "capability_discovery_or_install",
+            package: {
+              packageId: "gstack"
+            },
+            leaf: {
+              capabilityId: "gstack.office-hours",
+              packageId: "gstack",
+              subskillId: "office-hours"
+            },
+            query: {
+              jobFamilies: ["requirements_analysis"],
+              targetTypes: ["problem_statement", "text"],
+              artifacts: ["design_doc"],
+              examples: ["帮我做需求分析并产出设计文档"]
+            },
+            implementation: {
+              id: "gstack.office_hours",
+              type: "local_skill",
+              ownerSurface: "broker_owned_downstream"
+            }
+          }
+        ]
+      }),
+      "utf8"
+    );
+    await writeFile(
+      secondHostCatalogFilePath,
+      JSON.stringify({
+        packages: [
+          {
+            packageId: "gstack",
+            label: "gstack",
+            installState: "installed",
+            acquisition: "local_skill_bundle"
+          },
+          {
+            packageId: "zzz",
+            label: "zzz",
+            installState: "installed",
+            acquisition: "local_skill_bundle"
+          }
+        ],
+        skills: [
+          {
+            id: "remembered-analysis",
+            kind: "skill",
+            label: "Remembered Analysis",
+            intent: "capability_discovery_or_install",
+            package: {
+              packageId: "gstack"
+            },
+            leaf: {
+              capabilityId: "gstack.office-hours",
+              packageId: "gstack",
+              subskillId: "office-hours"
+            },
+            query: {
+              jobFamilies: ["requirements_analysis"],
+              targetTypes: ["problem_statement", "text"],
+              artifacts: ["design_doc"],
+              examples: ["帮我做需求分析并产出设计文档"]
+            },
+            implementation: {
+              id: "gstack.office_hours",
+              type: "local_skill",
+              ownerSurface: "broker_owned_downstream"
+            }
+          },
+          {
+            id: "aaa-challenger",
+            kind: "skill",
+            label: "AAA Challenger",
+            intent: "capability_discovery_or_install",
+            package: {
+              packageId: "zzz"
+            },
+            leaf: {
+              capabilityId: "zzz.analysis",
+              packageId: "zzz",
+              subskillId: "analysis"
+            },
+            query: {
+              jobFamilies: ["requirements_analysis"],
+              targetTypes: ["problem_statement", "text"],
+              artifacts: ["design_doc"],
+              examples: ["帮我做需求分析并产出设计文档"]
+            },
+            implementation: {
+              id: "zzz.analysis",
+              type: "local_skill",
+              ownerSurface: "broker_owned_downstream"
+            }
+          }
+        ]
+      }),
+      "utf8"
+    );
+    await writeFile(mcpRegistryFilePath, JSON.stringify({ servers: [] }), "utf8");
+
+    try {
+      const firstResult = await runBroker(request, {
+        brokerHomeDirectory: runtime.brokerHomeDirectory,
+        cacheFilePath: join(runtime.directory, "cache-first.json"),
+        hostCatalogFilePath: firstHostCatalogFilePath,
+        mcpRegistryFilePath,
+        now: new Date("2026-04-16T03:00:00.000Z")
+      });
+
+      expect(firstResult.ok).toBe(true);
+      expect(firstResult.outcome.code).toBe("HANDOFF_READY");
+      expect(firstResult.winner.id).toBe("remembered-analysis");
+
+      const secondResult = await runBroker(
+        {
+          ...request,
+          host: "codex",
+          capabilityQuery: {
+            ...request.capabilityQuery,
+            host: "codex"
+          }
+        },
+        {
+          brokerHomeDirectory: runtime.brokerHomeDirectory,
+          cacheFilePath: join(runtime.directory, "cache-second.json"),
+          hostCatalogFilePath: secondHostCatalogFilePath,
+          mcpRegistryFilePath,
+          currentHost: "codex",
+          now: new Date("2026-04-16T04:00:00.000Z")
+        }
+      );
+
+      expect(secondResult.ok).toBe(true);
+      expect(secondResult.outcome.code).toBe("HANDOFF_READY");
+      expect(secondResult.debug.cacheHit).toBe(false);
+      expect(secondResult.winner.id).toBe("remembered-analysis");
+    } finally {
+      await rm(runtime.directory, { recursive: true, force: true });
+    }
+  });
+
+  it("replays acquisition memory as a discovery source when current catalogs are empty", async () => {
+    const runtime = await createRuntimePaths();
+    const initialHostCatalogFilePath = join(runtime.directory, "memory-source-first-host.json");
+    const emptyHostCatalogFilePath = join(runtime.directory, "memory-source-empty-host.json");
+    const mcpRegistryFilePath = join(runtime.directory, "memory-source-empty-mcp.json");
+    const searchRoot = join(runtime.directory, "memory-source-search-root");
+    const rememberedPackageDirectory = join(searchRoot, "gstack");
+    const rememberedSkillDirectory = join(
+      rememberedPackageDirectory,
+      ".agents",
+      "skills",
+      "gstack-office-hours"
+    );
+    const request = {
+      requestText: "帮我做需求分析并产出设计文档",
+      host: "claude-code" as const,
+      capabilityQuery: {
+        kind: "capability_request" as const,
+        goal: "analyze a product requirement and produce a design doc",
+        host: "claude-code" as const,
+        requestText: "帮我做需求分析并产出设计文档",
+        jobFamilies: ["requirements_analysis"],
+        artifacts: ["design_doc"]
+      }
+    };
+
+    await writeFile(
+      initialHostCatalogFilePath,
+      JSON.stringify({
+        packages: [
+          {
+            packageId: "gstack",
+            label: "gstack",
+            installState: "available",
+            acquisition: "published_package",
+            probe: {
+              layouts: ["bundle_root_children", "nested_agent_skills"],
+              manifestNames: ["gstack"]
+            }
+          }
+        ],
+        skills: [
+          {
+            id: "remembered-analysis",
+            kind: "skill",
+            label: "Remembered Analysis",
+            intent: "capability_discovery_or_install",
+            package: {
+              packageId: "gstack"
+            },
+            leaf: {
+              capabilityId: "gstack.office-hours",
+              packageId: "gstack",
+              subskillId: "office-hours",
+              probe: {
+                manifestNames: ["office-hours"],
+                aliases: ["gstack-office-hours"]
+              }
+            },
+            query: {
+              jobFamilies: ["requirements_analysis"],
+              targetTypes: ["problem_statement", "text"],
+              artifacts: ["design_doc"],
+              examples: ["帮我做需求分析并产出设计文档"]
+            },
+            implementation: {
+              id: "gstack.office_hours",
+              type: "local_skill",
+              ownerSurface: "broker_owned_downstream"
+            },
+            sourceMetadata: {
+              skillName: "office-hours"
+            }
+          }
+        ]
+      }),
+      "utf8"
+    );
+    await writeFile(emptyHostCatalogFilePath, JSON.stringify({ skills: [] }), "utf8");
+    await writeFile(mcpRegistryFilePath, JSON.stringify({ servers: [] }), "utf8");
+
+    try {
+      const installRequired = await runBroker(request, {
+        brokerHomeDirectory: runtime.brokerHomeDirectory,
+        cacheFilePath: join(runtime.directory, "memory-source-install-required.json"),
+        hostCatalogFilePath: initialHostCatalogFilePath,
+        mcpRegistryFilePath,
+        packageSearchRoots: [searchRoot],
+        now: new Date("2026-04-16T05:00:00.000Z")
+      });
+
+      expect(installRequired.ok).toBe(false);
+      expect(installRequired.outcome.code).toBe("INSTALL_REQUIRED");
+
+      await mkdir(rememberedSkillDirectory, { recursive: true });
+      await writeFile(
+        join(rememberedPackageDirectory, "package.json"),
+        JSON.stringify({ name: "gstack", version: "0.13.8.0" }),
+        "utf8"
+      );
+      await writeFile(
+        join(rememberedSkillDirectory, "SKILL.md"),
+        "---\nname: office-hours\n---\n",
+        "utf8"
+      );
+
+      const verified = await runBroker(request, {
+        brokerHomeDirectory: runtime.brokerHomeDirectory,
+        cacheFilePath: join(runtime.directory, "memory-source-verified.json"),
+        hostCatalogFilePath: initialHostCatalogFilePath,
+        mcpRegistryFilePath,
+        packageSearchRoots: [searchRoot],
+        now: new Date("2026-04-16T05:05:00.000Z")
+      });
+
+      expect(verified.ok).toBe(true);
+      expect(verified.outcome.code).toBe("HANDOFF_READY");
+      expect(verified.winner.id).toBe("remembered-analysis");
+
+      const replayed = await runBroker(
+        {
+          ...request,
+          host: "codex",
+          capabilityQuery: {
+            ...request.capabilityQuery,
+            host: "codex"
+          }
+        },
+        {
+          brokerHomeDirectory: runtime.brokerHomeDirectory,
+          cacheFilePath: join(runtime.directory, "memory-source-replayed.json"),
+          hostCatalogFilePath: emptyHostCatalogFilePath,
+          mcpRegistryFilePath,
+          currentHost: "codex",
+          packageSearchRoots: [searchRoot],
+          now: new Date("2026-04-16T05:10:00.000Z")
+        }
+      );
+
+      expect(replayed.ok).toBe(true);
+      expect(replayed.outcome.code).toBe("HANDOFF_READY");
+      expect(replayed.debug.cacheHit).toBe(false);
+      expect(replayed.winner.id).toBe("remembered-analysis");
+      expect(replayed.winner.sourceMetadata).toMatchObject({
+        discoverySource: "acquisition_memory"
+      });
+    } finally {
+      await rm(runtime.directory, { recursive: true, force: true });
+    }
+  });
+
+  it("replays verified downstream manifests as a discovery source without cache or acquisition memory", async () => {
+    const runtime = await createRuntimePaths();
+    const initialHostCatalogFilePath = join(runtime.directory, "downstream-source-first-host.json");
+    const emptyHostCatalogFilePath = join(runtime.directory, "downstream-source-empty-host.json");
+    const mcpRegistryFilePath = join(runtime.directory, "downstream-source-empty-mcp.json");
+    const rememberedPackageDirectory = join(
+      runtime.brokerHomeDirectory,
+      "downstream",
+      "claude-code",
+      "skills",
+      "gstack"
+    );
+    const rememberedSkillDirectory = join(
+      rememberedPackageDirectory,
+      ".agents",
+      "skills",
+      "gstack-office-hours"
+    );
+    const request = {
+      requestText: "帮我做需求分析并产出设计文档",
+      host: "claude-code" as const,
+      capabilityQuery: {
+        kind: "capability_request" as const,
+        goal: "analyze a product requirement and produce a design doc",
+        host: "claude-code" as const,
+        requestText: "帮我做需求分析并产出设计文档",
+        jobFamilies: ["requirements_analysis"],
+        artifacts: ["design_doc"]
+      }
+    };
+
+    await writeFile(
+      initialHostCatalogFilePath,
+      JSON.stringify({
+        packages: [
+          {
+            packageId: "gstack",
+            label: "gstack",
+            installState: "available",
+            acquisition: "published_package",
+            probe: {
+              layouts: ["bundle_root_children", "nested_agent_skills"],
+              manifestNames: ["gstack"]
+            }
+          }
+        ],
+        skills: [
+          {
+            id: "remembered-analysis",
+            kind: "skill",
+            label: "Remembered Analysis",
+            intent: "capability_discovery_or_install",
+            package: {
+              packageId: "gstack"
+            },
+            leaf: {
+              capabilityId: "gstack.office-hours",
+              packageId: "gstack",
+              subskillId: "office-hours",
+              probe: {
+                manifestNames: ["office-hours"],
+                aliases: ["gstack-office-hours"]
+              }
+            },
+            query: {
+              jobFamilies: ["requirements_analysis"],
+              targetTypes: ["problem_statement", "text"],
+              artifacts: ["design_doc"],
+              examples: ["帮我做需求分析并产出设计文档"]
+            },
+            implementation: {
+              id: "gstack.office_hours",
+              type: "local_skill",
+              ownerSurface: "broker_owned_downstream"
+            },
+            sourceMetadata: {
+              skillName: "office-hours"
+            }
+          }
+        ]
+      }),
+      "utf8"
+    );
+    await writeFile(emptyHostCatalogFilePath, JSON.stringify({ skills: [] }), "utf8");
+    await writeFile(mcpRegistryFilePath, JSON.stringify({ servers: [] }), "utf8");
+    await mkdir(rememberedSkillDirectory, { recursive: true });
+    await writeFile(
+      join(rememberedPackageDirectory, "package.json"),
+      JSON.stringify({ name: "gstack", version: "0.13.8.0" }),
+      "utf8"
+    );
+    await writeFile(
+      join(rememberedSkillDirectory, "SKILL.md"),
+      "---\nname: office-hours\n---\n",
+      "utf8"
+    );
+
+    try {
+      const initial = await runBroker(request, {
+        brokerHomeDirectory: runtime.brokerHomeDirectory,
+        cacheFilePath: join(runtime.directory, "downstream-source-initial.json"),
+        hostCatalogFilePath: initialHostCatalogFilePath,
+        mcpRegistryFilePath,
+        now: new Date("2026-04-16T05:20:00.000Z")
+      });
+
+      expect(initial.ok).toBe(true);
+      expect(initial.outcome.code).toBe("HANDOFF_READY");
+      expect(initial.winner.id).toBe("remembered-analysis");
+
+      const manifestContents = JSON.parse(
+        await readFile(join(rememberedSkillDirectory, ".skills-broker.json"), "utf8")
+      ) as {
+        verifiedCandidate?: {
+          id?: string;
+        };
+      };
+      expect(manifestContents.verifiedCandidate?.id).toBe("remembered-analysis");
+
+      await rm(acquisitionMemoryFilePath(runtime.brokerHomeDirectory), { force: true });
+
+      const replayed = await runBroker(request, {
+        brokerHomeDirectory: runtime.brokerHomeDirectory,
+        cacheFilePath: join(runtime.directory, "downstream-source-replayed.json"),
+        hostCatalogFilePath: emptyHostCatalogFilePath,
+        mcpRegistryFilePath,
+        now: new Date("2026-04-16T05:25:00.000Z")
+      });
+
+      expect(replayed.ok).toBe(true);
+      expect(replayed.outcome.code).toBe("HANDOFF_READY");
+      expect(replayed.debug.cacheHit).toBe(false);
+      expect(replayed.winner.id).toBe("remembered-analysis");
+      expect(replayed.winner.sourceMetadata).toMatchObject({
+        discoverySource: "downstream_manifest",
+        verifiedDownstreamHost: "claude-code"
+      });
+    } finally {
+      await rm(runtime.directory, { recursive: true, force: true });
+    }
+  });
+
+  it("replays verified downstream manifests across hosts as install hints without acquisition memory", async () => {
+    const runtime = await createRuntimePaths();
+    const initialHostCatalogFilePath = join(runtime.directory, "cross-host-downstream-first-host.json");
+    const emptyHostCatalogFilePath = join(runtime.directory, "cross-host-downstream-empty-host.json");
+    const mcpRegistryFilePath = join(runtime.directory, "cross-host-downstream-empty-mcp.json");
+    const isolatedSearchRoot = join(runtime.directory, "cross-host-downstream-search-root");
+    const rememberedPackageDirectory = join(
+      runtime.brokerHomeDirectory,
+      "downstream",
+      "claude-code",
+      "skills",
+      "gstack"
+    );
+    const rememberedSkillDirectory = join(
+      rememberedPackageDirectory,
+      ".agents",
+      "skills",
+      "gstack-office-hours"
+    );
+    const request = {
+      requestText: "帮我做需求分析并产出设计文档",
+      host: "claude-code" as const,
+      capabilityQuery: {
+        kind: "capability_request" as const,
+        goal: "analyze a product requirement and produce a design doc",
+        host: "claude-code" as const,
+        requestText: "帮我做需求分析并产出设计文档",
+        jobFamilies: ["requirements_analysis"],
+        artifacts: ["design_doc"]
+      }
+    };
+
+    await writeFile(
+      initialHostCatalogFilePath,
+      JSON.stringify({
+        packages: [
+          {
+            packageId: "gstack",
+            label: "gstack",
+            installState: "available",
+            acquisition: "published_package",
+            probe: {
+              layouts: ["bundle_root_children", "nested_agent_skills"],
+              manifestNames: ["gstack"]
+            }
+          }
+        ],
+        skills: [
+          {
+            id: "remembered-analysis",
+            kind: "skill",
+            label: "Remembered Analysis",
+            intent: "capability_discovery_or_install",
+            package: {
+              packageId: "gstack"
+            },
+            leaf: {
+              capabilityId: "gstack.office-hours",
+              packageId: "gstack",
+              subskillId: "office-hours",
+              probe: {
+                manifestNames: ["office-hours"],
+                aliases: ["gstack-office-hours"]
+              }
+            },
+            query: {
+              jobFamilies: ["requirements_analysis"],
+              targetTypes: ["problem_statement", "text"],
+              artifacts: ["design_doc"],
+              examples: ["帮我做需求分析并产出设计文档"]
+            },
+            implementation: {
+              id: "gstack.office_hours",
+              type: "local_skill",
+              ownerSurface: "broker_owned_downstream"
+            },
+            sourceMetadata: {
+              skillName: "office-hours"
+            }
+          }
+        ]
+      }),
+      "utf8"
+    );
+    await writeFile(emptyHostCatalogFilePath, JSON.stringify({ skills: [] }), "utf8");
+    await writeFile(mcpRegistryFilePath, JSON.stringify({ servers: [] }), "utf8");
+    await mkdir(rememberedSkillDirectory, { recursive: true });
+    await writeFile(
+      join(rememberedPackageDirectory, "package.json"),
+      JSON.stringify({ name: "gstack", version: "0.13.8.0" }),
+      "utf8"
+    );
+    await writeFile(
+      join(rememberedSkillDirectory, "SKILL.md"),
+      "---\nname: office-hours\n---\n",
+      "utf8"
+    );
+
+    try {
+      const initial = await runBroker(request, {
+        brokerHomeDirectory: runtime.brokerHomeDirectory,
+        cacheFilePath: join(runtime.directory, "cross-host-downstream-initial.json"),
+        hostCatalogFilePath: initialHostCatalogFilePath,
+        mcpRegistryFilePath,
+        now: new Date("2026-04-16T05:30:00.000Z")
+      });
+
+      expect(initial.ok).toBe(true);
+      expect(initial.outcome.code).toBe("HANDOFF_READY");
+      expect(initial.winner.id).toBe("remembered-analysis");
+
+      await rm(acquisitionMemoryFilePath(runtime.brokerHomeDirectory), { force: true });
+
+      const replayed = await runBroker(
+        {
+          ...request,
+          host: "codex",
+          capabilityQuery: {
+            ...request.capabilityQuery,
+            host: "codex"
+          }
+        },
+        {
+          brokerHomeDirectory: runtime.brokerHomeDirectory,
+          cacheFilePath: join(runtime.directory, "cross-host-downstream-replayed.json"),
+          hostCatalogFilePath: emptyHostCatalogFilePath,
+          mcpRegistryFilePath,
+          currentHost: "codex",
+          packageSearchRoots: [isolatedSearchRoot],
+          now: new Date("2026-04-16T05:35:00.000Z")
+        }
+      );
+
+      expect(replayed.ok).toBe(false);
+      expect(replayed.outcome.code).toBe("INSTALL_REQUIRED");
+      expect(replayed.outcome.hostAction).toBe("offer_package_install");
+      expect(replayed.acquisition).toMatchObject({
+        reason: "package_not_installed",
+        package: {
+          packageId: "gstack",
+          installState: "available",
+          acquisition: "published_package"
+        },
+        leafCapability: {
+          capabilityId: "gstack.office-hours",
+          subskillId: "office-hours"
+        }
+      });
+      expect(replayed.trace).toMatchObject({
+        host: "codex",
+        resultCode: "INSTALL_REQUIRED",
+        winnerId: "remembered-analysis",
+        winnerPackageId: "gstack",
+        selectedCapabilityId: "gstack.office-hours",
+        selectedPackageInstallState: "available"
+      });
+    } finally {
+      await rm(runtime.directory, { recursive: true, force: true });
+    }
+  });
+
+  it("proves install, verify, and reuse across hosts for a published package", async () => {
+    const runtime = await createRuntimePaths();
+    const firstHostCatalogFilePath = join(runtime.directory, "published-first-host.json");
+    const secondHostCatalogFilePath = join(runtime.directory, "published-second-host.json");
+    const mcpRegistryFilePath = join(runtime.directory, "published-empty-mcp.json");
+    const searchRoot = join(runtime.directory, "published-search-root");
+    const rememberedPackageDirectory = join(searchRoot, "gstack");
+    const rememberedSkillDirectory = join(
+      rememberedPackageDirectory,
+      ".agents",
+      "skills",
+      "gstack-office-hours"
+    );
+    const challengerPackageDirectory = join(searchRoot, "zzz");
+    const challengerSkillDirectory = join(
+      challengerPackageDirectory,
+      ".agents",
+      "skills",
+      "zzz-analysis"
+    );
+    const request = {
+      requestText: "帮我做需求分析并产出设计文档",
+      host: "claude-code" as const,
+      capabilityQuery: {
+        kind: "capability_request" as const,
+        goal: "analyze a product requirement and produce a design doc",
+        host: "claude-code" as const,
+        requestText: "帮我做需求分析并产出设计文档",
+        jobFamilies: ["requirements_analysis"],
+        artifacts: ["design_doc"]
+      }
+    };
+
+    await writeFile(
+      firstHostCatalogFilePath,
+      JSON.stringify({
+        packages: [
+          {
+            packageId: "gstack",
+            label: "gstack",
+            installState: "available",
+            acquisition: "published_package",
+            probe: {
+              layouts: ["bundle_root_children", "nested_agent_skills"],
+              manifestNames: ["gstack"]
+            }
+          }
+        ],
+        skills: [
+          {
+            id: "remembered-analysis",
+            kind: "skill",
+            label: "Remembered Analysis",
+            intent: "capability_discovery_or_install",
+            package: {
+              packageId: "gstack"
+            },
+            leaf: {
+              capabilityId: "gstack.office-hours",
+              packageId: "gstack",
+              subskillId: "office-hours",
+              probe: {
+                manifestNames: ["office-hours"],
+                aliases: ["gstack-office-hours"]
+              }
+            },
+            query: {
+              jobFamilies: ["requirements_analysis"],
+              targetTypes: ["problem_statement", "text"],
+              artifacts: ["design_doc"],
+              examples: ["帮我做需求分析并产出设计文档"]
+            },
+            implementation: {
+              id: "gstack.office_hours",
+              type: "local_skill",
+              ownerSurface: "broker_owned_downstream"
+            },
+            sourceMetadata: {
+              skillName: "office-hours"
+            }
+          }
+        ]
+      }),
+      "utf8"
+    );
+    await writeFile(
+      secondHostCatalogFilePath,
+      JSON.stringify({
+        packages: [
+          {
+            packageId: "gstack",
+            label: "gstack",
+            installState: "available",
+            acquisition: "published_package",
+            probe: {
+              layouts: ["bundle_root_children", "nested_agent_skills"],
+              manifestNames: ["gstack"]
+            }
+          },
+          {
+            packageId: "zzz",
+            label: "zzz",
+            installState: "available",
+            acquisition: "published_package",
+            probe: {
+              layouts: ["bundle_root_children", "nested_agent_skills"],
+              manifestNames: ["zzz"]
+            }
+          }
+        ],
+        skills: [
+          {
+            id: "remembered-analysis",
+            kind: "skill",
+            label: "Remembered Analysis",
+            intent: "capability_discovery_or_install",
+            package: {
+              packageId: "gstack"
+            },
+            leaf: {
+              capabilityId: "gstack.office-hours",
+              packageId: "gstack",
+              subskillId: "office-hours",
+              probe: {
+                manifestNames: ["office-hours"],
+                aliases: ["gstack-office-hours"]
+              }
+            },
+            query: {
+              jobFamilies: ["requirements_analysis"],
+              targetTypes: ["problem_statement", "text"],
+              artifacts: ["design_doc"],
+              examples: ["帮我做需求分析并产出设计文档"]
+            },
+            implementation: {
+              id: "gstack.office_hours",
+              type: "local_skill",
+              ownerSurface: "broker_owned_downstream"
+            },
+            sourceMetadata: {
+              skillName: "office-hours"
+            }
+          },
+          {
+            id: "aaa-challenger",
+            kind: "skill",
+            label: "AAA Challenger",
+            intent: "capability_discovery_or_install",
+            package: {
+              packageId: "zzz"
+            },
+            leaf: {
+              capabilityId: "zzz.analysis",
+              packageId: "zzz",
+              subskillId: "analysis",
+              probe: {
+                manifestNames: ["analysis"],
+                aliases: ["zzz-analysis"]
+              }
+            },
+            query: {
+              jobFamilies: ["requirements_analysis"],
+              targetTypes: ["problem_statement", "text"],
+              artifacts: ["design_doc"],
+              examples: ["帮我做需求分析并产出设计文档"]
+            },
+            implementation: {
+              id: "zzz.analysis",
+              type: "local_skill",
+              ownerSurface: "broker_owned_downstream"
+            },
+            sourceMetadata: {
+              skillName: "analysis"
+            }
+          }
+        ]
+      }),
+      "utf8"
+    );
+    await writeFile(mcpRegistryFilePath, JSON.stringify({ servers: [] }), "utf8");
+
+    try {
+      const installRequired = await runBroker(request, {
+        brokerHomeDirectory: runtime.brokerHomeDirectory,
+        cacheFilePath: join(runtime.directory, "published-install-required.json"),
+        hostCatalogFilePath: firstHostCatalogFilePath,
+        mcpRegistryFilePath,
+        packageSearchRoots: [searchRoot],
+        now: new Date("2026-04-16T06:00:00.000Z")
+      });
+
+      expect(installRequired.ok).toBe(false);
+      expect(installRequired.outcome.code).toBe("INSTALL_REQUIRED");
+      expect(installRequired.acquisition?.package.acquisition).toBe("published_package");
+
+      await mkdir(rememberedSkillDirectory, { recursive: true });
+      await mkdir(challengerSkillDirectory, { recursive: true });
+      await writeFile(
+        join(rememberedPackageDirectory, "package.json"),
+        JSON.stringify({ name: "gstack", version: "0.13.8.0" }),
+        "utf8"
+      );
+      await writeFile(
+        join(challengerPackageDirectory, "package.json"),
+        JSON.stringify({ name: "zzz", version: "1.0.0" }),
+        "utf8"
+      );
+      await writeFile(
+        join(rememberedSkillDirectory, "SKILL.md"),
+        "---\nname: office-hours\n---\n",
+        "utf8"
+      );
+      await writeFile(
+        join(challengerSkillDirectory, "SKILL.md"),
+        "---\nname: analysis\n---\n",
+        "utf8"
+      );
+
+      const verified = await runBroker(request, {
+        brokerHomeDirectory: runtime.brokerHomeDirectory,
+        cacheFilePath: join(runtime.directory, "published-verified.json"),
+        hostCatalogFilePath: firstHostCatalogFilePath,
+        mcpRegistryFilePath,
+        packageSearchRoots: [searchRoot],
+        now: new Date("2026-04-16T06:05:00.000Z")
+      });
+
+      expect(verified.ok).toBe(true);
+      expect(verified.outcome.code).toBe("HANDOFF_READY");
+      expect(verified.winner.id).toBe("remembered-analysis");
+      expect(verified.handoff.chosenPackage.installState).toBe("installed");
+
+      const reused = await runBroker(
+        {
+          ...request,
+          host: "codex",
+          capabilityQuery: {
+            ...request.capabilityQuery,
+            host: "codex"
+          }
+        },
+        {
+          brokerHomeDirectory: runtime.brokerHomeDirectory,
+          cacheFilePath: join(runtime.directory, "published-reused.json"),
+          hostCatalogFilePath: secondHostCatalogFilePath,
+          mcpRegistryFilePath,
+          currentHost: "codex",
+          packageSearchRoots: [searchRoot],
+          now: new Date("2026-04-16T06:10:00.000Z")
+        }
+      );
+
+      expect(reused.ok).toBe(true);
+      expect(reused.outcome.code).toBe("HANDOFF_READY");
+      expect(reused.debug.cacheHit).toBe(false);
+      expect(reused.winner.id).toBe("remembered-analysis");
+    } finally {
+      await rm(runtime.directory, { recursive: true, force: true });
+    }
+  });
+
+  it("proves install, verify, and reuse across hosts for an MCP bundle", async () => {
+    const runtime = await createRuntimePaths();
+    const hostCatalogFilePath = join(runtime.directory, "mcp-proof-host.json");
+    const firstMcpRegistryFilePath = join(runtime.directory, "mcp-proof-first.json");
+    const secondMcpRegistryFilePath = join(runtime.directory, "mcp-proof-second.json");
+    const searchRoot = join(runtime.directory, "mcp-search-root");
+    const rememberedSkillDirectory = join(searchRoot, "website-qa");
+    const challengerSkillDirectory = join(searchRoot, "aaa-website-qa");
+    const request = {
+      requestText: "测下这个网站的质量",
+      host: "claude-code" as const,
+      capabilityQuery: {
+        kind: "capability_request" as const,
+        goal: "qa a website",
+        host: "claude-code" as const,
+        requestText: "测下这个网站的质量",
+        jobFamilies: ["quality_assurance"],
+        targets: [
+          {
+            type: "website" as const,
+            value: "https://example.com"
+          }
+        ],
+        artifacts: ["qa_report"]
+      }
+    };
+
+    await writeFile(hostCatalogFilePath, JSON.stringify({ skills: [] }), "utf8");
+    await writeFile(
+      firstMcpRegistryFilePath,
+      JSON.stringify({
+        servers: [
+          {
+            server: {
+              name: "io.example/website-qa",
+              title: "Website QA",
+              description: "QA websites, audit quality, and produce a qa report."
+            }
+          }
+        ]
+      }),
+      "utf8"
+    );
+    await writeFile(
+      secondMcpRegistryFilePath,
+      JSON.stringify({
+        servers: [
+          {
+            server: {
+              name: "io.example/website-qa",
+              title: "Website QA",
+              description: "QA websites, audit quality, and produce a qa report."
+            }
+          },
+          {
+            server: {
+              name: "io.example/aaa-website-qa",
+              title: "AAA Website QA",
+              description: "QA websites, audit quality, and produce a qa report."
+            }
+          }
+        ]
+      }),
+      "utf8"
+    );
+
+    try {
+      const installRequired = await runBroker(request, {
+        brokerHomeDirectory: runtime.brokerHomeDirectory,
+        cacheFilePath: join(runtime.directory, "mcp-install-required.json"),
+        hostCatalogFilePath,
+        mcpRegistryFilePath: firstMcpRegistryFilePath,
+        packageSearchRoots: [searchRoot],
+        now: new Date("2026-04-16T07:00:00.000Z")
+      });
+
+      expect(installRequired.ok).toBe(false);
+      expect(installRequired.outcome.code).toBe("INSTALL_REQUIRED");
+      expect(installRequired.acquisition?.package.acquisition).toBe("mcp_bundle");
+
+      await mkdir(rememberedSkillDirectory, { recursive: true });
+      await mkdir(challengerSkillDirectory, { recursive: true });
+      await writeFile(
+        join(rememberedSkillDirectory, "SKILL.md"),
+        "---\nname: Website QA\n---\n",
+        "utf8"
+      );
+      await writeFile(
+        join(challengerSkillDirectory, "SKILL.md"),
+        "---\nname: AAA Website QA\n---\n",
+        "utf8"
+      );
+
+      const verified = await runBroker(request, {
+        brokerHomeDirectory: runtime.brokerHomeDirectory,
+        cacheFilePath: join(runtime.directory, "mcp-verified.json"),
+        hostCatalogFilePath,
+        mcpRegistryFilePath: firstMcpRegistryFilePath,
+        packageSearchRoots: [searchRoot],
+        now: new Date("2026-04-16T07:05:00.000Z")
+      });
+
+      expect(verified.ok).toBe(true);
+      expect(verified.outcome.code).toBe("HANDOFF_READY");
+      expect(verified.winner.id).toBe("io.example/website-qa");
+      expect(verified.handoff.chosenPackage.installState).toBe("installed");
+
+      const reused = await runBroker(
+        {
+          ...request,
+          host: "codex",
+          capabilityQuery: {
+            ...request.capabilityQuery,
+            host: "codex"
+          }
+        },
+        {
+          brokerHomeDirectory: runtime.brokerHomeDirectory,
+          cacheFilePath: join(runtime.directory, "mcp-reused.json"),
+          hostCatalogFilePath,
+          mcpRegistryFilePath: secondMcpRegistryFilePath,
+          currentHost: "codex",
+          packageSearchRoots: [searchRoot],
+          now: new Date("2026-04-16T07:10:00.000Z")
+        }
+      );
+
+      expect(reused.ok).toBe(true);
+      expect(reused.outcome.code).toBe("HANDOFF_READY");
+      expect(reused.debug.cacheHit).toBe(false);
+      expect(reused.winner.id).toBe("io.example/website-qa");
+    } finally {
+      await rm(runtime.directory, { recursive: true, force: true });
+    }
+  });
+
   it("returns NO_CANDIDATE when local sources cannot match the request", async () => {
     const runtime = await createRuntimePaths();
     const emptyHostCatalogFilePath = join(runtime.directory, "empty-host.json");
@@ -300,7 +1326,7 @@ describe("runBroker", () => {
       expect(result.ok).toBe(false);
       expect(result.outcome.code).toBe("NO_CANDIDATE");
       expect(result.outcome.hostAction).toBe("offer_capability_discovery");
-      expect(result.outcome.message).toContain("Offer capability discovery or install help");
+      expect(result.outcome.message).toContain("Offer capability discovery help");
       expect(result.error.message).toContain("No candidate");
       expect(result.trace).toMatchObject({
         host: "claude-code",
@@ -674,8 +1700,8 @@ describe("runBroker", () => {
       });
 
       expect(result.ok).toBe(false);
-      expect(result.outcome.code).toBe("NO_CANDIDATE");
-      expect(result.outcome.hostAction).toBe("offer_capability_discovery");
+      expect(result.outcome.code).toBe("INSTALL_REQUIRED");
+      expect(result.outcome.hostAction).toBe("offer_package_install");
       expect(result.acquisition).toMatchObject({
         reason: "package_not_installed",
         package: {
@@ -687,6 +1713,12 @@ describe("runBroker", () => {
           capabilityId: "io.example/url-to-markdown",
           packageId: "io.example/url-to-markdown",
           subskillId: "url-to-markdown"
+        },
+        installPlan: {
+          method: "mcp_registry",
+          retry: {
+            mode: "rerun_request"
+          }
         }
       });
     } finally {
@@ -754,7 +1786,7 @@ describe("runBroker", () => {
       );
 
       expect(result.ok).toBe(false);
-      expect(result.outcome.code).toBe("NO_CANDIDATE");
+      expect(result.outcome.code).toBe("INSTALL_REQUIRED");
       expect(result.acquisition).toMatchObject({
         reason: "package_not_installed",
         package: {
@@ -766,11 +1798,17 @@ describe("runBroker", () => {
           capabilityId: "io.example/website-qa",
           packageId: "io.example/website-qa",
           subskillId: "website-qa"
+        },
+        installPlan: {
+          method: "mcp_registry",
+          retry: {
+            mode: "rerun_request"
+          }
         }
       });
       expect(result.trace).toMatchObject({
         hostDecision: "broker_first",
-        resultCode: "NO_CANDIDATE",
+        resultCode: "INSTALL_REQUIRED",
         normalizedBy: "structured_query",
         requestSurface: "structured_query",
         winnerPackageId: "io.example/website-qa"
@@ -780,7 +1818,7 @@ describe("runBroker", () => {
     }
   });
 
-  it("returns a package-aware NO_CANDIDATE when the best leaf belongs to an uninstalled package", async () => {
+  it("returns INSTALL_REQUIRED when the best leaf belongs to an uninstalled package", async () => {
     const runtime = await createRuntimePaths();
     const hostCatalogFilePath = join(runtime.directory, "host.json");
     const mcpRegistryFilePath = join(runtime.directory, "mcp.json");
@@ -860,8 +1898,8 @@ describe("runBroker", () => {
       );
 
       expect(result.ok).toBe(false);
-      expect(result.outcome.code).toBe("NO_CANDIDATE");
-      expect(result.outcome.hostAction).toBe("offer_capability_discovery");
+      expect(result.outcome.code).toBe("INSTALL_REQUIRED");
+      expect(result.outcome.hostAction).toBe("offer_package_install");
       expect(result.acquisition).toMatchObject({
         reason: "package_not_installed",
         package: {
@@ -872,6 +1910,12 @@ describe("runBroker", () => {
         leafCapability: {
           capabilityId: "gstack.office-hours",
           subskillId: "office-hours"
+        },
+        installPlan: {
+          method: "package_manager",
+          retry: {
+            mode: "rerun_request"
+          }
         }
       });
     } finally {
@@ -1080,7 +2124,7 @@ describe("runBroker", () => {
       );
 
       expect(result.ok).toBe(false);
-      expect(result.outcome.code).toBe("NO_CANDIDATE");
+      expect(result.outcome.code).toBe("INSTALL_REQUIRED");
       expect(result.acquisition).toMatchObject({
         reason: "package_not_installed",
         package: {
@@ -1089,6 +2133,12 @@ describe("runBroker", () => {
         },
         leafCapability: {
           capabilityId: "gstack.office-hours"
+        },
+        installPlan: {
+          method: "package_manager",
+          retry: {
+            mode: "rerun_request"
+          }
         }
       });
     } finally {
