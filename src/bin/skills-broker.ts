@@ -30,6 +30,7 @@ export type LifecycleCliResult = {
   command: ValidCommand;
   dryRun: boolean;
   purgeSharedHome: boolean;
+  resetAcquisitionMemory: boolean;
   repairHostSurface: boolean;
   clearManualRecovery: boolean;
   refreshRemote: boolean;
@@ -51,6 +52,7 @@ export async function runLifecycleCli(argv: string[]): Promise<LifecycleCliResul
   let commandInput: string | undefined;
   let dryRun = false;
   let purgeSharedHome = false;
+  let resetAcquisitionMemory = false;
   let repairHostSurface = false;
   let clearManualRecovery = false;
   let refreshRemote = false;
@@ -84,6 +86,12 @@ export async function runLifecycleCli(argv: string[]): Promise<LifecycleCliResul
 
     if (arg === "--purge" || arg === "--all") {
       purgeSharedHome = true;
+      seenFlags.add(arg);
+      continue;
+    }
+
+    if (arg === "--reset-acquisition-memory") {
+      resetAcquisitionMemory = true;
       seenFlags.add(arg);
       continue;
     }
@@ -236,6 +244,7 @@ export async function runLifecycleCli(argv: string[]): Promise<LifecycleCliResul
       "--broker-home",
       "--claude-dir",
       "--codex-dir",
+      "--reset-acquisition-memory",
       "--purge",
       "--all"
     ])
@@ -249,6 +258,12 @@ export async function runLifecycleCli(argv: string[]): Promise<LifecycleCliResul
 
   if (repairHostSurface && clearManualRecovery) {
     throw new Error("Cannot combine --repair-host-surface with --clear-manual-recovery");
+  }
+
+  if (resetAcquisitionMemory && purgeSharedHome) {
+    throw new Error(
+      "Cannot combine --reset-acquisition-memory with --purge or --all"
+    );
   }
 
   if (clearManualRecovery) {
@@ -276,6 +291,7 @@ export async function runLifecycleCli(argv: string[]): Promise<LifecycleCliResul
     command: candidate,
     dryRun,
     purgeSharedHome,
+    resetAcquisitionMemory,
     repairHostSurface,
     clearManualRecovery,
     refreshRemote,
@@ -382,7 +398,8 @@ async function main(argv = process.argv.slice(2)) {
         result.codexDirOverride === undefined
           ? undefined
           : paths.codexInstallDirectory,
-      purgeSharedHome: result.purgeSharedHome
+      purgeSharedHome: result.purgeSharedHome,
+      resetAcquisitionMemory: result.resetAcquisitionMemory
     });
 
     process.stdout.write(`${formatLifecycleResult(lifecycleResult, result.outputMode)}\n`);
@@ -398,6 +415,9 @@ async function main(argv = process.argv.slice(2)) {
     }
     if (result.purgeSharedHome) {
       pieces.push("purge");
+    }
+    if (result.resetAcquisitionMemory) {
+      pieces.push("reset-acquisition-memory");
     }
     if (result.repairHostSurface) {
       pieces.push("repair-host-surface");

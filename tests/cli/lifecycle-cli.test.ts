@@ -74,6 +74,7 @@ describe("lifecycle cli", () => {
     expect(result.command).toBe("remove");
     expect(result.dryRun).toBe(false);
     expect(result.purgeSharedHome).toBe(false);
+    expect(result.resetAcquisitionMemory).toBe(false);
     expect(result.outputMode).toBe("text");
   });
 
@@ -82,6 +83,14 @@ describe("lifecycle cli", () => {
 
     expect(result.command).toBe("remove");
     expect(result.purgeSharedHome).toBe(true);
+  });
+
+  it("supports scoped acquisition-memory reset on remove", async () => {
+    const result = await runLifecycleCli(["remove", "--reset-acquisition-memory"]);
+
+    expect(result.command).toBe("remove");
+    expect(result.resetAcquisitionMemory).toBe(true);
+    expect(result.purgeSharedHome).toBe(false);
   });
 
   it("recognizes --repair-host-surface for update", async () => {
@@ -558,7 +567,8 @@ describe("lifecycle cli", () => {
       expect(result.command).toBe("remove");
       expect(result.sharedHome).toEqual({
         path: brokerHomeDirectory,
-        status: "preserved"
+        status: "preserved",
+        acquisitionMemory: "preserved"
       });
       expect(result.hosts).toContainEqual({
         name: "codex",
@@ -601,9 +611,60 @@ describe("lifecycle cli", () => {
       expect(result.command).toBe("remove");
       expect(result.sharedHome).toEqual({
         path: brokerHomeDirectory,
-        status: "purged"
+        status: "purged",
+        acquisitionMemory: "already_absent"
       });
       await expect(access(brokerHomeDirectory)).rejects.toThrow();
+    } finally {
+      await rm(runtimeDirectory, { recursive: true, force: true });
+    }
+  });
+
+  it("clears acquisition memory without purging shared home when requested", async () => {
+    const scriptPath = resolve("src/bin/skills-broker.ts");
+    const runtimeDirectory = await mkdtemp(resolve(tmpdir(), "skills-broker-cli-remove-memory-"));
+    const brokerHomeDirectory = resolve(runtimeDirectory, ".skills-broker");
+    const memoryPath = resolve(brokerHomeDirectory, "state", "acquisition-memory.json");
+
+    try {
+      await installSharedBrokerHome({
+        brokerHomeDirectory,
+        projectRoot: process.cwd()
+      });
+      await writeFile(
+        memoryPath,
+        JSON.stringify({
+          version: "2026-04-16",
+          entries: []
+        }),
+        "utf8"
+      );
+
+      const { stdout } = await execFileAsync("node", [
+        "--loader",
+        tsNodeLoaderPath,
+        scriptPath,
+        "remove",
+        "--json",
+        "--reset-acquisition-memory",
+        "--broker-home",
+        brokerHomeDirectory
+      ], {
+        env: {
+          ...process.env,
+          HOME: runtimeDirectory
+        },
+        encoding: "utf8"
+      });
+
+      const result = JSON.parse(stdout.trim());
+      expect(result.sharedHome).toEqual({
+        path: brokerHomeDirectory,
+        status: "preserved",
+        acquisitionMemory: "cleared"
+      });
+      await expect(access(memoryPath)).rejects.toThrow();
+      await expect(access(brokerHomeDirectory)).resolves.toBeUndefined();
     } finally {
       await rm(runtimeDirectory, { recursive: true, force: true });
     }
@@ -691,6 +752,14 @@ describe("lifecycle cli", () => {
     );
     await expect(runLifecycleCli(["remove", "--repo-root", "/tmp/repo"])).rejects.toThrow(
       "Flag --repo-root is not valid for remove"
+    );
+  });
+
+  it("rejects combining acquisition-memory reset with purge", async () => {
+    await expect(
+      runLifecycleCli(["remove", "--reset-acquisition-memory", "--purge"])
+    ).rejects.toThrow(
+      "Cannot combine --reset-acquisition-memory with --purge or --all"
     );
   });
 

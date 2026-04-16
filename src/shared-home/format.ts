@@ -50,6 +50,9 @@ export function formatLifecycleResult(
       lines.push(
         `Routing metrics (last ${result.routingMetrics.windowDays}d): ${result.routingMetrics.observed} traces, ${result.routingMetrics.syntheticHostSkips} host skips`
       );
+      lines.push(
+        `Acquisition routing: true_no_candidate=${result.routingMetrics.acquisition.trueNoCandidate}, install_required=${result.routingMetrics.acquisition.installRequired}`
+      );
 
       for (const contract of result.routingMetrics.contracts) {
         lines.push(
@@ -63,6 +66,14 @@ export function formatLifecycleResult(
         );
       }
     }
+    lines.push(
+      `Acquisition memory: ${result.acquisitionMemory.exists ? "present" : "missing"}, entries=${result.acquisitionMemory.entries}, successful_routes=${result.acquisitionMemory.successfulRoutes}, first_reuse_after_install=${result.acquisitionMemory.firstReuseRecorded}, cross_host_reuse=${result.acquisitionMemory.crossHostReuse}`
+    );
+    lines.push(
+      `Verified downstream manifests: total=${result.verifiedDownstreamManifests.manifests}, ${result.verifiedDownstreamManifests.hosts
+        .map((host) => `${host.name}=${host.manifests}`)
+        .join(", ")}`
+    );
 
     lines.push("");
     if (result.brokerFirstGate.skipped) {
@@ -194,7 +205,8 @@ export function formatLifecycleResult(
       "skills-broker removed",
       "",
       `Shared home: ${result.sharedHome.path}`,
-      `Shared home status: ${result.sharedHome.status}`
+      `Shared home status: ${result.sharedHome.status}`,
+      `Acquisition memory: ${result.sharedHome.acquisitionMemory}`
     ];
 
     for (const host of result.hosts) {
