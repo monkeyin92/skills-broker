@@ -68,7 +68,8 @@ describe("Claude Code smoke", () => {
         expect(skillContents).toContain("structured `capabilityQuery`");
         expect(skillContents).toContain("If the broker returns `UNSUPPORTED_REQUEST`, continue normally.");
         expect(skillContents).toContain("If the broker returns `AMBIGUOUS_REQUEST`, ask a clarifying question.");
-        expect(skillContents).toContain("If the broker returns `NO_CANDIDATE`, offer capability discovery or install help.");
+        expect(skillContents).toContain("If the broker returns `NO_CANDIDATE`, offer capability discovery help.");
+        expect(skillContents).toContain("If the broker returns `INSTALL_REQUIRED`, offer package install help using the broker-provided install plan.");
         expect(skillContents).toContain("If the broker returns `PREPARE_FAILED`, explain the failure clearly");
         expect(skillContents).toContain("../../bin/run-broker");
 

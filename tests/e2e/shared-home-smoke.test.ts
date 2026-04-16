@@ -134,7 +134,8 @@ describe("shared broker home smoke", () => {
         expect(codexSkillContents).toContain("do not pick a package, workflow family, skill, or MCP at the host layer");
         expect(codexSkillContents).toContain("If the broker returns `UNSUPPORTED_REQUEST`, continue normally.");
         expect(codexSkillContents).toContain("If the broker returns `AMBIGUOUS_REQUEST`, ask a clarifying question.");
-        expect(codexSkillContents).toContain("If the broker returns `NO_CANDIDATE`, offer capability discovery or install help.");
+        expect(codexSkillContents).toContain("If the broker returns `NO_CANDIDATE`, offer capability discovery help.");
+        expect(codexSkillContents).toContain("If the broker returns `INSTALL_REQUIRED`, offer package install help using the broker-provided install plan.");
         expect(codexSkillContents).toContain("If the broker returns `PREPARE_FAILED`, explain the failure clearly");
 
         const claudeResult = await runClaudeCodeAdapter(

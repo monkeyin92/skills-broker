@@ -46,6 +46,50 @@ function createWinner(): CapabilityCard {
   };
 }
 
+function createInstalledMcpWinner(): CapabilityCard {
+  return {
+    id: "io.example/website-qa",
+    kind: "mcp",
+    label: "Website QA",
+    compatibilityIntent: "capability_discovery_or_install",
+    package: {
+      packageId: "io.example/website-qa",
+      label: "Website QA",
+      installState: "installed",
+      acquisition: "mcp_bundle"
+    },
+    leaf: {
+      capabilityId: "io.example/website-qa",
+      packageId: "io.example/website-qa",
+      subskillId: "website-qa"
+    },
+    query: {
+      jobFamilies: ["quality_assurance"],
+      targetTypes: ["website", "url"],
+      artifacts: ["qa_report"],
+      examples: ["测下这个网站的质量"]
+    },
+    implementation: {
+      id: "io.example/website-qa",
+      type: "mcp_server",
+      ownerSurface: "broker_owned_downstream"
+    },
+    hosts: {
+      currentHostSupported: true,
+      portabilityScore: 0
+    },
+    prepare: {
+      authRequired: false,
+      installRequired: false
+    },
+    ranking: {
+      contextCost: 1,
+      confidence: 1
+    },
+    sourceMetadata: {}
+  };
+}
+
 describe("prepareCandidate", () => {
   it("returns ready true for the selected candidate", async () => {
     const result = await prepareCandidate(createWinner(), {
@@ -100,5 +144,18 @@ describe("prepareCandidate", () => {
         }
       )
     ).rejects.toThrow(/outside package "baoyu"/);
+  });
+
+  it("accepts installed MCP winners whose ids equal the package id", async () => {
+    const result = await prepareCandidate(createInstalledMcpWinner(), {
+      currentHost: "codex"
+    });
+
+    expect(result.ready).toBe(true);
+    expect(result.selection).toEqual({
+      package: result.candidate.package,
+      leafCapability: result.candidate.leaf,
+      implementation: result.candidate.implementation
+    });
   });
 });

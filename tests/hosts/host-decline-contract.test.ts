@@ -12,12 +12,14 @@ type DeclineResult = {
       | "UNSUPPORTED_REQUEST"
       | "AMBIGUOUS_REQUEST"
       | "NO_CANDIDATE"
+      | "INSTALL_REQUIRED"
       | "PREPARE_FAILED";
     message: string;
     hostAction:
       | "continue_normally"
       | "ask_clarifying_question"
       | "offer_capability_discovery"
+      | "offer_package_install"
       | "show_graceful_failure";
   };
   error: {
@@ -25,6 +27,7 @@ type DeclineResult = {
       | "UNSUPPORTED_REQUEST"
       | "AMBIGUOUS_REQUEST"
       | "NO_CANDIDATE"
+      | "INSTALL_REQUIRED"
       | "PREPARE_FAILED";
     message: string;
   };

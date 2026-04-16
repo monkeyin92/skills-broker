@@ -46,7 +46,7 @@ function makeCapabilityCard(
 }
 
 describe("discoverCandidates", () => {
-  it("dedupes by canonical leaf capability id and keeps the first source winner", () => {
+  it("dedupes by canonical leaf capability id and prefers the higher-precedence source", () => {
     const hostSkill = makeCapabilityCard({
       id: "requirements-analysis",
       leaf: {
@@ -86,7 +86,18 @@ describe("discoverCandidates", () => {
       }
     });
 
-    expect(discoverCandidates([hostSkill], [mcpMirror])).toEqual([hostSkill]);
+    expect(
+      discoverCandidates(
+        {
+          source: "mcp_registry",
+          candidates: [mcpMirror]
+        },
+        {
+          source: "host_catalog",
+          candidates: [hostSkill]
+        }
+      )
+    ).toEqual([hostSkill]);
   });
 
   it("keeps distinct capabilities even when their candidate ids collide", () => {
@@ -117,6 +128,59 @@ describe("discoverCandidates", () => {
       }
     });
 
-    expect(discoverCandidates([officeHours, qa])).toEqual([officeHours, qa]);
+    expect(
+      discoverCandidates({
+        source: "host_catalog",
+        candidates: [officeHours, qa]
+      })
+    ).toEqual([officeHours, qa]);
+  });
+
+  it("prefers the installed duplicate when two sources have the same precedence", () => {
+    const availableHostSkill = makeCapabilityCard({
+      id: "gstack.qa.available",
+      leaf: {
+        capabilityId: "gstack.qa",
+        packageId: "gstack",
+        subskillId: "qa"
+      },
+      implementation: {
+        id: "gstack.qa",
+        type: "local_skill",
+        ownerSurface: "broker_owned_downstream"
+      },
+      package: {
+        packageId: "gstack",
+        label: "gstack",
+        installState: "available",
+        acquisition: "published_package"
+      }
+    });
+    const installedHostSkill = makeCapabilityCard({
+      id: "gstack.qa.installed",
+      leaf: {
+        capabilityId: "gstack.qa",
+        packageId: "gstack",
+        subskillId: "qa"
+      },
+      implementation: {
+        id: "gstack.qa",
+        type: "local_skill",
+        ownerSurface: "broker_owned_downstream"
+      }
+    });
+
+    expect(
+      discoverCandidates(
+        {
+          source: "host_catalog",
+          candidates: [availableHostSkill]
+        },
+        {
+          source: "host_catalog",
+          candidates: [installedHostSkill]
+        }
+      )
+    ).toEqual([installedHostSkill]);
   });
 });

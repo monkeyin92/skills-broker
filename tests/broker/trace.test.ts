@@ -60,17 +60,11 @@ describe("summarizeBrokerRoutingTraces", () => {
           requestSurface: "raw_envelope",
           normalizedBy: "raw_request_fallback",
           requestContract: "raw_envelope_fallback",
-          resultCode: "NO_CANDIDATE",
+          resultCode: "INSTALL_REQUIRED",
           routingOutcome: "fallback",
           missLayer: "retrieval",
-          hostAction: "offer_capability_discovery",
-          winnerId: null,
-          winnerPackageId: null,
-          selectionMode: null,
-          selectedCapabilityId: null,
-          selectedLeafCapabilityId: null,
-          selectedImplementationId: null,
-          selectedPackageInstallState: null
+          hostAction: "offer_package_install",
+          selectedPackageInstallState: "available"
         }),
         createTrace({
           requestText: "skipped",
@@ -103,6 +97,10 @@ describe("summarizeBrokerRoutingTraces", () => {
     expect(summary).toEqual({
       observed: 4,
       syntheticHostSkips: 1,
+      acquisition: {
+        trueNoCandidate: 0,
+        installRequired: 1
+      },
       contracts: [
         {
           requestContract: "query_native",

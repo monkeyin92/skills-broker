@@ -6,12 +6,11 @@ export type CapabilitySelection = {
   implementation: CapabilityCard["implementation"];
 };
 
-function packagePrefix(value: string): string | undefined {
-  if (!value.includes(".")) {
-    return undefined;
-  }
-
-  return value.split(".", 1)[0];
+function staysWithinPackageNamespace(
+  value: string,
+  packageId: string
+): boolean {
+  return value === packageId || value.startsWith(`${packageId}.`);
 }
 
 export function buildCapabilitySelection(
@@ -49,18 +48,13 @@ export function buildCapabilitySelection(
     );
   }
 
-  const capabilityPackageId = packagePrefix(capabilityId);
-  if (capabilityPackageId !== undefined && capabilityPackageId !== packageId) {
+  if (!staysWithinPackageNamespace(capabilityId, packageId)) {
     throw new Error(
       `Candidate "${candidate.id}" has capability "${capabilityId}" outside package "${packageId}".`
     );
   }
 
-  const implementationPackageId = packagePrefix(implementationId);
-  if (
-    implementationPackageId !== undefined &&
-    implementationPackageId !== packageId
-  ) {
+  if (!staysWithinPackageNamespace(implementationId, packageId)) {
     throw new Error(
       `Candidate "${candidate.id}" has implementation "${implementationId}" outside package "${packageId}".`
     );

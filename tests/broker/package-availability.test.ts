@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import type { CapabilityCard } from "../../src/core/capability-card";
+import { toCapabilityCard } from "../../src/core/capability-card";
 import { hydratePackageAvailability } from "../../src/broker/package-availability";
 
 function createAvailableSkill(): CapabilityCard {
@@ -310,6 +311,106 @@ describe("hydratePackageAvailability", () => {
 
       expect(card.package.installState).toBe("installed");
       expect(card.prepare.installRequired).toBe(false);
+    } finally {
+      await rm(runtimeDirectory, { recursive: true, force: true });
+    }
+  });
+
+  it("upgrades an available MCP bundle when a matching manifest exists in a searchable skill directory", async () => {
+    const runtimeDirectory = await mkdtemp(join(tmpdir(), "skills-broker-package-mcp-"));
+
+    try {
+      const skillDirectory = join(runtimeDirectory, "website-qa");
+      const [card] = await hydratePackageAvailability(
+        [
+          toCapabilityCard({
+            kind: "mcp",
+            id: "io.example/website-qa",
+            label: "Website QA",
+            intent: "capability_discovery_or_install",
+            package: {
+              packageId: "io.example/website-qa",
+              label: "Website QA",
+              installState: "available",
+              acquisition: "mcp_bundle",
+              probe: {
+                layouts: ["single_skill_directory"],
+                manifestNames: ["io.example/website-qa", "Website QA"]
+              }
+            },
+            leaf: {
+              capabilityId: "io.example/website-qa",
+              packageId: "io.example/website-qa",
+              subskillId: "website-qa",
+              probe: {
+                manifestNames: ["io.example/website-qa", "Website QA"],
+                aliases: ["website-qa"]
+              }
+            },
+            implementation: {
+              id: "io.example/website-qa",
+              type: "mcp_server",
+              ownerSurface: "broker_owned_downstream"
+            }
+          })
+        ],
+        {
+          currentHost: "codex",
+          packageSearchRoots: [runtimeDirectory]
+        }
+      );
+
+      expect(card.package.installState).toBe("available");
+      expect(card.prepare.installRequired).toBe(true);
+
+      await mkdir(skillDirectory, { recursive: true });
+      await writeFile(
+        join(skillDirectory, "SKILL.md"),
+        "---\nname: Website QA\n---\n",
+        "utf8"
+      );
+
+      const [upgradedCard] = await hydratePackageAvailability(
+        [
+          toCapabilityCard({
+            kind: "mcp",
+            id: "io.example/website-qa",
+            label: "Website QA",
+            intent: "capability_discovery_or_install",
+            package: {
+              packageId: "io.example/website-qa",
+              label: "Website QA",
+              installState: "available",
+              acquisition: "mcp_bundle",
+              probe: {
+                layouts: ["single_skill_directory"],
+                manifestNames: ["io.example/website-qa", "Website QA"]
+              }
+            },
+            leaf: {
+              capabilityId: "io.example/website-qa",
+              packageId: "io.example/website-qa",
+              subskillId: "website-qa",
+              probe: {
+                manifestNames: ["io.example/website-qa", "Website QA"],
+                aliases: ["website-qa"]
+              }
+            },
+            implementation: {
+              id: "io.example/website-qa",
+              type: "mcp_server",
+              ownerSurface: "broker_owned_downstream"
+            }
+          })
+        ],
+        {
+          currentHost: "codex",
+          packageSearchRoots: [runtimeDirectory]
+        }
+      );
+
+      expect(upgradedCard.package.installState).toBe("installed");
+      expect(upgradedCard.prepare.installRequired).toBe(false);
     } finally {
       await rm(runtimeDirectory, { recursive: true, force: true });
     }

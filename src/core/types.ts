@@ -95,6 +95,7 @@ export type CapabilityQuery = {
 
 export type BrokerOutcomeCode =
   | "NO_CANDIDATE"
+  | "INSTALL_REQUIRED"
   | "HANDOFF_READY"
   | "WORKFLOW_STAGE_READY"
   | "WORKFLOW_BLOCKED"
@@ -108,6 +109,7 @@ export type BrokerHostAction =
   | "continue_normally"
   | "ask_clarifying_question"
   | "offer_capability_discovery"
+  | "offer_package_install"
   | "show_graceful_failure";
 
 export type CapabilityOwnershipSurface =
@@ -164,10 +166,43 @@ export type LeafCapabilityRef = {
   probe?: LeafCapabilityProbe;
 };
 
+export type PackageInstallMethod =
+  | "package_manager"
+  | "mcp_registry"
+  | "local_bundle"
+  | "manual_followup";
+
+export type PackageInstallRetryMode =
+  | "rerun_request"
+  | "resume_workflow_stage";
+
+export type PackageInstallPlanStep = {
+  id: "install" | "verify" | "retry";
+  title: string;
+  instructions: string;
+};
+
+export type PackageInstallPlan = {
+  method: PackageInstallMethod;
+  summary: string;
+  steps: PackageInstallPlanStep[];
+  verification: {
+    checks: string[];
+    packageProbe?: CapabilityPackageProbe;
+    leafProbe?: LeafCapabilityProbe;
+  };
+  retry: {
+    mode: PackageInstallRetryMode;
+    runId?: string;
+    stageId?: string;
+  };
+};
+
 export type PackageAcquisitionHint = {
   reason: "package_not_installed";
   package: CapabilityPackageRef;
   leafCapability: LeafCapabilityRef;
+  installPlan: PackageInstallPlan;
 };
 
 export type QueryBackedBrokerRequest = {

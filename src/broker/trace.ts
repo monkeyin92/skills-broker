@@ -92,6 +92,10 @@ export type BrokerRoutingContractSummary = {
 export type BrokerRoutingTraceSummary = {
   observed: number;
   syntheticHostSkips: number;
+  acquisition: {
+    trueNoCandidate: number;
+    installRequired: number;
+  };
   surfaces: BrokerRoutingSurfaceSummary[];
   contracts: BrokerRoutingContractSummary[];
 };
@@ -161,6 +165,7 @@ function missLayerForResultCode(
     case "AMBIGUOUS_REQUEST":
       return "broker_normalization";
     case "NO_CANDIDATE":
+    case "INSTALL_REQUIRED":
       return "retrieval";
     case "PREPARE_FAILED":
       return "prepare";
@@ -188,6 +193,7 @@ function routingOutcomeForResultCode(
     case "AMBIGUOUS_REQUEST":
       return "misroute";
     case "NO_CANDIDATE":
+    case "INSTALL_REQUIRED":
     case "PREPARE_FAILED":
     case "WORKFLOW_FAILED":
       return "fallback";
@@ -246,9 +252,19 @@ export function summarizeBrokerRoutingTraces(
     Omit<BrokerRoutingContractSummary, "hitRate" | "misrouteRate" | "fallbackRate">
   >();
   let syntheticHostSkips = 0;
+  let trueNoCandidate = 0;
+  let installRequired = 0;
 
   for (let index = 0; index < filtered.length; index += 1) {
     const trace = filtered[index];
+
+    if (trace.resultCode === "NO_CANDIDATE") {
+      trueNoCandidate += 1;
+    }
+
+    if (trace.resultCode === "INSTALL_REQUIRED") {
+      installRequired += 1;
+    }
 
     if (trace.routingOutcome === "host_skipped") {
       syntheticHostSkips += 1;
@@ -304,6 +320,10 @@ export function summarizeBrokerRoutingTraces(
   return {
     observed: filtered.length,
     syntheticHostSkips,
+    acquisition: {
+      trueNoCandidate,
+      installRequired
+    },
     surfaces: REQUEST_SURFACE_ORDER.map((requestSurface) => {
       const summary = perSurface.get(requestSurface) ?? {
         requestSurface,

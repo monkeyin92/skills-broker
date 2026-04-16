@@ -1,6 +1,15 @@
 import { dirname, join } from "node:path";
 import { tmpdir } from "node:os";
 import { discoverCandidates } from "./discover.js";
+import { buildPackageAcquisitionHint } from "./acquisition.js";
+import {
+  AcquisitionMemoryStore,
+  acquisitionMemoryFilePath
+} from "./acquisition-memory.js";
+import {
+  loadVerifiedDownstreamCandidates,
+  writeVerifiedDownstreamManifest
+} from "./downstream-manifest-source.js";
 import { explainDecision } from "./explain.js";
 import { buildHandoffEnvelope } from "./handoff.js";
 import { hydratePackageAvailability } from "./package-availability.js";
@@ -13,7 +22,8 @@ import {
 } from "./resolved-request.js";
 import {
   hasCapabilityQueryMatch,
-  rankCapabilities
+  rankCapabilities,
+  type RoutingHistory
 } from "./rank.js";
 import {
   type BrokerDebug,
@@ -53,8 +63,7 @@ import type {
   BrokerHost,
   BrokerHostAction,
   BrokerIntent,
-  BrokerOutcomeCode,
-  PackageAcquisitionHint
+  BrokerOutcomeCode
 } from "../core/types.js";
 import { BROKER_HOSTS, isBrokerHost } from "../core/types.js";
 import {
@@ -82,6 +91,36 @@ type DiscoverySnapshot = {
   candidates: CapabilityCard[];
   workflowsById: Map<string, WorkflowRecipe>;
 };
+
+function mergeHistoryByCandidateId(
+  ...histories: Array<Record<string, RoutingHistory> | undefined>
+): Record<string, RoutingHistory> | undefined {
+  const merged = new Map<string, RoutingHistory>();
+
+  for (const history of histories) {
+    if (history === undefined) {
+      continue;
+    }
+
+    for (const [candidateId, candidateHistory] of Object.entries(history)) {
+      const existing = merged.get(candidateId);
+
+      merged.set(candidateId, {
+        cacheHit:
+          (existing?.cacheHit ?? false) || (candidateHistory.cacheHit ?? false),
+        successfulRoutes:
+          (existing?.successfulRoutes ?? 0) +
+          (candidateHistory.successfulRoutes ?? 0)
+      });
+    }
+  }
+
+  if (merged.size === 0) {
+    return undefined;
+  }
+
+  return Object.fromEntries(merged);
+}
 
 export type RunBrokerOptions = {
   cacheFilePath?: string;
@@ -168,12 +207,61 @@ async function persistTraceIfConfigured(
   }
 }
 
+async function persistAcquisitionMemoryIfConfigured(
+  store: AcquisitionMemoryStore | undefined,
+  input: {
+    canonicalKey: string;
+    compatibilityIntent: BrokerIntent;
+    winner: CapabilityCard;
+    currentHost: BrokerHost;
+    now: Date;
+  }
+): Promise<void> {
+  if (store === undefined) {
+    return;
+  }
+
+  try {
+    await store.recordVerifiedWinner(input);
+  } catch {
+    // Acquisition memory is advisory only.
+  }
+}
+
+async function replayAcquisitionCandidatesIfConfigured(
+  store: AcquisitionMemoryStore | undefined,
+  canonicalKey: string
+): Promise<CapabilityCard[]> {
+  if (store === undefined) {
+    return [];
+  }
+
+  try {
+    return await store.replayCandidates(canonicalKey);
+  } catch {
+    return [];
+  }
+}
+
+async function persistVerifiedDownstreamManifestIfConfigured(input: {
+  brokerHomeDirectory?: string;
+  winner: CapabilityCard;
+  currentHost: BrokerHost;
+  now: Date;
+}): Promise<void> {
+  try {
+    await writeVerifiedDownstreamManifest(input);
+  } catch {
+    // Verified downstream manifests are advisory only.
+  }
+}
+
 function createNoCandidateResult(
   debug: BrokerDebug,
   trace: BrokerRoutingTrace
 ): BrokerFailureResult {
   const message =
-    "The broker understood the request, but no installed capability matched it. Offer capability discovery or install help.";
+    "The broker understood the request, but no matching capability was found. Offer capability discovery help.";
   const errorMessage = "No candidate matched the normalized broker request.";
 
   return {
@@ -200,19 +288,17 @@ function createPackageInstallRequiredResult(
   return {
     ok: false,
     outcome: {
-      code: "NO_CANDIDATE",
-      message: `The broker found a matching capability in package "${winner.package.packageId}", but that package is not installed yet. Offer package discovery or install help for "${winner.leaf.subskillId}".`,
-      hostAction: "offer_capability_discovery"
+      code: "INSTALL_REQUIRED",
+      message: `The broker matched "${winner.leaf.capabilityId}", but package "${winner.package.packageId}" is not installed yet. Offer the broker-provided install plan before retrying.`,
+      hostAction: "offer_package_install"
     },
     error: {
-      code: "NO_CANDIDATE",
+      code: "INSTALL_REQUIRED",
       message: `Package "${winner.package.packageId}" is not installed for capability "${winner.leaf.capabilityId}".`
     },
-    acquisition: {
-      reason: "package_not_installed",
-      package: winner.package,
-      leafCapability: winner.leaf
-    },
+    acquisition: buildPackageAcquisitionHint(winner, {
+      retryMode: "rerun_request"
+    }),
     debug,
     trace
   };
@@ -221,7 +307,12 @@ function createPackageInstallRequiredResult(
 function createFailureResult(
   code: Exclude<
     BrokerOutcomeCode,
-    "HANDOFF_READY" | "WORKFLOW_STAGE_READY" | "WORKFLOW_BLOCKED" | "WORKFLOW_COMPLETED" | "NO_CANDIDATE"
+    | "HANDOFF_READY"
+    | "WORKFLOW_STAGE_READY"
+    | "WORKFLOW_BLOCKED"
+    | "WORKFLOW_COMPLETED"
+    | "NO_CANDIDATE"
+    | "INSTALL_REQUIRED"
   >,
   message: string,
   hostAction: BrokerHostAction,
@@ -315,7 +406,9 @@ function cacheRecordMatchesLegacyKey(
 async function discoverCapabilityCards(
   request: ResolvedBrokerRequest,
   hostCatalogFilePath: string,
-  mcpRegistryFilePath: string
+  mcpRegistryFilePath: string,
+  acquisitionMemoryCandidates: CapabilityCard[] = [],
+  downstreamManifestCandidates: CapabilityCard[] = []
 ): Promise<DiscoverySnapshot> {
   const [hostDiscoveryResult, mcpResult] = await Promise.allSettled([
     loadHostDiscoverySnapshot(undefined, hostCatalogFilePath),
@@ -328,7 +421,12 @@ async function discoverCapabilityCards(
     )
   ]);
 
-  if (hostDiscoveryResult.status === "rejected" && mcpResult.status === "rejected") {
+  if (
+    hostDiscoveryResult.status === "rejected" &&
+    mcpResult.status === "rejected" &&
+    acquisitionMemoryCandidates.length === 0 &&
+    downstreamManifestCandidates.length === 0
+  ) {
     throw new AggregateError(
       [hostDiscoveryResult.reason, mcpResult.reason],
       "All discovery sources failed."
@@ -352,8 +450,26 @@ async function discoverCapabilityCards(
     .map(toCapabilityCard);
   const normalizedMcpCandidates = mcpCandidates.map(toCapabilityCard);
   const mergedCandidates = discoverCandidates(
-    [...normalizedHostCandidates, ...normalizedWorkflowCandidates],
-    normalizedMcpCandidates
+    {
+      source: "downstream_manifest",
+      candidates: downstreamManifestCandidates
+    },
+    {
+      source: "acquisition_memory",
+      candidates: acquisitionMemoryCandidates
+    },
+    {
+      source: "host_catalog",
+      candidates: normalizedHostCandidates
+    },
+    {
+      source: "workflow_catalog",
+      candidates: normalizedWorkflowCandidates
+    },
+    {
+      source: "mcp_registry",
+      candidates: normalizedMcpCandidates
+    }
   )
     .filter(
       (candidate) =>
@@ -400,6 +516,12 @@ async function runWorkflowResume(
   const sessionStore = new WorkflowSessionStore(
     defaultWorkflowSessionFilePath(options)
   );
+  const acquisitionMemoryStore =
+    options.brokerHomeDirectory === undefined
+      ? undefined
+      : new AcquisitionMemoryStore(
+          acquisitionMemoryFilePath(options.brokerHomeDirectory)
+        );
   const session = await sessionStore.read(input.workflowResume.runId);
 
   if (session === null) {
@@ -480,6 +602,8 @@ async function runWorkflowResume(
     winner: workflowWinnerCard(recipe),
     recipe,
     sessionStore,
+    requestQueryIdentity: resolvedRequest.requestQueryIdentity,
+    acquisitionMemoryStore,
     brokerHomeDirectory: options.brokerHomeDirectory,
     packageSearchRoots: options.packageSearchRoots,
     resume: input.workflowResume,
@@ -555,6 +679,12 @@ async function runSingleStep(
   }
 
   const resolvedRequest = resolveBrokerRequest(request);
+  const acquisitionMemoryStore =
+    options.brokerHomeDirectory === undefined
+      ? undefined
+      : new AcquisitionMemoryStore(
+          acquisitionMemoryFilePath(options.brokerHomeDirectory)
+        );
 
   const cachedRecord = await cacheStore.read();
   const exactCachedCard =
@@ -585,10 +715,26 @@ async function runSingleStep(
     ];
   } else {
     try {
+      const downstreamManifestCandidates =
+        await loadVerifiedDownstreamCandidates({
+          brokerHomeDirectory: options.brokerHomeDirectory,
+          currentHost,
+          visibleHosts: [
+            currentHost,
+            ...BROKER_HOSTS.filter((host) => host !== currentHost)
+          ]
+        });
+      const acquisitionMemoryCandidates =
+        await replayAcquisitionCandidatesIfConfigured(
+          acquisitionMemoryStore,
+          resolvedRequest.requestQueryIdentity
+        );
       const discovered = await discoverCapabilityCards(
         resolvedRequest,
         hostCatalogFilePath,
-        mcpRegistryFilePath
+        mcpRegistryFilePath,
+        acquisitionMemoryCandidates,
+        downstreamManifestCandidates
       );
       candidates = discovered.candidates;
       workflowsById = discovered.workflowsById;
@@ -615,20 +761,33 @@ async function runSingleStep(
     packageSearchRoots: options.packageSearchRoots
   });
 
+  const acquisitionHistoryByCandidateId =
+    acquisitionMemoryStore === undefined
+      ? undefined
+      : await acquisitionMemoryStore.historyByCandidateId(
+          resolvedRequest.requestQueryIdentity,
+          candidates
+        );
+  const cacheHistoryByCandidateId =
+    exactCachedCard === null
+      ? undefined
+      : {
+          [exactCachedCard.card.id]: {
+            cacheHit,
+            successfulRoutes: exactCachedCard.successfulRoutes
+          }
+        };
+  const historyByCandidateId = mergeHistoryByCandidateId(
+    acquisitionHistoryByCandidateId,
+    cacheHistoryByCandidateId
+  );
+
   const ranked = rankCapabilities({
     currentHost,
     requestCompatibilityIntent: resolvedRequest.compatibilityIntent,
     requestCapabilityQuery: request.capabilityQuery,
     candidates,
-    historyByCandidateId:
-      exactCachedCard === null
-        ? undefined
-        : {
-            [exactCachedCard.card.id]: {
-              cacheHit,
-              successfulRoutes: exactCachedCard.successfulRoutes
-            }
-          }
+    historyByCandidateId
   });
 
   if (ranked.length === 0) {
@@ -701,6 +860,8 @@ async function runSingleStep(
         sessionStore: new WorkflowSessionStore(
           defaultWorkflowSessionFilePath(options)
         ),
+        requestQueryIdentity: resolvedRequest.requestQueryIdentity,
+        acquisitionMemoryStore,
         brokerHomeDirectory: options.brokerHomeDirectory,
         packageSearchRoots: options.packageSearchRoots,
         debug
@@ -715,11 +876,12 @@ async function runSingleStep(
       createBrokerRoutingTrace({
         input,
         currentHost,
-        resultCode: "NO_CANDIDATE",
+        resultCode: "INSTALL_REQUIRED",
         now,
-        hostAction: "offer_capability_discovery",
+        hostAction: "offer_package_install",
         candidateCount: ranked.length,
-        winner
+        winner,
+        reasonCode: "package_not_installed"
       })
     );
   }
@@ -764,6 +926,19 @@ async function runSingleStep(
     resolvedRequest,
     now
   );
+  await persistAcquisitionMemoryIfConfigured(acquisitionMemoryStore, {
+    canonicalKey: resolvedRequest.requestQueryIdentity,
+    compatibilityIntent: resolvedRequest.compatibilityIntent,
+    winner,
+    currentHost,
+    now
+  });
+  await persistVerifiedDownstreamManifestIfConfigured({
+    brokerHomeDirectory: options.brokerHomeDirectory,
+    winner,
+    currentHost,
+    now
+  });
 
   const result: BrokerSuccessResult = {
     ok: true,

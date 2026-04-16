@@ -352,7 +352,7 @@ test("cli accepts an explicit capability discovery envelope and returns HANDOFF_
             intent: "capability_discovery_or_install",
             implementation: {
               id: "skills_broker.capability_discovery",
-              type: "broker_workflow",
+              type: "local_skill",
               ownerSurface: "broker_owned_downstream"
             }
           }
