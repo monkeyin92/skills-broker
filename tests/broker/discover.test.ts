@@ -183,4 +183,59 @@ describe("discoverCandidates", () => {
       )
     ).toEqual([installedHostSkill]);
   });
+
+  it("keeps an installed host candidate over a higher-precedence advisory replay", () => {
+    const installedHostSkill = makeCapabilityCard({
+      id: "remembered-analysis",
+      leaf: {
+        capabilityId: "gstack.office-hours",
+        packageId: "gstack",
+        subskillId: "office-hours"
+      },
+      implementation: {
+        id: "gstack.office_hours",
+        type: "local_skill",
+        ownerSurface: "broker_owned_downstream"
+      }
+    });
+    const advisoryReplay = makeCapabilityCard({
+      id: "remembered-analysis",
+      leaf: {
+        capabilityId: "gstack.office-hours",
+        packageId: "gstack",
+        subskillId: "office-hours"
+      },
+      implementation: {
+        id: "gstack.office_hours",
+        type: "local_skill",
+        ownerSurface: "broker_owned_downstream"
+      },
+      package: {
+        packageId: "gstack",
+        label: "gstack",
+        installState: "available",
+        acquisition: "published_package"
+      },
+      prepare: {
+        authRequired: false,
+        installRequired: true
+      },
+      sourceMetadata: {
+        discoverySource: "acquisition_memory"
+      }
+    });
+
+    expect(
+      discoverCandidates(
+        {
+          source: "acquisition_memory",
+          candidates: [advisoryReplay]
+        },
+        {
+          source: "host_catalog",
+          candidates: [installedHostSkill]
+        }
+      )
+    ).toEqual([installedHostSkill]);
+  });
 });

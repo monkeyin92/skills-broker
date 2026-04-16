@@ -32,8 +32,8 @@ function duplicatePriority(
   source: DiscoverySourceName
 ): [number, number, number, number] {
   return [
-    discoverySourcePrecedence(source),
     candidate.package.installState === "installed" ? 1 : 0,
+    discoverySourcePrecedence(source),
     -candidate.ranking.contextCost,
     candidate.ranking.confidence
   ];
