@@ -129,6 +129,10 @@ describe("shared broker home smoke", () => {
         expect(codexSkillContents).toContain("Use this skill only at the coarse broker boundary.");
         expect(codexSkillContents).toContain("The host decides only one of these boundary outcomes:");
         expect(codexSkillContents).toContain("## Broker-First (`broker_first`)");
+        expect(codexSkillContents).toContain("If you need one concrete broker-first example to calibrate the boundary, start with website QA.");
+        expect(codexSkillContents).toContain("Treat the examples below as semantic anchors, not literal trigger phrases.");
+        expect(codexSkillContents).toContain("Prefer semantic judgment over exact string overlap.");
+        expect(codexSkillContents).toContain("\"QA this website https://example.com\"");
         expect(codexSkillContents).toContain("## Handle Normally (`handle_normally`)");
         expect(codexSkillContents).toContain("## Clarify Before Broker (`clarify_before_broker`)");
         expect(codexSkillContents).toContain("do not pick a package, workflow family, skill, or MCP at the host layer");

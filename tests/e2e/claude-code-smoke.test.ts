@@ -61,6 +61,10 @@ describe("Claude Code smoke", () => {
         expect(skillContents).toContain("Use this skill only at the coarse broker boundary.");
         expect(skillContents).toContain("The host decides only one of these boundary outcomes:");
         expect(skillContents).toContain("## Broker-First (`broker_first`)");
+        expect(skillContents).toContain("If you need one concrete broker-first example to calibrate the boundary, start with website QA.");
+        expect(skillContents).toContain("Treat the examples below as semantic anchors, not literal trigger phrases.");
+        expect(skillContents).toContain("Prefer semantic judgment over exact string overlap.");
+        expect(skillContents).toContain("\"QA this website https://example.com\"");
         expect(skillContents).toContain("## Handle Normally (`handle_normally`)");
         expect(skillContents).toContain("## Clarify Before Broker (`clarify_before_broker`)");
         expect(skillContents).toContain("build a broker envelope with raw request text plus safe hints");
