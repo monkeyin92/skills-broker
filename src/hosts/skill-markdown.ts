@@ -7,18 +7,21 @@ type HostShellSkillMarkdownOptions = {
   maintainedBoundaryExamples?: readonly string[];
 };
 
-const BROKER_FIRST_EXAMPLES = [
+const WEBSITE_QA_HERO_EXAMPLES = [
   "测下这个网站的质量：https://www.baidu.com",
   "QA 这个网站 https://example.com",
   "QA this website https://example.com",
   "检查这个网站质量",
+  "find a skill or MCP for website QA",
+  "有没有现成 skill 能做这个网站 QA"
+] as const;
+
+const OTHER_BROKER_FIRST_EXAMPLES = [
   "我有一个想法：做一个自动串起评审和发版的工具",
   "帮我做需求分析并产出设计文档",
   "帮我看看这个需求有没有漏洞",
   "把这个页面转成 markdown: https://example.com/a",
   "convert this webpage to markdown https://example.com/a",
-  "find a skill or MCP for website QA",
-  "有没有现成 skill 能做这个网站 QA",
   "investigate this site failure with a reusable workflow"
 ] as const;
 
@@ -53,21 +56,45 @@ ${prefix} '${JSON.stringify(payload)}'
 \`\`\``;
 }
 
-function mergeExamples(
+function partitionExamples(
   maintainedBoundaryExamples: readonly string[] | undefined
-): readonly string[] {
-  return [
-    ...new Set([
-      ...(maintainedBoundaryExamples ?? []),
-      ...BROKER_FIRST_EXAMPLES
+): {
+  heroExamples: readonly string[];
+  secondaryMaintainedExamples: readonly string[];
+  otherBrokerFirstExamples: readonly string[];
+} {
+  const uniqueMaintainedExamples = Array.from(
+    new Set(maintainedBoundaryExamples ?? [])
+  );
+  const heroExamples = Array.from(
+    new Set([
+      ...WEBSITE_QA_HERO_EXAMPLES,
+      ...uniqueMaintainedExamples.filter((example) =>
+        WEBSITE_QA_HERO_EXAMPLES.includes(
+          example as (typeof WEBSITE_QA_HERO_EXAMPLES)[number]
+        )
+      )
     ])
-  ];
+  );
+  const secondaryMaintainedExamples = uniqueMaintainedExamples.filter(
+    (example) => !heroExamples.includes(example)
+  );
+
+  return {
+    heroExamples,
+    secondaryMaintainedExamples,
+    otherBrokerFirstExamples: OTHER_BROKER_FIRST_EXAMPLES
+  };
 }
 
 export function buildHostShellSkillMarkdown(
   options: HostShellSkillMarkdownOptions
 ): string {
-  const brokerFirstExamples = mergeExamples(options.maintainedBoundaryExamples);
+  const {
+    heroExamples,
+    secondaryMaintainedExamples,
+    otherBrokerFirstExamples
+  } = partitionExamples(options.maintainedBoundaryExamples);
   const markdownPayload = {
     requestText: "turn this webpage into markdown: https://example.com/article",
     host: options.host,
@@ -138,9 +165,32 @@ Treat the examples below as semantic anchors, not literal trigger phrases.
 - Prefer semantic judgment over exact string overlap.
 - If the user clearly wants website QA, requirements analysis, investigation, or capability lookup, choose \`broker_first\` even when the wording is a paraphrase rather than one of the example sentences.
 
+### Hero lane: website QA
+
+Start here when you need one first-use path that proves the host shell is routing correctly.
+
+- If the user clearly wants a website tested, or wants help finding/installing the website QA winner, choose \`broker_first\`.
+- Keep website QA visually first. It is the calibration lane. Other maintained lanes are still valid, but secondary.
+
 Examples:
 
-${renderExamples(brokerFirstExamples)}
+${renderExamples(heroExamples)}
+
+### Secondary maintained lanes
+
+Requirements analysis and investigation still stay broker-first. They are maintained lanes, but they should not outrank website QA when the host is learning the boundary.
+
+Examples:
+
+${renderExamples(secondaryMaintainedExamples)}
+
+### Other broker-first lanes
+
+Use the broker first for other reusable capability execution too, including markdown conversion and broader workflow or capability lookup paths.
+
+Examples:
+
+${renderExamples(otherBrokerFirstExamples)}
 
 ## Handle Normally (\`handle_normally\`)
 
@@ -202,9 +252,9 @@ If you are not confident, omit \`capabilityQuery\` and still send the raw envelo
 
 ## Runner Contract
 
-${renderCommand(options.runnerCommand, markdownPayload)}
-
 ${renderCommand(options.runnerCommand, debugPayload, true)}
+
+${renderCommand(options.runnerCommand, markdownPayload)}
 
 ${renderCommand(options.runnerCommand, structuredPayload)}
 

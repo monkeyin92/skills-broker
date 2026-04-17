@@ -299,6 +299,17 @@ describe("normalizeRequest", () => {
     );
   });
 
+  it("rejects 看下这个页面 as unsupported instead of misrouting it to website QA", () => {
+    expectRejected(
+      {
+        requestText: "看下这个页面",
+        host: "codex",
+        urls: ["https://example.com/page"]
+      },
+      "UNSUPPORTED_REQUEST"
+    );
+  });
+
   it('accepts an auto-invoked envelope with invocationMode: "auto"', () => {
     const normalized = normalizeRequest({
       requestText: "convert this page to markdown",

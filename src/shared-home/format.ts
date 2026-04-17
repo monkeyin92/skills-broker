@@ -25,6 +25,47 @@ function formatAdoptionHealthLine(
   return `Adoption health: blocked (${blockerCodes}${overflow})`;
 }
 
+function formatSharedHomeExistsLine(result: DoctorLifecycleResult): string {
+  if (result.sharedHome.exists) {
+    return "Shared home exists: yes";
+  }
+
+  if ((result.sharedHome.missingPaths?.length ?? 0) === 0) {
+    return "Shared home exists: no";
+  }
+
+  return `Shared home exists: no (missing ${result.sharedHome.missingPaths
+    ?.map((pathname) => pathname.replace(`${result.sharedHome.path}/`, ""))
+    .join(", ")})`;
+}
+
+function formatWebsiteQaLoopLine(result: DoctorLifecycleResult): string {
+  const installRequired =
+    result.websiteQaLoop.installRequiredTraces > 0
+      ? `observed (${result.websiteQaLoop.installRequiredTraces} install_required trace${result.websiteQaLoop.installRequiredTraces === 1 ? "" : "s"})`
+      : "pending (no website QA install_required trace recorded yet)";
+  const rerun =
+    result.websiteQaLoop.acquisitionMemoryState === "unreadable"
+      ? "unknown (acquisition memory unreadable)"
+      : result.websiteQaLoop.rerunSuccessfulRoutes > 0
+        ? `confirmed (${result.websiteQaLoop.rerunSuccessfulRoutes} successful rerun${result.websiteQaLoop.rerunSuccessfulRoutes === 1 ? "" : "s"})`
+        : "pending (no successful website QA rerun recorded yet)";
+  const reuse =
+    result.websiteQaLoop.acquisitionMemoryState === "unreadable"
+      ? "unknown (acquisition memory unreadable)"
+      : result.websiteQaLoop.reuseRecorded > 0
+        ? `confirmed (${result.websiteQaLoop.reuseRecorded} first reuse event${result.websiteQaLoop.reuseRecorded === 1 ? "" : "s"})`
+        : "pending (no website QA reuse recorded yet)";
+  const replay =
+    result.websiteQaLoop.verifiedDownstreamState === "unreadable"
+      ? "unknown (verified downstream manifests unreadable)"
+      : result.websiteQaLoop.downstreamReplayManifests > 0
+        ? `ready (${result.websiteQaLoop.downstreamReplayManifests} verified downstream manifest${result.websiteQaLoop.downstreamReplayManifests === 1 ? "" : "s"})`
+        : "pending (no website QA verified downstream manifest yet)";
+
+  return `Website QA loop: install_required=${installRequired}; rerun=${rerun}; reuse=${reuse}; replay=${replay}`;
+}
+
 export function formatLifecycleResult(
   result: UpdateLifecycleResult | DoctorLifecycleResult | RemoveLifecycleResult,
   outputMode: "text" | "json"
@@ -38,7 +79,7 @@ export function formatLifecycleResult(
       "skills-broker doctor",
       "",
       `Shared home: ${result.sharedHome.path}`,
-      `Shared home exists: ${result.sharedHome.exists ? "yes" : "no"}`,
+      formatSharedHomeExistsLine(result),
       formatAdoptionHealthLine(result.adoptionHealth)
     ];
 
@@ -67,13 +108,14 @@ export function formatLifecycleResult(
       }
     }
     lines.push(
-      `Acquisition memory: ${result.acquisitionMemory.exists ? "present" : "missing"}, entries=${result.acquisitionMemory.entries}, successful_routes=${result.acquisitionMemory.successfulRoutes}, first_reuse_after_install=${result.acquisitionMemory.firstReuseRecorded}, cross_host_reuse=${result.acquisitionMemory.crossHostReuse}`
+      `Acquisition memory: ${result.acquisitionMemory.state}, entries=${result.acquisitionMemory.entries}, successful_routes=${result.acquisitionMemory.successfulRoutes}, first_reuse_after_install=${result.acquisitionMemory.firstReuseRecorded}, cross_host_reuse=${result.acquisitionMemory.crossHostReuse}, website_qa_successful_reruns=${result.acquisitionMemory.qualityAssuranceSuccessfulRoutes}, website_qa_first_reuse=${result.acquisitionMemory.qualityAssuranceFirstReuseRecorded}`
     );
     lines.push(
-      `Verified downstream manifests: total=${result.verifiedDownstreamManifests.manifests}, ${result.verifiedDownstreamManifests.hosts
+      `Verified downstream manifests: ${result.verifiedDownstreamManifests.state}, total=${result.verifiedDownstreamManifests.manifests}, website_qa=${result.verifiedDownstreamManifests.qualityAssuranceManifests}, ${result.verifiedDownstreamManifests.hosts
         .map((host) => `${host.name}=${host.manifests}`)
         .join(", ")}`
     );
+    lines.push(formatWebsiteQaLoopLine(result));
 
     lines.push("");
     if (result.brokerFirstGate.skipped) {

@@ -187,7 +187,10 @@ describe("lifecycle cli", () => {
       expect(result.adoptionHealth.status).toBe("blocked");
       expect(result.sharedHome).toEqual({
         path: brokerHomeDirectory,
-        exists: false
+        exists: false,
+        missingPaths: expect.arrayContaining([
+          resolve(brokerHomeDirectory, "package.json")
+        ])
       });
       expect(result.hosts).toContainEqual(
         expect.objectContaining({
@@ -707,14 +710,18 @@ describe("lifecycle cli", () => {
         reasons: [
           {
             code: "SHARED_HOME_MISSING",
-            message:
+            message: expect.stringContaining(
               "shared-home: managed host shells exist but the shared broker home is missing"
+            )
           }
         ]
       });
       expect(result.sharedHome).toEqual({
         path: brokerHomeDirectory,
-        exists: false
+        exists: false,
+        missingPaths: expect.arrayContaining([
+          resolve(brokerHomeDirectory, "package.json")
+        ])
       });
       expect(result.status).toMatchObject({
         skipped: true,

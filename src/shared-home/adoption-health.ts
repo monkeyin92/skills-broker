@@ -1,4 +1,5 @@
 import type { BrokerHost } from "../core/types.js";
+import type { DoctorProofRailState } from "./doctor.js";
 
 export type AdoptionHealthStatus = "green" | "blocked" | "inactive";
 
@@ -14,6 +15,8 @@ export type AdoptionHealthReasonCode =
   | "HOST_MANUAL_RECOVERY"
   | "BROKER_FIRST_STRICT_ISSUE"
   | "STATUS_STRICT_ISSUE"
+  | "ACQUISITION_MEMORY_UNREADABLE"
+  | "VERIFIED_DOWNSTREAM_MANIFESTS_UNREADABLE"
   | "NO_MANAGED_HOST";
 
 export type AdoptionHealthReason = {
@@ -50,6 +53,11 @@ type StrictIssueSource = {
   }>;
 };
 
+type ProofRailState = {
+  acquisitionMemory?: DoctorProofRailState;
+  verifiedDownstreamManifests?: DoctorProofRailState;
+};
+
 export type ResolveAdoptionHealthInput = {
   sharedHomeState?: "installed" | "updated" | "planned" | "failed";
   sharedHomeReason?: string;
@@ -57,6 +65,7 @@ export type ResolveAdoptionHealthInput = {
   hosts: AdoptionHealthHost[];
   brokerFirstGate?: StrictIssueSource;
   statusBoard?: StrictIssueSource;
+  proofRails?: ProofRailState;
 };
 
 const MANAGED_HOST_STATUSES = new Set([
@@ -190,7 +199,9 @@ export function resolveAdoptionHealth(
   if (input.sharedHomeExists === false && managedHosts.length > 0) {
     reasons.push({
       code: "SHARED_HOME_MISSING",
-      message: "shared-home: managed host shells exist but the shared broker home is missing"
+      message: `shared-home: managed host shells exist but the shared broker home is missing${
+        input.sharedHomeReason ? ` (${input.sharedHomeReason})` : ""
+      }`
     });
   }
 
@@ -212,6 +223,28 @@ export function resolveAdoptionHealth(
       input.statusBoard
     )
   );
+
+  if (
+    managedHosts.length > 0 &&
+    input.proofRails?.acquisitionMemory === "unreadable"
+  ) {
+    reasons.push({
+      code: "ACQUISITION_MEMORY_UNREADABLE",
+      message:
+        "website QA proof rail is unreadable: acquisition memory cannot prove the install_required -> rerun path"
+    });
+  }
+
+  if (
+    managedHosts.length > 0 &&
+    input.proofRails?.verifiedDownstreamManifests === "unreadable"
+  ) {
+    reasons.push({
+      code: "VERIFIED_DOWNSTREAM_MANIFESTS_UNREADABLE",
+      message:
+        "website QA proof rail is unreadable: verified downstream manifests cannot prove replay/reuse"
+    });
+  }
 
   if (reasons.length > 0) {
     return {
