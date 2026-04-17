@@ -10,6 +10,7 @@ type HostShellSkillMarkdownOptions = {
 const BROKER_FIRST_EXAMPLES = [
   "测下这个网站的质量：https://www.baidu.com",
   "QA 这个网站 https://example.com",
+  "QA this website https://example.com",
   "检查这个网站质量",
   "我有一个想法：做一个自动串起评审和发版的工具",
   "帮我做需求分析并产出设计文档",
@@ -128,6 +129,14 @@ Use the broker first when the user is asking for:
 - a specialized reusable workflow
 - capability lookup or install help
 - external capability execution instead of ordinary model-native work
+
+If you need one concrete broker-first example to calibrate the boundary, start with website QA.
+
+Treat the examples below as semantic anchors, not literal trigger phrases.
+
+- Minor wording changes that preserve the same intent should keep the same boundary decision.
+- Prefer semantic judgment over exact string overlap.
+- If the user clearly wants website QA, requirements analysis, investigation, or capability lookup, choose \`broker_first\` even when the wording is a paraphrase rather than one of the example sentences.
 
 Examples:
 

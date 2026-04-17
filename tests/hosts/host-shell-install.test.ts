@@ -49,6 +49,8 @@ describe("host shell installers", () => {
       expect(claudeSkill).toContain("The host decides only one of these boundary outcomes:");
       expect(claudeSkill).toContain("Do not decide whether the request is QA, markdown conversion, requirements analysis, investigation, or capability discovery at the host layer.");
       expect(claudeSkill).toContain("## Broker-First (`broker_first`)");
+      expect(claudeSkill).toContain("Treat the examples below as semantic anchors, not literal trigger phrases.");
+      expect(claudeSkill).toContain("Prefer semantic judgment over exact string overlap.");
       expect(claudeSkill).toContain("## Handle Normally (`handle_normally`)");
       expect(claudeSkill).toContain("## Clarify Before Broker (`clarify_before_broker`)");
       expect(claudeSkill).toContain("The host decides only the boundary; the broker chooses the package, workflow, skill, or MCP.");
@@ -80,6 +82,8 @@ describe("host shell installers", () => {
       expect(codexSkill).toContain("The host decides only one of these boundary outcomes:");
       expect(codexSkill).toContain("Do not decide whether the request is QA, markdown conversion, requirements analysis, investigation, or capability discovery at the host layer.");
       expect(codexSkill).toContain("## Broker-First (`broker_first`)");
+      expect(codexSkill).toContain("Treat the examples below as semantic anchors, not literal trigger phrases.");
+      expect(codexSkill).toContain("Prefer semantic judgment over exact string overlap.");
       expect(codexSkill).toContain("## Handle Normally (`handle_normally`)");
       expect(codexSkill).toContain("## Clarify Before Broker (`clarify_before_broker`)");
       expect(codexSkill).toContain("The host decides only the boundary; the broker chooses the package, workflow, skill, or MCP.");
