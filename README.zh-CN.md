@@ -19,6 +19,12 @@
 - 把候选准备到“宿主可调用”的状态
 - handoff 完成立刻退场
 
+今天最清楚的第一条使用路径是 **website QA**：
+
+- 先让宿主去 QA 一个网站
+- 如果还没装对应赢家，就让 broker 返回 `INSTALL_REQUIRED`
+- 安装后重试，再把 verify 和 cross-host reuse 跑通
+
 如果你也被这个问题困扰，给项目点个 star 会很有帮助。
 
 ## 这个项目解决什么问题
@@ -95,6 +101,8 @@ broker 决定：
 
 > **先打穿 broker auto-router 的一个小湖：** markdown 转换、broker-first 的需求分析 / QA / investigation 路由，以及第一条 broker 自管的 `idea-to-ship` workflow。
 
+在这个小湖里，**website QA 是今天最适合当默认入口的 lane**。requirements analysis 和 investigation 继续保持 supported maintained families，但第一条该教用户去试的路径应该先是 QA。
+
 v0 当前包含：
 
 - 一套跨宿主共享的 broker envelope
@@ -137,7 +145,7 @@ v0 当前包含：
 这不是为了“什么都支持”。  
 v0 的目标是证明：在一个具体任务上，broker 可以比人手动翻 skills 更准确地选到并准备好正确能力。
 
-**当前产品阶段：**在保持 adoption health 绿色的前提下，把 discovery/install 做成更强的复用飞轮，让 Claude Code 和 Codex 持续把 `skills-broker` 放在热路径上，同时让 broker 可触达的能力面随使用一起增长，不再回头重开这次已经发货的 identity migration。
+**当前产品阶段：**在保持 adoption health 绿色的前提下，把 discovery/install 做成更强的复用飞轮，让 Claude Code 和 Codex 持续把 `skills-broker` 放在热路径上，同时让 broker 可触达的能力面随使用一起增长，不再回头重开这次已经发货的 identity migration。这个 packet 最想先说清楚的默认入口，就是 website QA。
 
 **迁移说明：**`capabilityQuery` 现在是唯一应该让调用方依赖的公开请求契约。`intent` 还在，但现在只作为内部兼容层标签保留给 supplier adapter、显式的晚期 tie-break、maintained-family proof rail，以及 legacy workflow/session 连续性。
 
@@ -258,14 +266,16 @@ npx skills-broker update \
 
 如果你要接到自动化或 CI，所有 lifecycle 命令也都支持 `--json`。
 
-### 3. 走一遍 install-required -> verify -> reuse 闭环
+### 3. 先跑一遍 website QA 的 install-required -> verify -> reuse 闭环
 
 这是 discovery/install 飞轮在发布态薄宿主壳上真正要证明自己的地方。
 
-1. 在 Claude Code 或 Codex 里发一个受支持的 broker-first 请求，最好落在 maintained family，比如 requirements analysis、网站 QA 或 investigation。
+1. 在 Claude Code 或 Codex 里，先从一个 website QA 请求开始，比如 `QA 这个网站 https://example.com`。
 2. 如果当前最佳 package 还没装，宿主应该收到一个 `INSTALL_REQUIRED` outcome，同时带 `hostAction=offer_package_install`。这和真正的 `NO_CANDIDATE` 不一样：前者表示 broker 已经找到了赢家，只是在要求宿主先安装。
 3. 同意安装后，把同一个请求再发一次。broker 这次应该验证已安装赢家并直接 handoff，而不是重新掉回 fallback。
 4. 跑 `npx skills-broker doctor`，确认 shared home 已经开始记录 reuse，也能看见后续可 replay 的 verified downstream manifests。
+
+requirements analysis 和 investigation 仍然是受支持的 maintained family，只是它们不该和 QA 一起抢 README 里的第一步。
 
 第一次被 install 挡住时，宿主侧 outcome 应该类似：
 
@@ -381,6 +391,7 @@ npx vitest run
 
 - 先打穿一个小而清楚的 routed lake，而不是一上来覆盖开放域
 - 先接两个宿主：Claude Code 和 Codex
+- 先把这个小湖里的一个默认入口讲清楚：website QA first
 - 先把几条显式 broker-first lane 做扎实：markdown 转换、需求分析 / QA / investigation，以及第一条 workflow recipe
 - 默认依赖 fixture 做稳定本地测试
 - 路由逻辑尽量保持小、明确、易审计
@@ -398,6 +409,7 @@ npx vitest run
 接下来大概率会推进：
 
 - 提升 Claude Code 和 Codex 真实会话里的 broker-first 命中率
+- 补更多证据，证明 website QA-first 的入口表述真的会带来重复使用
 - 扩展到 OpenCode 等更多宿主
 - 增加更多任务族，而不只限于当前这组 markdown + requirements / QA / investigation 小湖
 - 增加更多 broker 自管 workflow，而不只限于第一条 `idea-to-ship` 主链路
@@ -468,7 +480,7 @@ npx vitest run
 
 ### 它已经能直接生产使用了吗？
 
-还没有。现在仍然是一个聚焦型 v0，但已经有共享 broker home、已发布的 lifecycle CLI、Claude Code 和 Codex 两个薄宿主壳、已经发货的 adoption-proof rail，以及一个小而清楚的 routed lake。当前阶段重点是在不让真实宿主 auto-routing 回退的前提下，把 discovery/install 做成更强的复用飞轮，因为 query-native 和 package-vs-leaf 这两条迁移尾巴已经发货。
+还没有。现在仍然是一个聚焦型 v0，但已经有共享 broker home、已发布的 lifecycle CLI、Claude Code 和 Codex 两个薄宿主壳、已经发货的 adoption-proof rail，以及一个小而清楚的 routed lake。当前阶段重点是在不让真实宿主 auto-routing 回退的前提下，把 discovery/install 做成更强的复用飞轮，因为 query-native 和 package-vs-leaf 这两条迁移尾巴已经发货。如果你今天只想走一条最清楚的 first-use path，就先从 website QA 开始。
 
 ### 为什么先做 Claude Code 和 Codex？
 

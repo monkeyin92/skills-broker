@@ -13,6 +13,12 @@
 
 Instead of forcing users to browse catalogs, memorize tool names, or manually decide which capability to install next, `skills-broker` sits in front of the host and handles the capability decision at runtime.
 
+The clearest first-use path today is **website QA**:
+
+- ask the host to QA a website
+- let the broker surface `INSTALL_REQUIRED` if the winner is missing
+- retry after install and watch the same path verify and reuse across Claude Code and Codex
+
 If this problem resonates with you, a star helps more people discover the project.
 
 ## The Problem
@@ -89,6 +95,8 @@ Current scope is intentionally narrow:
 
 > **A small first lake for the broker auto-router:** markdown conversions, broker-first requirements / QA / investigation routing, and one broker-owned `idea-to-ship` workflow.
 
+Within that lake, **website QA is the clearest default-entry lane today**. Requirements analysis and investigation remain supported maintained families, but QA is the first workflow the docs should teach people to try.
+
 v0 currently includes:
 
 - a shared broker envelope across hosts
@@ -131,7 +139,7 @@ Important truth in this packet: the catalog still carries a `capability-discover
 This is deliberately not "solve everything."  
 The point of v0 is to prove that a broker can pick and prepare the right capability better than a human manually browsing skills.
 
-**Current product phase:** keep adoption health green while turning discovery/install into a stronger reuse flywheel, so Claude Code and Codex visibly keep `skills-broker` on the hot path and the broker compounds reachable capability surface over time without reopening the identity migration work that just shipped.
+**Current product phase:** keep adoption health green while turning discovery/install into a stronger reuse flywheel, so Claude Code and Codex visibly keep `skills-broker` on the hot path and the broker compounds reachable capability surface over time without reopening the identity migration work that just shipped. The first default-entry habit this packet wants to make obvious is website QA.
 
 **Migration note:** `capabilityQuery` is now the only public request contract the broker wants callers to depend on. `intent` still exists, but it now survives only as an internal compatibility lane label for supplier adapters, explicit late tie-breaks, maintained-family proof rails, and legacy workflow/session continuity.
 
@@ -251,14 +259,16 @@ This will:
 
 For automation or CI, every lifecycle command also supports `--json`.
 
-### 3. Watch the install-required -> verify -> reuse loop
+### 3. Try the website QA install-required -> verify -> reuse loop
 
 This is the published host-shell path where the discovery/install flywheel is supposed to prove itself.
 
-1. In Claude Code or Codex, send a supported broker-first request from a maintained family such as requirements analysis, website QA, or investigation.
+1. In Claude Code or Codex, start with a website QA request such as `QA this website https://example.com`.
 2. If the best package is not installed yet, the host should receive an `INSTALL_REQUIRED` outcome with `hostAction=offer_package_install`. That is different from a true `NO_CANDIDATE`: the broker found a winner and is asking the host to install it.
 3. Approve the install, then send the same request again. The broker should verify the installed winner and hand off instead of falling back.
 4. Run `npx skills-broker doctor` to confirm the shared-home state is recording reuse and any verified downstream manifests that can be replayed later.
+
+Requirements analysis and investigation are still supported maintained families. They just are not the first thing this README should make you try.
 
 On the first blocked pass, the host-side outcome should look like:
 
@@ -370,6 +380,7 @@ This repository currently optimizes for:
 
 - a small first routed lake instead of broad open-domain coverage
 - two attached hosts first: Claude Code and Codex
+- one clean default-entry habit inside that lake: website QA first
 - a handful of explicit broker-first lanes: markdown conversion, requirements / QA / investigation, and the first workflow recipe
 - explicit fixture-backed local tests
 - small, inspectable routing logic
@@ -387,6 +398,7 @@ It does **not** yet provide:
 Likely next:
 
 - stronger broker-first hit rate in real Claude Code and Codex sessions
+- more proof that website QA-first positioning turns into real repeat usage
 - broader host support such as OpenCode
 - richer host-side observability around broker first-refusal decisions
 - more task families beyond the current markdown + requirements / QA / investigation lake
@@ -458,7 +470,7 @@ No. It is a broker and routing layer.
 
 ### Is this production-ready?
 
-Not yet. It is still a focused v0, but it now includes a shared broker home, published lifecycle CLI, Claude Code and Codex thin shells, a shipped adoption-proof rail, and a small first routed lake. The current phase is keeping real host auto-routing green while turning discovery/install into a stronger reuse flywheel, now that both the query-native and package-vs-leaf migration tails are shipped.
+Not yet. It is still a focused v0, but it now includes a shared broker home, published lifecycle CLI, Claude Code and Codex thin shells, a shipped adoption-proof rail, and a small first routed lake. The current phase is keeping real host auto-routing green while turning discovery/install into a stronger reuse flywheel, now that both the query-native and package-vs-leaf migration tails are shipped. If you want the clearest first-use path today, start with website QA.
 
 ### Why Claude Code and Codex first?
 
