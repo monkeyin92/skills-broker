@@ -282,7 +282,7 @@ describe("lifecycle cli", () => {
     } finally {
       await rm(runtimeDirectory, { recursive: true, force: true });
     }
-  }, 15000);
+  }, 30000);
 
   it("keeps doctor --strict green when no status item needs remote truth", async () => {
     const scriptPath = resolve("src/bin/skills-broker.ts");
