@@ -2,6 +2,18 @@
 
 ## [Unreleased]
 
+## [0.3.2] - 2026-04-17
+
+### Changed
+
+- Changed the published quick-start path and generated host-shell guidance so website QA is the unmistakable first-use lane, with the install-required -> rerun -> doctor loop presented before the broader broker-first families.
+- Changed `skills-broker doctor` to treat shared-home install proof, acquisition memory, and verified downstream manifests as explicit website-QA lifecycle truth instead of loose counters, and fail adoption health closed when those proof rails are unreadable.
+
+### Fixed
+
+- Fixed the QA default-entry proof rail so website-QA requests now prove `INSTALL_REQUIRED` -> rerun -> cross-host reuse explicitly, while vague asks like `check this page` / `看下这个页面` stay out of the QA lane.
+- Fixed lifecycle CLI doctor expectations so JSON/blocking output matches the stricter shared-home proof model.
+
 ## [0.3.1] - 2026-04-17
 
 ### Changed
