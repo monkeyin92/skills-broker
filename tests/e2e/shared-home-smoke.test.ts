@@ -10,6 +10,58 @@ import { loadMaintainedBrokerFirstContract } from "../../src/core/maintained-bro
 import { installSharedBrokerHome } from "../../src/shared-home/install";
 
 const execFileAsync = promisify(execFile);
+const HERO_LANE_EXAMPLES = [
+  '"测下这个网站的质量：https://www.baidu.com"',
+  '"QA 这个网站 https://example.com"',
+  '"QA this website https://example.com"',
+  '"检查这个网站质量"',
+  '"find a skill or MCP for website QA"',
+  '"有没有现成 skill 能做这个网站 QA"'
+] as const;
+
+function expectInOrder(text: string, snippets: readonly string[]): void {
+  let previousIndex = -1;
+
+  for (const snippet of snippets) {
+    const index = text.indexOf(snippet);
+    expect(index, `Expected to find snippet in order: ${snippet}`).toBeGreaterThan(
+      previousIndex
+    );
+    previousIndex = index;
+  }
+}
+
+function expectCodexSkillLayout(skill: string): void {
+  expectInOrder(skill, [
+    "# Skills Broker",
+    "Use this skill only at the coarse broker boundary.",
+    "The host decides only one of these boundary outcomes:",
+    "## Broker-First (`broker_first`)",
+    "If you need one concrete broker-first example to calibrate the boundary, start with website QA.",
+    "### Hero lane: website QA",
+    ...HERO_LANE_EXAMPLES,
+    "### Secondary maintained lanes",
+    '"帮我做需求分析并产出设计文档"',
+    '"帮我看看这个需求有没有漏洞"',
+    '"investigate this site failure with a reusable workflow"',
+    "### Other broker-first lanes",
+    '"我有一个想法：做一个自动串起评审和发版的工具"',
+    '"把这个页面转成 markdown: https://example.com/a"',
+    '"convert this webpage to markdown https://example.com/a"',
+    "## Handle Normally (`handle_normally`)",
+    "## Clarify Before Broker (`clarify_before_broker`)",
+    "## Host Contract",
+    "do not pick a package, workflow family, skill, or MCP at the host layer",
+    "## Decline Contract",
+    "If the broker returns `UNSUPPORTED_REQUEST`, continue normally.",
+    "If the broker returns `AMBIGUOUS_REQUEST`, ask a clarifying question.",
+    "If the broker returns `NO_CANDIDATE`, offer capability discovery help.",
+    "If the broker returns `INSTALL_REQUIRED`, offer package install help using the broker-provided install plan.",
+    "If the broker returns `PREPARE_FAILED`, explain the failure clearly",
+    "## Runner Contract",
+    '--debug \'{"requestText":"QA this website https://example.com"'
+  ]);
+}
 
 async function writeLegacyCodexShell(
   installDirectory: string,
@@ -125,22 +177,13 @@ describe("shared broker home smoke", () => {
         expect(sharedContract).toEqual(sourceContract);
 
         const codexSkillContents = await readFile(codexSkillPath, "utf8");
-        expect(codexSkillContents).toContain("# Skills Broker");
-        expect(codexSkillContents).toContain("Use this skill only at the coarse broker boundary.");
-        expect(codexSkillContents).toContain("The host decides only one of these boundary outcomes:");
-        expect(codexSkillContents).toContain("## Broker-First (`broker_first`)");
-        expect(codexSkillContents).toContain("If you need one concrete broker-first example to calibrate the boundary, start with website QA.");
-        expect(codexSkillContents).toContain("Treat the examples below as semantic anchors, not literal trigger phrases.");
-        expect(codexSkillContents).toContain("Prefer semantic judgment over exact string overlap.");
-        expect(codexSkillContents).toContain("\"QA this website https://example.com\"");
-        expect(codexSkillContents).toContain("## Handle Normally (`handle_normally`)");
-        expect(codexSkillContents).toContain("## Clarify Before Broker (`clarify_before_broker`)");
-        expect(codexSkillContents).toContain("do not pick a package, workflow family, skill, or MCP at the host layer");
-        expect(codexSkillContents).toContain("If the broker returns `UNSUPPORTED_REQUEST`, continue normally.");
-        expect(codexSkillContents).toContain("If the broker returns `AMBIGUOUS_REQUEST`, ask a clarifying question.");
-        expect(codexSkillContents).toContain("If the broker returns `NO_CANDIDATE`, offer capability discovery help.");
-        expect(codexSkillContents).toContain("If the broker returns `INSTALL_REQUIRED`, offer package install help using the broker-provided install plan.");
-        expect(codexSkillContents).toContain("If the broker returns `PREPARE_FAILED`, explain the failure clearly");
+        expectCodexSkillLayout(codexSkillContents);
+        expect(codexSkillContents).toContain(
+          "Treat the examples below as semantic anchors, not literal trigger phrases."
+        );
+        expect(codexSkillContents).toContain(
+          "Prefer semantic judgment over exact string overlap."
+        );
 
         const claudeResult = await runClaudeCodeAdapter(
           {

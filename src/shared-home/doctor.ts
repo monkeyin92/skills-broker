@@ -1,12 +1,15 @@
-import { access, readdir, stat } from "node:fs/promises";
+import { access, readFile, readdir, stat } from "node:fs/promises";
 import { join } from "node:path";
 import {
   AcquisitionMemoryStore,
-  acquisitionMemoryFilePath
+  acquisitionMemoryFilePath,
+  type AcquisitionMemoryEntry
 } from "../broker/acquisition-memory.js";
-import { loadVerifiedDownstreamCandidates } from "../broker/downstream-manifest-source.js";
 import { readBrokerRoutingTraces, routingTraceLogFilePath } from "../broker/trace-store.js";
-import { summarizeBrokerRoutingTraces } from "../broker/trace.js";
+import {
+  summarizeBrokerRoutingTraces,
+  type BrokerRoutingTrace
+} from "../broker/trace.js";
 import {
   BROKER_HOSTS,
   brokerHostKnownShellEntries,
@@ -35,27 +38,44 @@ import { evaluateStatusBoard, type DoctorStatusResult } from "./status.js";
 import type { PeerSurfaceIntegrityIssue } from "./peer-surface-audit.js";
 import type { PeerSurfaceManualRecoveryMarker } from "./peer-surface-audit.js";
 
+export type DoctorProofRailState = "present" | "missing" | "unreadable";
+
 export type DoctorLifecycleResult = {
   command: "doctor";
   sharedHome: {
     path: string;
     exists: boolean;
+    missingPaths?: string[];
   };
   acquisitionMemory: {
     path: string;
     exists: boolean;
+    state: DoctorProofRailState;
     entries: number;
     successfulRoutes: number;
     firstReuseRecorded: number;
     crossHostReuse: number;
+    qualityAssuranceSuccessfulRoutes: number;
+    qualityAssuranceFirstReuseRecorded: number;
   };
   verifiedDownstreamManifests: {
     rootPath: string;
+    state: DoctorProofRailState;
     manifests: number;
+    qualityAssuranceManifests: number;
     hosts: Array<{
       name: BrokerHost;
+      state: DoctorProofRailState;
       manifests: number;
     }>;
+  };
+  websiteQaLoop: {
+    installRequiredTraces: number;
+    rerunSuccessfulRoutes: number;
+    reuseRecorded: number;
+    downstreamReplayManifests: number;
+    acquisitionMemoryState: DoctorProofRailState;
+    verifiedDownstreamState: DoctorProofRailState;
   };
   routingMetrics: {
     windowDays: number;
@@ -102,6 +122,21 @@ export type DoctorSharedBrokerHomeOptions = {
 
 type DoctorHostEntry = DoctorLifecycleResult["hosts"][number];
 
+type DoctorVerifiedDownstreamHostSummary =
+  DoctorLifecycleResult["verifiedDownstreamManifests"]["hosts"][number];
+
+type DoctorVerifiedDownstreamHostScan = DoctorVerifiedDownstreamHostSummary & {
+  qualityAssuranceManifests: number;
+  unreadableReason?: string;
+};
+
+type DoctorSharedHomeSummary = DoctorLifecycleResult["sharedHome"];
+
+const WEBSITE_QA_WINNER_ID = "website-qa";
+const WEBSITE_QA_CAPABILITY_ID = "gstack.qa";
+const WEBSITE_QA_SUBSKILL_ID = "qa";
+const VERIFIED_MANIFEST_FILE = ".skills-broker.json";
+
 async function pathExists(pathname: string): Promise<boolean> {
   try {
     await access(pathname);
@@ -111,6 +146,58 @@ async function pathExists(pathname: string): Promise<boolean> {
   }
 }
 
+async function summarizeDoctorSharedHome(
+  brokerHomeDirectory: string,
+  warnings: string[]
+): Promise<DoctorSharedHomeSummary> {
+  const layout = resolveSharedBrokerHomeLayout(brokerHomeDirectory);
+  const requiredPaths = [
+    layout.packageJsonPath,
+    layout.hostCatalogPath,
+    layout.maintainedFamiliesPath,
+    layout.mcpRegistryPath,
+    layout.distPath,
+    layout.runnerPath
+  ];
+  const missingPaths: string[] = [];
+
+  for (const pathname of requiredPaths) {
+    if (!(await pathExists(pathname))) {
+      missingPaths.push(pathname);
+    }
+  }
+
+  if (missingPaths.length > 0 && missingPaths.length < requiredPaths.length) {
+    warnings.push(
+      `shared-home: incomplete install proof (${missingPaths
+        .map((pathname) => pathname.replace(`${brokerHomeDirectory}/`, ""))
+        .join(", ")})`
+    );
+  }
+
+  return {
+    path: brokerHomeDirectory,
+    exists: missingPaths.length === 0,
+    ...(missingPaths.length === 0 ? {} : { missingPaths })
+  };
+}
+
+function isWebsiteQaAcquisitionEntry(entry: AcquisitionMemoryEntry): boolean {
+  return (
+    entry.leafCapabilityId === WEBSITE_QA_CAPABILITY_ID ||
+    entry.candidateId === WEBSITE_QA_CAPABILITY_ID ||
+    entry.canonicalKey.includes("families:quality_assurance")
+  );
+}
+
+function isWebsiteQaTrace(trace: BrokerRoutingTrace): boolean {
+  return (
+    trace.winnerId === WEBSITE_QA_WINNER_ID ||
+    trace.selectedCapabilityId === WEBSITE_QA_CAPABILITY_ID ||
+    trace.selectedLeafCapabilityId === WEBSITE_QA_SUBSKILL_ID
+  );
+}
+
 async function summarizeDoctorAcquisitionMemory(
   brokerHomeDirectory: string,
   warnings: string[]
@@ -118,12 +205,28 @@ async function summarizeDoctorAcquisitionMemory(
   const filePath = acquisitionMemoryFilePath(brokerHomeDirectory);
   const exists = await pathExists(filePath);
 
+  if (!exists) {
+    return {
+      path: filePath,
+      exists,
+      state: "missing",
+      entries: 0,
+      successfulRoutes: 0,
+      firstReuseRecorded: 0,
+      crossHostReuse: 0,
+      qualityAssuranceSuccessfulRoutes: 0,
+      qualityAssuranceFirstReuseRecorded: 0
+    };
+  }
+
   try {
     const memory = await new AcquisitionMemoryStore(filePath).read();
+    const websiteQaEntries = memory.entries.filter(isWebsiteQaAcquisitionEntry);
 
     return {
       path: filePath,
       exists,
+      state: "present",
       entries: memory.entries.length,
       successfulRoutes: memory.entries.reduce(
         (total, entry) => total + entry.successfulRoutes,
@@ -134,6 +237,13 @@ async function summarizeDoctorAcquisitionMemory(
       ).length,
       crossHostReuse: memory.entries.filter(
         (entry) => entry.verifiedHosts.length > 1
+      ).length,
+      qualityAssuranceSuccessfulRoutes: websiteQaEntries.reduce(
+        (total, entry) => total + entry.successfulRoutes,
+        0
+      ),
+      qualityAssuranceFirstReuseRecorded: websiteQaEntries.filter(
+        (entry) => entry.firstReuseAt !== undefined
       ).length
     };
   } catch (error) {
@@ -144,10 +254,134 @@ async function summarizeDoctorAcquisitionMemory(
     return {
       path: filePath,
       exists,
+      state: "unreadable",
       entries: 0,
       successfulRoutes: 0,
       firstReuseRecorded: 0,
-      crossHostReuse: 0
+      crossHostReuse: 0,
+      qualityAssuranceSuccessfulRoutes: 0,
+      qualityAssuranceFirstReuseRecorded: 0
+    };
+  }
+}
+
+function parseVerifiedManifestCandidate(raw: string): {
+  isWebsiteQa: boolean;
+} | null {
+  try {
+    const parsed = JSON.parse(raw) as Record<string, unknown>;
+    if (typeof parsed !== "object" || parsed === null) {
+      return null;
+    }
+
+    const skillName =
+      typeof parsed.skillName === "string" ? parsed.skillName : undefined;
+    const verifiedCandidate =
+      typeof parsed.verifiedCandidate === "object" && parsed.verifiedCandidate !== null
+        ? (parsed.verifiedCandidate as Record<string, unknown>)
+        : undefined;
+    const leaf =
+      verifiedCandidate !== undefined &&
+      typeof verifiedCandidate.leaf === "object" &&
+      verifiedCandidate.leaf !== null
+        ? (verifiedCandidate.leaf as Record<string, unknown>)
+        : undefined;
+
+    return {
+      isWebsiteQa:
+        skillName === WEBSITE_QA_SUBSKILL_ID ||
+        leaf?.capabilityId === WEBSITE_QA_CAPABILITY_ID ||
+        leaf?.subskillId === WEBSITE_QA_SUBSKILL_ID
+    };
+  } catch {
+    return null;
+  }
+}
+
+async function summarizeVerifiedDownstreamHost(
+  directory: string,
+  host: BrokerHost
+): Promise<DoctorVerifiedDownstreamHostScan> {
+  try {
+    const entries = await readdir(directory, { withFileTypes: true });
+    let manifests = 0;
+    let qualityAssuranceManifests = 0;
+
+    for (const entry of entries) {
+      const entryPath = join(directory, entry.name);
+
+      if (entry.isDirectory()) {
+        const nested = await summarizeVerifiedDownstreamHost(entryPath, host);
+        if (nested.state === "unreadable") {
+          return nested;
+        }
+
+        manifests += nested.manifests;
+        qualityAssuranceManifests += nested.qualityAssuranceManifests ?? 0;
+        continue;
+      }
+
+      if (!entry.isFile() || entry.name !== VERIFIED_MANIFEST_FILE) {
+        continue;
+      }
+
+      let rawManifest: string;
+      try {
+        rawManifest = await readFile(entryPath, "utf8");
+      } catch (error) {
+        const reason =
+          error instanceof Error ? error.message : "unknown manifest read failure";
+        return {
+          name: host,
+          state: "unreadable",
+          manifests,
+          qualityAssuranceManifests,
+          unreadableReason: `${entryPath}: ${reason}`
+        };
+      }
+
+      const parsed = parseVerifiedManifestCandidate(rawManifest);
+      if (parsed === null) {
+        return {
+          name: host,
+          state: "unreadable",
+          manifests,
+          qualityAssuranceManifests,
+          unreadableReason: `${entryPath}: invalid verified downstream manifest`
+        };
+      }
+
+      manifests += 1;
+      if (parsed.isWebsiteQa) {
+        qualityAssuranceManifests += 1;
+      }
+    }
+
+    return {
+      name: host,
+      state: manifests > 0 ? "present" : "missing",
+      manifests,
+      qualityAssuranceManifests
+    };
+  } catch (error) {
+    const nodeError = error as NodeJS.ErrnoException;
+    if (nodeError.code === "ENOENT") {
+      return {
+        name: host,
+        state: "missing",
+        manifests: 0,
+        qualityAssuranceManifests: 0
+      };
+    }
+
+    const reason =
+      error instanceof Error ? error.message : "unknown downstream manifest failure";
+    return {
+      name: host,
+      state: "unreadable",
+      manifests: 0,
+      qualityAssuranceManifests: 0,
+      unreadableReason: `${directory}: ${reason}`
     };
   }
 }
@@ -158,35 +392,35 @@ async function summarizeDoctorVerifiedDownstreamManifests(
 ): Promise<DoctorLifecycleResult["verifiedDownstreamManifests"]> {
   const hosts = await Promise.all(
     BROKER_HOSTS.map(async (host) => {
-      try {
-        return {
-          name: host,
-          manifests: (
-            await loadVerifiedDownstreamCandidates({
-              brokerHomeDirectory,
-              currentHost: host
-            })
-          ).length
-        };
-      } catch (error) {
-        const reason =
-          error instanceof Error
-            ? error.message
-            : "unknown downstream manifest failure";
-        warnings.push(`downstream-manifests:${host}: unreadable (${reason})`);
+      const hostSummary = await summarizeVerifiedDownstreamHost(
+        join(brokerHomeDirectory, "downstream", host, "skills"),
+        host
+      );
 
-        return {
-          name: host,
-          manifests: 0
-        };
+      if (hostSummary.state === "unreadable" && hostSummary.unreadableReason) {
+        warnings.push(
+          `downstream-manifests:${host}: unreadable (${hostSummary.unreadableReason})`
+        );
       }
+
+      return hostSummary;
     })
   );
+  const state: DoctorProofRailState = hosts.some((host) => host.state === "unreadable")
+    ? "unreadable"
+    : hosts.some((host) => host.state === "present")
+      ? "present"
+      : "missing";
 
   return {
     rootPath: join(brokerHomeDirectory, "downstream"),
+    state,
     manifests: hosts.reduce((total, host) => total + host.manifests, 0),
-    hosts
+    qualityAssuranceManifests: hosts.reduce(
+      (total, host) => total + host.qualityAssuranceManifests,
+      0
+    ),
+    hosts: hosts.map(({ unreadableReason: _unreadableReason, ...host }) => host)
   };
 }
 
@@ -356,19 +590,23 @@ export async function doctorSharedBrokerHome(
   options: DoctorSharedBrokerHomeOptions
 ): Promise<DoctorLifecycleResult> {
   const sharedHomeLayout = resolveSharedBrokerHomeLayout(options.brokerHomeDirectory);
-  const sharedHomeExists = await pathExists(sharedHomeLayout.packageJsonPath);
+  const warnings: string[] = [];
+  const sharedHome = await summarizeDoctorSharedHome(
+    options.brokerHomeDirectory,
+    warnings
+  );
   const hostTargets = await detectLifecycleHostTargets({
     homeDirectory: options.homeDirectory,
     brokerHomeOverride: options.brokerHomeDirectory,
     claudeDirOverride: options.claudeCodeInstallDirectory,
     codexDirOverride: options.codexInstallDirectory
   });
-  const warnings: string[] = [];
   const routingWindowDays = 7;
+  const routingTraces = await readBrokerRoutingTraces(
+    routingTraceLogFilePath(options.brokerHomeDirectory)
+  );
   const routingSummary = summarizeBrokerRoutingTraces(
-    await readBrokerRoutingTraces(
-      routingTraceLogFilePath(options.brokerHomeDirectory)
-    ),
+    routingTraces,
     {
       since: new Date(
         (options.now ?? new Date()).getTime() -
@@ -385,6 +623,16 @@ export async function doctorSharedBrokerHome(
       options.brokerHomeDirectory,
       warnings
     );
+  const websiteQaInstallRequiredTraces = routingTraces.filter(
+    (trace) =>
+      new Date(trace.timestamp) >=
+        new Date(
+          (options.now ?? new Date()).getTime() -
+            routingWindowDays * 24 * 60 * 60 * 1000
+        ) &&
+      trace.resultCode === "INSTALL_REQUIRED" &&
+      isWebsiteQaTrace(trace)
+  ).length;
   const hosts = [
     ...(
       await Promise.all(
@@ -416,12 +664,18 @@ export async function doctorSharedBrokerHome(
 
   return {
     command: "doctor",
-    sharedHome: {
-      path: options.brokerHomeDirectory,
-      exists: sharedHomeExists
-    },
+    sharedHome,
     acquisitionMemory,
     verifiedDownstreamManifests,
+    websiteQaLoop: {
+      installRequiredTraces: websiteQaInstallRequiredTraces,
+      rerunSuccessfulRoutes: acquisitionMemory.qualityAssuranceSuccessfulRoutes,
+      reuseRecorded: acquisitionMemory.qualityAssuranceFirstReuseRecorded,
+      downstreamReplayManifests:
+        verifiedDownstreamManifests.qualityAssuranceManifests,
+      acquisitionMemoryState: acquisitionMemory.state,
+      verifiedDownstreamState: verifiedDownstreamManifests.state
+    },
     routingMetrics: {
       windowDays: routingWindowDays,
       observed: routingSummary.observed,
@@ -434,10 +688,22 @@ export async function doctorSharedBrokerHome(
     brokerFirstGate,
     status,
     adoptionHealth: resolveAdoptionHealth({
-      sharedHomeExists,
+      sharedHomeExists: sharedHome.exists,
+      sharedHomeReason:
+        sharedHome.exists === true || sharedHome.missingPaths === undefined
+          ? undefined
+          : `missing install proof rails (${sharedHome.missingPaths
+              .map((pathname) =>
+                pathname.replace(`${options.brokerHomeDirectory}/`, "")
+              )
+              .join(", ")})`,
       hosts,
       brokerFirstGate,
-      statusBoard: status
+      statusBoard: status,
+      proofRails: {
+        acquisitionMemory: acquisitionMemory.state,
+        verifiedDownstreamManifests: verifiedDownstreamManifests.state
+      }
     }),
     warnings
   };

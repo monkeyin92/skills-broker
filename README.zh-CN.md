@@ -215,6 +215,8 @@ skills-broker update
 
 ## 快速安装和使用
 
+如果你今天只跑一条发布态主路径，就跑这一条：先装 shared broker home，然后让宿主去 QA 一个网站，需要时同意 `INSTALL_REQUIRED`，再把同一个请求重跑一遍，最后用 `doctor` 看证据。
+
 ### 1. 初始化或刷新共享 broker home
 
 ```bash
@@ -236,37 +238,7 @@ npx skills-broker update
 
 如果没有检测到官方根目录，CLI 会明确提示，并告诉你用 `--claude-dir` 或 `--codex-dir` 指定自定义目录。默认根目录缺失会让 adoption health 保持在 `inactive`；如果你显式指定了一个缺失的宿主壳路径，则会出现带名字的 `blocked` verdict。
 
-### 1.5 先验证 operator 路径
-
-```bash
-npx skills-broker doctor --strict
-```
-
-这是确认共享 home 安装是否真的生效的最快路径。这个 packet 现在只要求三件事：
-
-- 你能用一条命令看出 adoption health 是 `green`、`blocked` 还是 `inactive`
-- 支持矩阵只声称 Claude Code 和 Codex
-- operator-facing 失败能指出先去检查哪里
-
-### 2. 用显式目录试跑共享 home
-
-```bash
-npx skills-broker update \
-  --broker-home /tmp/.skills-broker \
-  --claude-dir /tmp/.claude/skills/skills-broker \
-  --codex-dir /tmp/.agents/skills/skills-broker
-```
-
-它会：
-
-- 把共享 broker runtime 构建到 `/tmp/.skills-broker`
-- 接上一个 Claude Code 薄壳
-- 接上一个 Codex 薄壳
-- 让两个宿主复用同一份 broker cache 和路由历史
-
-如果你要接到自动化或 CI，所有 lifecycle 命令也都支持 `--json`。
-
-### 3. 先跑一遍 website QA 的 install-required -> verify -> reuse 闭环
+### 2. 先跑一遍 website QA 的 install-required -> verify -> reuse 闭环
 
 这是 discovery/install 飞轮在发布态薄宿主壳上真正要证明自己的地方。
 
@@ -303,7 +275,37 @@ Verified downstream manifests: total=2, claude-code=1, codex=1
 npx skills-broker remove --reset-acquisition-memory
 ```
 
-### 4. 为本地开发克隆仓库并安装依赖
+### 3. 用 `doctor` 验证 operator 路径
+
+```bash
+npx skills-broker doctor --strict
+```
+
+这是在 QA loop 跑完后，确认共享 home 安装是否真的生效的最快路径。这个 packet 现在只要求三件事：
+
+- 你能用一条命令看出 adoption health 是 `green`、`blocked` 还是 `inactive`
+- 支持矩阵只声称 Claude Code 和 Codex
+- operator-facing 失败能指出先去检查哪里
+
+### 4. 用显式目录试跑共享 home
+
+```bash
+npx skills-broker update \
+  --broker-home /tmp/.skills-broker \
+  --claude-dir /tmp/.claude/skills/skills-broker \
+  --codex-dir /tmp/.agents/skills/skills-broker
+```
+
+它会：
+
+- 把共享 broker runtime 构建到 `/tmp/.skills-broker`
+- 接上一个 Claude Code 薄壳
+- 接上一个 Codex 薄壳
+- 让两个宿主复用同一份 broker cache 和路由历史
+
+如果你要接到自动化或 CI，所有 lifecycle 命令也都支持 `--json`。
+
+### 5. 为本地开发克隆仓库并安装依赖
 
 ```bash
 git clone https://github.com/monkeyin92/skills-broker.git
@@ -311,14 +313,14 @@ cd skills-broker
 npm ci
 ```
 
-### 5. 构建并验证本地 checkout
+### 6. 构建并验证本地 checkout
 
 ```bash
 npm run build
 npx vitest run
 ```
 
-### 6. 安装仓库内的 Claude Code 本地包
+### 7. 安装仓库内的 Claude Code 本地包
 
 ```bash
 ./scripts/install-claude-code.sh /absolute/path/to/claude-code-plugin
@@ -335,7 +337,7 @@ npx vitest run
 
 这条链路是 **仓库内的 Claude Code 开发路径**，不是当前主推的发布态安装入口。
 
-### 7. 在 contributor 路径上拿到 first routed success
+### 8. 在 contributor 路径上拿到 first routed success
 
 ```bash
 /absolute/path/to/claude-code-plugin/bin/run-broker \

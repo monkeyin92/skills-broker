@@ -1167,7 +1167,7 @@ describe("runBroker", () => {
     }
   });
 
-  it("proves install, verify, and reuse across hosts for an MCP bundle", async () => {
+  it("proves website QA INSTALL_REQUIRED -> install -> rerun -> cross-host reuse for an MCP bundle", async () => {
     const runtime = await createRuntimePaths();
     const hostCatalogFilePath = join(runtime.directory, "mcp-proof-host.json");
     const firstMcpRegistryFilePath = join(runtime.directory, "mcp-proof-first.json");
@@ -1246,6 +1246,16 @@ describe("runBroker", () => {
       expect(installRequired.ok).toBe(false);
       expect(installRequired.outcome.code).toBe("INSTALL_REQUIRED");
       expect(installRequired.acquisition?.package.acquisition).toBe("mcp_bundle");
+      expect(installRequired.acquisition?.installPlan.retry).toEqual({
+        mode: "rerun_request"
+      });
+      expect(installRequired.trace).toMatchObject({
+        host: "claude-code",
+        hostDecision: "broker_first",
+        resultCode: "INSTALL_REQUIRED",
+        winnerId: "io.example/website-qa",
+        winnerPackageId: "io.example/website-qa"
+      });
 
       await mkdir(rememberedSkillDirectory, { recursive: true });
       await mkdir(challengerSkillDirectory, { recursive: true });
@@ -1273,6 +1283,42 @@ describe("runBroker", () => {
       expect(verified.outcome.code).toBe("HANDOFF_READY");
       expect(verified.winner.id).toBe("io.example/website-qa");
       expect(verified.handoff.chosenPackage.installState).toBe("installed");
+      expect(verified.trace).toMatchObject({
+        host: "claude-code",
+        hostDecision: "broker_first",
+        resultCode: "HANDOFF_READY",
+        winnerId: "io.example/website-qa",
+        winnerPackageId: "io.example/website-qa"
+      });
+
+      const verifiedAcquisitionMemory = JSON.parse(
+        await readFile(
+          acquisitionMemoryFilePath(runtime.brokerHomeDirectory),
+          "utf8"
+        )
+      ) as {
+        entries: Array<{
+          canonicalKey: string;
+          packageId: string;
+          leafCapabilityId: string;
+          successfulRoutes: number;
+          firstReuseAt?: string;
+          verifiedHosts: string[];
+        }>;
+      };
+
+      expect(verifiedAcquisitionMemory.entries).toHaveLength(1);
+      expect(verifiedAcquisitionMemory.entries[0]).toMatchObject({
+        canonicalKey:
+          "query:v2|output:markdown_only|families:quality_assurance|artifacts:qa_report|constraints:|targets:website:https://example.com|preferred:",
+        packageId: "io.example/website-qa",
+        leafCapabilityId: "io.example/website-qa",
+        successfulRoutes: 1,
+        verifiedHosts: ["claude-code"]
+      });
+      expect(verifiedAcquisitionMemory.entries[0]).not.toHaveProperty(
+        "firstReuseAt"
+      );
 
       const reused = await runBroker(
         {
@@ -1298,6 +1344,35 @@ describe("runBroker", () => {
       expect(reused.outcome.code).toBe("HANDOFF_READY");
       expect(reused.debug.cacheHit).toBe(false);
       expect(reused.winner.id).toBe("io.example/website-qa");
+      expect(reused.trace).toMatchObject({
+        host: "codex",
+        hostDecision: "broker_first",
+        resultCode: "HANDOFF_READY",
+        winnerId: "io.example/website-qa",
+        winnerPackageId: "io.example/website-qa"
+      });
+
+      const reusedAcquisitionMemory = JSON.parse(
+        await readFile(
+          acquisitionMemoryFilePath(runtime.brokerHomeDirectory),
+          "utf8"
+        )
+      ) as {
+        entries: Array<{
+          packageId: string;
+          successfulRoutes: number;
+          firstReuseAt?: string;
+          verifiedHosts: string[];
+        }>;
+      };
+
+      expect(reusedAcquisitionMemory.entries).toHaveLength(1);
+      expect(reusedAcquisitionMemory.entries[0]).toMatchObject({
+        packageId: "io.example/website-qa",
+        successfulRoutes: 2,
+        firstReuseAt: "2026-04-16T07:10:00.000Z",
+        verifiedHosts: expect.arrayContaining(["claude-code", "codex"])
+      });
     } finally {
       await rm(runtime.directory, { recursive: true, force: true });
     }

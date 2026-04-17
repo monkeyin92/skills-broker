@@ -208,6 +208,8 @@ That distinction matters because the hardest part is not storing tools. The hard
 
 ## Quick Start
 
+If you only try one published path, make it this one: install the shared broker home, ask the host to QA a website, approve `INSTALL_REQUIRED` if needed, then rerun the same request and inspect `doctor`.
+
 ### 1. Install or refresh the shared broker home
 
 ```bash
@@ -229,37 +231,7 @@ By default, `update` detects official host roots before it writes anything:
 
 If a host root is not found, the CLI will explain that and tell you to use `--claude-dir` or `--codex-dir` for custom layouts. A missing default root keeps adoption health `inactive`; an explicitly targeted shell path that is missing shows up as a named `blocked` verdict.
 
-### 1.5 Verify the operator path first
-
-```bash
-npx skills-broker doctor --strict
-```
-
-This is the fastest way to confirm the shared-home install is real. For this packet, the success bar is simple:
-
-- you can tell in one command whether adoption health is `green`, `blocked`, or `inactive`
-- the support matrix only claims Claude Code and Codex
-- operator-facing failures tell you what broke and what to inspect next
-
-### 2. Try explicit shared-home directories
-
-```bash
-npx skills-broker update \
-  --broker-home /tmp/.skills-broker \
-  --claude-dir /tmp/.claude/skills/skills-broker \
-  --codex-dir /tmp/.agents/skills/skills-broker
-```
-
-This will:
-
-- build the shared broker runtime into `/tmp/.skills-broker`
-- attach a Claude Code thin shell
-- attach a Codex thin shell
-- let both hosts reuse the same broker cache and routing history
-
-For automation or CI, every lifecycle command also supports `--json`.
-
-### 3. Try the website QA install-required -> verify -> reuse loop
+### 2. Try the website QA install-required -> verify -> reuse loop
 
 This is the published host-shell path where the discovery/install flywheel is supposed to prove itself.
 
@@ -296,7 +268,37 @@ If you want to clear only that advisory memory and re-run the loop from scratch,
 npx skills-broker remove --reset-acquisition-memory
 ```
 
-### 4. Clone the repository for local development
+### 3. Verify the operator path with `doctor`
+
+```bash
+npx skills-broker doctor --strict
+```
+
+This is the fastest way to confirm the shared-home install is real after the QA loop. For this packet, the success bar is simple:
+
+- you can tell in one command whether adoption health is `green`, `blocked`, or `inactive`
+- the support matrix only claims Claude Code and Codex
+- operator-facing failures tell you what broke and what to inspect next
+
+### 4. Try explicit shared-home directories
+
+```bash
+npx skills-broker update \
+  --broker-home /tmp/.skills-broker \
+  --claude-dir /tmp/.claude/skills/skills-broker \
+  --codex-dir /tmp/.agents/skills/skills-broker
+```
+
+This will:
+
+- build the shared broker runtime into `/tmp/.skills-broker`
+- attach a Claude Code thin shell
+- attach a Codex thin shell
+- let both hosts reuse the same broker cache and routing history
+
+For automation or CI, every lifecycle command also supports `--json`.
+
+### 5. Clone the repository for local development
 
 ```bash
 git clone https://github.com/monkeyin92/skills-broker.git
@@ -304,14 +306,14 @@ cd skills-broker
 npm ci
 ```
 
-### 5. Build and verify the local checkout
+### 6. Build and verify the local checkout
 
 ```bash
 npm run build
 npx vitest run
 ```
 
-### 6. Install the repo-local Claude Code package
+### 7. Install the repo-local Claude Code package
 
 ```bash
 ./scripts/install-claude-code.sh /absolute/path/to/claude-code-plugin
@@ -328,7 +330,7 @@ This creates a self-contained local package containing:
 
 This is the **repo-local Claude Code development path**, not the primary published install flow.
 
-### 7. First routed success on the contributor path
+### 8. First routed success on the contributor path
 
 ```bash
 /absolute/path/to/claude-code-plugin/bin/run-broker \

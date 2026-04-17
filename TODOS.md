@@ -2,6 +2,18 @@
 
 ## Ecosystem
 
+### Generalize maintained-family semantic contract after QA default-entry proof is hard
+
+**What:** Revisit richer maintained-family semantic boundary structure only after the website QA default-entry loop is proven end to end in docs, host shell, doctor, and QA-specific proof rails.
+
+**Why:** Right now the higher-leverage gap is operator-visible QA conversion truth, not prettier family schema. Generalizing too early risks adding structure with no runtime consumer.
+
+**Context:** The current packet should harden `website QA` as the default-entry loop. Generic semantic-contract expansion becomes valuable again only after that loop has dedicated install-required -> rerun -> reuse proof and doctor truth.
+
+**Effort:** M
+**Priority:** P2
+**Depends on:** website QA default-entry conversion hardening landing first
+
 ## Host Expansion
 
 ### Add OpenCode as the third thin host shell

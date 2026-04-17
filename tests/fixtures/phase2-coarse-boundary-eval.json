@@ -153,6 +153,18 @@
       }
     },
     {
+      "id": "clarify-before-broker-check-page-zh",
+      "mode": "synthetic_host_skip",
+      "hosts": ["claude-code", "codex"],
+      "requestText": "看下这个页面",
+      "now": "2026-03-31T10:27:00.000Z",
+      "expect": {
+        "hostDecision": "clarify_before_broker",
+        "resultCode": "HOST_SKIPPED_BROKER",
+        "hostAction": "ask_clarifying_question"
+      }
+    },
+    {
       "id": "clarify-before-broker-analyze",
       "mode": "synthetic_host_skip",
       "hosts": ["claude-code", "codex"],
