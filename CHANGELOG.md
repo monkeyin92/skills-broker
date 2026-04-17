@@ -2,6 +2,18 @@
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-04-17
+
+### Changed
+
+- Changed the first-use story in `README.md` and `README.zh-CN.md` so website QA is the clear default-entry path, with the install-required -> verify -> reuse loop taught as the first thing to try.
+- Changed generated Claude Code and Codex host-shell skill copy to teach that broker-first examples are semantic anchors, not literal trigger phrases, while still keeping the host at the coarse routing boundary.
+- Changed the maintained coarse-boundary proof rail to cover paraphrased requirements-analysis, investigation, and website-QA requests instead of only the canonical example sentences.
+
+### Fixed
+
+- Fixed a flaky full-suite CLI strict-doctor timeout by giving the explicit missing-host-shell assertion enough time to complete under heavier test load.
+
 ## [0.3.0] - 2026-04-16
 
 ### Added
