@@ -1245,7 +1245,22 @@ describe("runBroker", () => {
 
       expect(installRequired.ok).toBe(false);
       expect(installRequired.outcome.code).toBe("INSTALL_REQUIRED");
+      expect(installRequired.outcome.message).toContain(
+        'Install and verify package "io.example/website-qa" before retrying.'
+      );
       expect(installRequired.acquisition?.package.acquisition).toBe("mcp_bundle");
+      expect(installRequired.acquisition?.installPlan.steps).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            id: "verify",
+            title: "Verify package and leaf"
+          }),
+          expect.objectContaining({
+            id: "retry",
+            instructions: "After verification succeeds, rerun the same broker request."
+          })
+        ])
+      );
       expect(installRequired.acquisition?.installPlan.retry).toEqual({
         mode: "rerun_request"
       });
@@ -1283,12 +1298,16 @@ describe("runBroker", () => {
       expect(verified.outcome.code).toBe("HANDOFF_READY");
       expect(verified.winner.id).toBe("io.example/website-qa");
       expect(verified.handoff.chosenPackage.installState).toBe("installed");
+      expect(verified.debug.decision).toContain(
+        "cache reuse: no cache hit, successful routing history: 0"
+      );
       expect(verified.trace).toMatchObject({
         host: "claude-code",
         hostDecision: "broker_first",
         resultCode: "HANDOFF_READY",
         winnerId: "io.example/website-qa",
-        winnerPackageId: "io.example/website-qa"
+        winnerPackageId: "io.example/website-qa",
+        reasonCode: "query_native"
       });
 
       const verifiedAcquisitionMemory = JSON.parse(
@@ -1343,13 +1362,15 @@ describe("runBroker", () => {
       expect(reused.ok).toBe(true);
       expect(reused.outcome.code).toBe("HANDOFF_READY");
       expect(reused.debug.cacheHit).toBe(false);
+      expect(reused.debug.decision).toContain("cache reuse: no cache hit");
       expect(reused.winner.id).toBe("io.example/website-qa");
       expect(reused.trace).toMatchObject({
         host: "codex",
         hostDecision: "broker_first",
         resultCode: "HANDOFF_READY",
         winnerId: "io.example/website-qa",
-        winnerPackageId: "io.example/website-qa"
+        winnerPackageId: "io.example/website-qa",
+        reasonCode: "query_native"
       });
 
       const reusedAcquisitionMemory = JSON.parse(
@@ -1373,6 +1394,44 @@ describe("runBroker", () => {
         firstReuseAt: "2026-04-16T07:10:00.000Z",
         verifiedHosts: expect.arrayContaining(["claude-code", "codex"])
       });
+
+      const persistedTraces = (
+        await readFile(
+          routingTraceLogFilePath(runtime.brokerHomeDirectory),
+          "utf8"
+        )
+      )
+        .trim()
+        .split("\n")
+        .map((line) =>
+          JSON.parse(line) as {
+            host: string;
+            resultCode: string;
+            reasonCode: string | null;
+            winnerId: string | null;
+          }
+        );
+
+      expect(persistedTraces).toEqual([
+        expect.objectContaining({
+          host: "claude-code",
+          resultCode: "INSTALL_REQUIRED",
+          reasonCode: "package_not_installed",
+          winnerId: "io.example/website-qa"
+        }),
+        expect.objectContaining({
+          host: "claude-code",
+          resultCode: "HANDOFF_READY",
+          reasonCode: "query_native",
+          winnerId: "io.example/website-qa"
+        }),
+        expect.objectContaining({
+          host: "codex",
+          resultCode: "HANDOFF_READY",
+          reasonCode: "query_native",
+          winnerId: "io.example/website-qa"
+        })
+      ]);
     } finally {
       await rm(runtime.directory, { recursive: true, force: true });
     }
@@ -2215,6 +2274,109 @@ describe("runBroker", () => {
             mode: "rerun_request"
           }
         }
+      });
+    } finally {
+      await rm(runtime.directory, { recursive: true, force: true });
+    }
+  });
+
+  it("returns a specific PREPARE_FAILED outcome when an installed winner fails handoff validation", async () => {
+    const runtime = await createRuntimePaths();
+    const hostCatalogFilePath = join(runtime.directory, "prepare-failed-host.json");
+    const mcpRegistryFilePath = join(runtime.directory, "prepare-failed-mcp.json");
+
+    await writeFile(
+      hostCatalogFilePath,
+      JSON.stringify({
+        packages: [
+          {
+            packageId: "gstack",
+            label: "gstack",
+            installState: "installed",
+            acquisition: "local_skill_bundle"
+          }
+        ],
+        skills: [
+          {
+            id: "website-qa",
+            kind: "skill",
+            label: "Website QA",
+            intent: "capability_discovery_or_install",
+            package: {
+              packageId: "gstack"
+            },
+            leaf: {
+              capabilityId: "gstack.qa",
+              packageId: "gstack",
+              subskillId: "qa"
+            },
+            query: {
+              jobFamilies: ["quality_assurance"],
+              targetTypes: ["website", "url"],
+              artifacts: ["qa_report"],
+              examples: ["测下这个网站的质量"]
+            },
+            implementation: {
+              id: "external.qa",
+              type: "local_skill",
+              ownerSurface: "broker_owned_downstream"
+            }
+          }
+        ]
+      }),
+      "utf8"
+    );
+    await writeFile(mcpRegistryFilePath, JSON.stringify({ servers: [] }), "utf8");
+
+    try {
+      const result = await runBroker(
+        {
+          requestText: "QA this website https://example.com",
+          host: "claude-code",
+          capabilityQuery: {
+            kind: "capability_request",
+            goal: "qa a website",
+            host: "claude-code",
+            requestText: "QA this website https://example.com",
+            jobFamilies: ["quality_assurance"],
+            targets: [
+              {
+                type: "website",
+                value: "https://example.com"
+              }
+            ],
+            artifacts: ["qa_report"]
+          }
+        },
+        {
+          cacheFilePath: runtime.cacheFilePath,
+          hostCatalogFilePath,
+          mcpRegistryFilePath,
+          now: new Date("2026-04-17T03:00:00.000Z")
+        }
+      );
+
+      expect(result.ok).toBe(false);
+      expect(result.outcome).toMatchObject({
+        code: "PREPARE_FAILED",
+        hostAction: "show_graceful_failure"
+      });
+      expect(result.outcome.message).toContain(
+        'Candidate "website-qa" failed broker handoff validation after installation.'
+      );
+      expect(result.error).toMatchObject({
+        code: "PREPARE_FAILED",
+        message:
+          'Candidate "website-qa" has implementation "external.qa" outside package "gstack".'
+      });
+      expect(result.trace).toMatchObject({
+        resultCode: "PREPARE_FAILED",
+        missLayer: "prepare",
+        reasonCode: "candidate_selection_invalid",
+        winnerId: "website-qa",
+        winnerPackageId: "gstack",
+        selectedCapabilityId: "gstack.qa",
+        selectedPackageInstallState: "installed"
       });
     } finally {
       await rm(runtime.directory, { recursive: true, force: true });

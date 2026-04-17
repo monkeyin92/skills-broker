@@ -129,6 +129,25 @@ describe("prepareCandidate", () => {
     ).rejects.toThrow(/is not ready for handoff/);
   });
 
+  it("fails with an installed-but-unusable message when install verification still blocks handoff", async () => {
+    await expect(
+      prepareCandidate(
+        {
+          ...createWinner(),
+          prepare: {
+            authRequired: false,
+            installRequired: true
+          }
+        },
+        {
+          currentHost: "codex"
+        }
+      )
+    ).rejects.toThrow(
+      /looks installed, but the leaf "baoyu\.url-to-markdown" could not be verified for handoff/
+    );
+  });
+
   it("fails closed when package and implementation selection drift apart", async () => {
     await expect(
       prepareCandidate(

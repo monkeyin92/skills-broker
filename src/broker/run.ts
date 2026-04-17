@@ -13,7 +13,7 @@ import {
 import { explainDecision } from "./explain.js";
 import { buildHandoffEnvelope } from "./handoff.js";
 import { hydratePackageAvailability } from "./package-availability.js";
-import { prepareCandidate } from "./prepare.js";
+import { PrepareCandidateError, prepareCandidate } from "./prepare.js";
 import {
   legacyIntentCacheKey,
   requestRoutingReasonCode,
@@ -289,7 +289,7 @@ function createPackageInstallRequiredResult(
     ok: false,
     outcome: {
       code: "INSTALL_REQUIRED",
-      message: `The broker matched "${winner.leaf.capabilityId}", but package "${winner.package.packageId}" is not installed yet. Offer the broker-provided install plan before retrying.`,
+      message: `The broker matched "${winner.leaf.capabilityId}", but package "${winner.package.packageId}" is not installed yet. Install and verify package "${winner.package.packageId}" before retrying.`,
       hostAction: "offer_package_install"
     },
     error: {
@@ -348,6 +348,10 @@ function ambiguousRequestMessage(): string {
 
 function prepareFailedMessage(): string {
   return "The broker selected a candidate but could not prepare a handoff. Explain the failure clearly and do not silently bypass the broker.";
+}
+
+function prepareFailureUserMessage(error: PrepareCandidateError): string {
+  return error.userMessage;
 }
 
 function packageInstalled(card: CapabilityCard): boolean {
@@ -892,7 +896,27 @@ async function runSingleStep(
     prepared = await prepareCandidate(winner, {
       currentHost
     });
-  } catch {
+  } catch (error) {
+    if (error instanceof PrepareCandidateError) {
+      return createFailureResult(
+        "PREPARE_FAILED",
+        prepareFailureUserMessage(error),
+        "show_graceful_failure",
+        debug,
+        createBrokerRoutingTrace({
+          input,
+          currentHost,
+          resultCode: "PREPARE_FAILED",
+          now,
+          hostAction: "show_graceful_failure",
+          candidateCount: ranked.length,
+          winner,
+          reasonCode: error.reasonCode
+        }),
+        error.message
+      );
+    }
+
     return createFailureResult(
       "PREPARE_FAILED",
       prepareFailedMessage(),

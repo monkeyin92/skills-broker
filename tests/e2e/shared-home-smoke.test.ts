@@ -56,7 +56,7 @@ function expectCodexSkillLayout(skill: string): void {
     "If the broker returns `UNSUPPORTED_REQUEST`, continue normally.",
     "If the broker returns `AMBIGUOUS_REQUEST`, ask a clarifying question.",
     "If the broker returns `NO_CANDIDATE`, offer capability discovery help.",
-    "If the broker returns `INSTALL_REQUIRED`, offer package install help using the broker-provided install plan.",
+    "If the broker returns `INSTALL_REQUIRED`, offer package install help using the broker-provided install plan, verify it, then rerun the same request.",
     "If the broker returns `PREPARE_FAILED`, explain the failure clearly",
     "## Runner Contract",
     '--debug \'{"requestText":"QA this website https://example.com"'

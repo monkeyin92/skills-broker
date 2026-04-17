@@ -48,6 +48,45 @@ export type LifecycleCliResult = {
   shipRefOverride?: string;
 };
 
+type StrictDoctorGateInput = {
+  status: {
+    hasStrictIssues: boolean;
+  };
+  brokerFirstGate: {
+    hasStrictIssues: boolean;
+  };
+  hosts: Array<{
+    competingPeerSkills?: unknown[];
+    integrityIssues?: unknown[];
+    manualRecovery?: unknown;
+  }>;
+  adoptionHealth: {
+    status: "inactive" | "green" | "blocked";
+  };
+  websiteQaLoop: {
+    verdict: "blocked" | "in_progress" | "proven";
+  };
+};
+
+export function shouldFailStrictDoctorGate(input: StrictDoctorGateInput): boolean {
+  const hasPeerSurfaceStrictIssues = input.hosts.some(
+    (host) =>
+      (host.competingPeerSkills?.length ?? 0) > 0 ||
+      (host.integrityIssues?.length ?? 0) > 0 ||
+      host.manualRecovery !== undefined
+  );
+  const hasAdoptionBlockingIssues = input.adoptionHealth.status === "blocked";
+  const hasWebsiteQaBlockingIssues = input.websiteQaLoop.verdict === "blocked";
+
+  return (
+    input.status.hasStrictIssues ||
+    input.brokerFirstGate.hasStrictIssues ||
+    hasPeerSurfaceStrictIssues ||
+    hasAdoptionBlockingIssues ||
+    hasWebsiteQaBlockingIssues
+  );
+}
+
 export async function runLifecycleCli(argv: string[]): Promise<LifecycleCliResult> {
   let commandInput: string | undefined;
   let dryRun = false;
@@ -365,23 +404,8 @@ async function main(argv = process.argv.slice(2)) {
       shipRefOverride: result.shipRefOverride
     });
 
-    const hasPeerSurfaceStrictIssues = lifecycleResult.hosts.some(
-      (host) =>
-        (host.competingPeerSkills?.length ?? 0) > 0 ||
-        (host.integrityIssues?.length ?? 0) > 0 ||
-        host.manualRecovery !== undefined
-    );
-    const hasAdoptionBlockingIssues =
-      lifecycleResult.adoptionHealth.status === "blocked";
-
     process.stdout.write(`${formatLifecycleResult(lifecycleResult, result.outputMode)}\n`);
-    if (
-      result.strict &&
-      (lifecycleResult.status.hasStrictIssues ||
-        lifecycleResult.brokerFirstGate.hasStrictIssues ||
-        hasPeerSurfaceStrictIssues ||
-        hasAdoptionBlockingIssues)
-    ) {
+    if (result.strict && shouldFailStrictDoctorGate(lifecycleResult)) {
       process.exitCode = 1;
     }
     return lifecycleResult;

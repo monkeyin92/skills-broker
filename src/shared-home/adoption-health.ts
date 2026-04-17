@@ -231,7 +231,7 @@ export function resolveAdoptionHealth(
     reasons.push({
       code: "ACQUISITION_MEMORY_UNREADABLE",
       message:
-        "website QA proof rail is unreadable: acquisition memory cannot prove the install_required -> rerun path"
+        "website QA verify proof is unreadable: acquisition memory cannot prove the install_required -> verify path"
     });
   }
 
@@ -242,7 +242,7 @@ export function resolveAdoptionHealth(
     reasons.push({
       code: "VERIFIED_DOWNSTREAM_MANIFESTS_UNREADABLE",
       message:
-        "website QA proof rail is unreadable: verified downstream manifests cannot prove replay/reuse"
+        "website QA replay/reuse proof is unreadable: verified downstream manifests cannot prove replay or cross-host reuse readiness"
     });
   }
 
