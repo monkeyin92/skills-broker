@@ -185,11 +185,16 @@ describe("runBroker decline contract", () => {
     );
 
     try {
-      vi.doMock("../../src/broker/prepare", () => ({
-        prepareCandidate: vi.fn(async () => {
-          throw new Error("kaboom");
-        })
-      }));
+      vi.doMock("../../src/broker/prepare", async (importOriginal) => {
+        const actual = await importOriginal<typeof import("../../src/broker/prepare")>();
+
+        return {
+          ...actual,
+          prepareCandidate: vi.fn(async () => {
+            throw new Error("kaboom");
+          })
+        };
+      });
 
       const { runBroker } = await import("../../src/broker/run");
 

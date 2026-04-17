@@ -39,6 +39,14 @@ import type { PeerSurfaceIntegrityIssue } from "./peer-surface-audit.js";
 import type { PeerSurfaceManualRecoveryMarker } from "./peer-surface-audit.js";
 
 export type DoctorProofRailState = "present" | "missing" | "unreadable";
+export type WebsiteQaLoopPhase =
+  | "install_required_pending"
+  | "verify_pending"
+  | "verify_confirmed"
+  | "cross_host_reuse_pending"
+  | "cross_host_reuse_confirmed"
+  | "proof_unreadable";
+export type WebsiteQaLoopVerdict = "blocked" | "in_progress" | "proven";
 
 export type DoctorLifecycleResult = {
   command: "doctor";
@@ -76,6 +84,17 @@ export type DoctorLifecycleResult = {
     downstreamReplayManifests: number;
     acquisitionMemoryState: DoctorProofRailState;
     verifiedDownstreamState: DoctorProofRailState;
+    verdict: WebsiteQaLoopVerdict;
+    phase: WebsiteQaLoopPhase;
+    proofs: {
+      installRequiredObserved: boolean;
+      verifyConfirmed: boolean;
+      crossHostReuseConfirmed: boolean;
+      replayReady: boolean;
+    };
+    verifyState: "confirmed" | "pending" | "unknown";
+    crossHostReuseState: "confirmed" | "pending" | "unknown";
+    nextAction: string;
   };
   routingMetrics: {
     windowDays: number;
@@ -136,6 +155,123 @@ const WEBSITE_QA_WINNER_ID = "website-qa";
 const WEBSITE_QA_CAPABILITY_ID = "gstack.qa";
 const WEBSITE_QA_SUBSKILL_ID = "qa";
 const VERIFIED_MANIFEST_FILE = ".skills-broker.json";
+
+function websiteQaNextAction(input: {
+  installRequiredTraces: number;
+  rerunSuccessfulRoutes: number;
+  reuseRecorded: number;
+  downstreamReplayManifests: number;
+  acquisitionMemoryState: DoctorProofRailState;
+  verifiedDownstreamState: DoctorProofRailState;
+}): string {
+  if (input.installRequiredTraces === 0) {
+    return "Trigger one website QA request until the broker returns INSTALL_REQUIRED.";
+  }
+
+  if (input.acquisitionMemoryState === "unreadable") {
+    return "Repair acquisition memory so doctor can prove the install-required and rerun steps.";
+  }
+
+  if (input.rerunSuccessfulRoutes === 0) {
+    return "Install the suggested website QA package, verify it, then rerun the same request.";
+  }
+
+  if (input.verifiedDownstreamState === "unreadable") {
+    return "Repair verified downstream manifests so doctor can prove replay and reuse readiness.";
+  }
+
+  if (input.reuseRecorded === 0) {
+    return "Repeat the same website QA request from another host to record the first proven reuse.";
+  }
+
+  if (input.downstreamReplayManifests === 0) {
+    return "Verify one successful website QA handoff so the downstream replay manifest is recorded.";
+  }
+
+  return "Website QA loop is proven; keep this request path as the default-entry demo.";
+}
+
+function websiteQaVerifyState(input: {
+  rerunSuccessfulRoutes: number;
+  acquisitionMemoryState: DoctorProofRailState;
+}): "confirmed" | "pending" | "unknown" {
+  if (input.acquisitionMemoryState === "unreadable") {
+    return "unknown";
+  }
+
+  return input.rerunSuccessfulRoutes > 0 ? "confirmed" : "pending";
+}
+
+function websiteQaCrossHostReuseState(input: {
+  reuseRecorded: number;
+  acquisitionMemoryState: DoctorProofRailState;
+}): "confirmed" | "pending" | "unknown" {
+  if (input.acquisitionMemoryState === "unreadable") {
+    return "unknown";
+  }
+
+  return input.reuseRecorded > 0 ? "confirmed" : "pending";
+}
+
+function websiteQaLoopProofs(input: {
+  installRequiredTraces: number;
+  rerunSuccessfulRoutes: number;
+  reuseRecorded: number;
+  downstreamReplayManifests: number;
+}): {
+  installRequiredObserved: boolean;
+  verifyConfirmed: boolean;
+  crossHostReuseConfirmed: boolean;
+  replayReady: boolean;
+} {
+  return {
+    installRequiredObserved: input.installRequiredTraces > 0,
+    verifyConfirmed: input.rerunSuccessfulRoutes > 0,
+    crossHostReuseConfirmed: input.reuseRecorded > 0,
+    replayReady: input.downstreamReplayManifests > 0
+  };
+}
+
+function websiteQaLoopPhase(input: {
+  installRequiredTraces: number;
+  rerunSuccessfulRoutes: number;
+  reuseRecorded: number;
+  acquisitionMemoryState: DoctorProofRailState;
+  verifiedDownstreamState: DoctorProofRailState;
+}): WebsiteQaLoopPhase {
+  if (
+    input.acquisitionMemoryState === "unreadable" ||
+    input.verifiedDownstreamState === "unreadable"
+  ) {
+    return "proof_unreadable";
+  }
+
+  if (input.installRequiredTraces === 0) {
+    return "install_required_pending";
+  }
+
+  if (input.rerunSuccessfulRoutes === 0) {
+    return "verify_pending";
+  }
+
+  if (input.reuseRecorded === 0) {
+    return "cross_host_reuse_pending";
+  }
+
+  return "cross_host_reuse_confirmed";
+}
+
+function websiteQaLoopVerdict(phase: WebsiteQaLoopPhase): WebsiteQaLoopVerdict {
+  if (phase === "proof_unreadable") {
+    return "blocked";
+  }
+
+  if (phase === "cross_host_reuse_confirmed") {
+    return "proven";
+  }
+
+  return "in_progress";
+}
 
 async function pathExists(pathname: string): Promise<boolean> {
   try {
@@ -662,12 +798,40 @@ export async function doctorSharedBrokerHome(
     allowMissingRepoTarget: options.repoRootOverride === undefined
   });
 
-  return {
-    command: "doctor",
-    sharedHome,
-    acquisitionMemory,
-    verifiedDownstreamManifests,
-    websiteQaLoop: {
+  const phase = websiteQaLoopPhase({
+    installRequiredTraces: websiteQaInstallRequiredTraces,
+    rerunSuccessfulRoutes: acquisitionMemory.qualityAssuranceSuccessfulRoutes,
+    reuseRecorded: acquisitionMemory.qualityAssuranceFirstReuseRecorded,
+    acquisitionMemoryState: acquisitionMemory.state,
+    verifiedDownstreamState: verifiedDownstreamManifests.state
+  });
+
+  const websiteQaLoop = {
+    installRequiredTraces: websiteQaInstallRequiredTraces,
+    rerunSuccessfulRoutes: acquisitionMemory.qualityAssuranceSuccessfulRoutes,
+    reuseRecorded: acquisitionMemory.qualityAssuranceFirstReuseRecorded,
+    downstreamReplayManifests:
+      verifiedDownstreamManifests.qualityAssuranceManifests,
+    acquisitionMemoryState: acquisitionMemory.state,
+    verifiedDownstreamState: verifiedDownstreamManifests.state,
+    verdict: websiteQaLoopVerdict(phase),
+    phase,
+    proofs: websiteQaLoopProofs({
+      installRequiredTraces: websiteQaInstallRequiredTraces,
+      rerunSuccessfulRoutes: acquisitionMemory.qualityAssuranceSuccessfulRoutes,
+      reuseRecorded: acquisitionMemory.qualityAssuranceFirstReuseRecorded,
+      downstreamReplayManifests:
+        verifiedDownstreamManifests.qualityAssuranceManifests
+    }),
+    verifyState: websiteQaVerifyState({
+      rerunSuccessfulRoutes: acquisitionMemory.qualityAssuranceSuccessfulRoutes,
+      acquisitionMemoryState: acquisitionMemory.state
+    }),
+    crossHostReuseState: websiteQaCrossHostReuseState({
+      reuseRecorded: acquisitionMemory.qualityAssuranceFirstReuseRecorded,
+      acquisitionMemoryState: acquisitionMemory.state
+    }),
+    nextAction: websiteQaNextAction({
       installRequiredTraces: websiteQaInstallRequiredTraces,
       rerunSuccessfulRoutes: acquisitionMemory.qualityAssuranceSuccessfulRoutes,
       reuseRecorded: acquisitionMemory.qualityAssuranceFirstReuseRecorded,
@@ -675,7 +839,15 @@ export async function doctorSharedBrokerHome(
         verifiedDownstreamManifests.qualityAssuranceManifests,
       acquisitionMemoryState: acquisitionMemory.state,
       verifiedDownstreamState: verifiedDownstreamManifests.state
-    },
+    })
+  };
+
+  return {
+    command: "doctor",
+    sharedHome,
+    acquisitionMemory,
+    verifiedDownstreamManifests,
+    websiteQaLoop,
     routingMetrics: {
       windowDays: routingWindowDays,
       observed: routingSummary.observed,

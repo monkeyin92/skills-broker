@@ -303,7 +303,13 @@ npx skills-broker update \
 - 接上一个 Codex 薄壳
 - 让两个宿主复用同一份 broker cache 和路由历史
 
-如果你要接到自动化或 CI，所有 lifecycle 命令也都支持 `--json`。
+如果你要接到自动化或 CI，所有 lifecycle 命令也都支持 `--json`。对于发布态的 website QA proof loop，推荐直接把 `websiteQaLoop.verdict` 当成稳定 gate 字段来读：
+
+- `blocked`：proof rail 不可读，或者这条闭环当前还不可信
+- `in_progress`：闭环已经开始，但 install -> verify -> cross-host reuse 还没有完整证明
+- `proven`：已经拿到 cross-host reuse 级别的闭环证明
+
+如果调用方还想看细节，可以继续读 `websiteQaLoop.phase` 和 `websiteQaLoop.proofs`；但不应该再去解析 `doctor` 的自然语言文本。
 
 ### 5. 为本地开发克隆仓库并安装依赖
 

@@ -66,6 +66,55 @@ function formatWebsiteQaLoopLine(result: DoctorLifecycleResult): string {
   return `Website QA loop: install_required=${installRequired}; rerun=${rerun}; reuse=${reuse}; replay=${replay}`;
 }
 
+function formatWebsiteQaNextActionLine(result: DoctorLifecycleResult): string {
+  return `Website QA next action: ${result.websiteQaLoop.nextAction}`;
+}
+
+function formatWebsiteQaVerifyProofLine(result: DoctorLifecycleResult): string {
+  if (result.websiteQaLoop.verifyState === "unknown") {
+    return "Website QA verify proof: unknown (acquisition memory unreadable)";
+  }
+
+  if (result.websiteQaLoop.verifyState === "confirmed") {
+    return "Website QA verify proof: confirmed (successful rerun evidence recorded)";
+  }
+
+  return "Website QA verify proof: pending (no successful rerun evidence recorded yet)";
+}
+
+function formatWebsiteQaCrossHostReuseProofLine(
+  result: DoctorLifecycleResult
+): string {
+  if (result.websiteQaLoop.crossHostReuseState === "unknown") {
+    return "Website QA cross-host reuse proof: unknown (acquisition memory unreadable)";
+  }
+
+  if (result.websiteQaLoop.crossHostReuseState === "confirmed") {
+    return "Website QA cross-host reuse proof: confirmed (first reuse across hosts recorded)";
+  }
+
+  return "Website QA cross-host reuse proof: pending (first reuse across hosts not recorded yet)";
+}
+
+function formatAdoptionHealthProofLine(
+  result: DoctorLifecycleResult
+): string | undefined {
+  if (result.adoptionHealth.status !== "green") {
+    return undefined;
+  }
+
+  const hasWebsiteQaEvidence =
+    result.websiteQaLoop.installRequiredTraces > 0 ||
+    result.websiteQaLoop.rerunSuccessfulRoutes > 0 ||
+    result.websiteQaLoop.reuseRecorded > 0;
+
+  if (!hasWebsiteQaEvidence) {
+    return undefined;
+  }
+
+  return `Adoption health proof: website QA verify=${result.websiteQaLoop.verifyState}; cross-host reuse=${result.websiteQaLoop.crossHostReuseState}`;
+}
+
 export function formatLifecycleResult(
   result: UpdateLifecycleResult | DoctorLifecycleResult | RemoveLifecycleResult,
   outputMode: "text" | "json"
@@ -82,6 +131,11 @@ export function formatLifecycleResult(
       formatSharedHomeExistsLine(result),
       formatAdoptionHealthLine(result.adoptionHealth)
     ];
+    const adoptionHealthProofLine = formatAdoptionHealthProofLine(result);
+
+    if (adoptionHealthProofLine !== undefined) {
+      lines.push(adoptionHealthProofLine);
+    }
 
     if (result.routingMetrics.observed === 0) {
       lines.push(
@@ -116,6 +170,9 @@ export function formatLifecycleResult(
         .join(", ")}`
     );
     lines.push(formatWebsiteQaLoopLine(result));
+    lines.push(formatWebsiteQaVerifyProofLine(result));
+    lines.push(formatWebsiteQaCrossHostReuseProofLine(result));
+    lines.push(formatWebsiteQaNextActionLine(result));
 
     lines.push("");
     if (result.brokerFirstGate.skipped) {

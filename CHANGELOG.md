@@ -2,6 +2,19 @@
 
 ## [Unreleased]
 
+## [0.3.3] - 2026-04-17
+
+### Changed
+
+- Changed `skills-broker doctor --json` guidance so automation and CI can read `websiteQaLoop.verdict` as the stable website-QA gate field, with `phase` and `proofs` kept as the detailed drill-down surface.
+- Changed lifecycle CLI strict-doctor gating to consume the structured website-QA verdict directly instead of relying only on higher-level adoption-health rollups.
+- Changed `skills-broker doctor` output so website-QA verify proof and cross-host reuse proof are shown as separate operator-facing states, rather than forcing operators to infer them from aggregate counters.
+
+### Fixed
+
+- Fixed broker prepare failures so an installed-but-unverified winner now reports a distinct prepare failure instead of looking identical to a package that was never installed.
+- Fixed published host guidance and lifecycle tests so `INSTALL_REQUIRED` consistently tells the host to install, verify, and rerun the same request before expecting handoff or reuse.
+
 ## [0.3.2] - 2026-04-17
 
 ### Changed

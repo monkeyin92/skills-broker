@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { runLifecycleCli } from "../../src/bin/skills-broker";
+import {
+  runLifecycleCli,
+  shouldFailStrictDoctorGate
+} from "../../src/bin/skills-broker";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { resolve } from "node:path";
@@ -185,6 +188,18 @@ describe("lifecycle cli", () => {
       const result = JSON.parse(stdout.trim());
       expect(result.command).toBe("doctor");
       expect(result.adoptionHealth.status).toBe("blocked");
+      expect(result.websiteQaLoop).toEqual(
+        expect.objectContaining({
+          verdict: "in_progress",
+          phase: "install_required_pending",
+          proofs: {
+            installRequiredObserved: false,
+            verifyConfirmed: false,
+            crossHostReuseConfirmed: false,
+            replayReady: false
+          }
+        })
+      );
       expect(result.sharedHome).toEqual({
         path: brokerHomeDirectory,
         exists: false,
@@ -203,6 +218,28 @@ describe("lifecycle cli", () => {
       await rm(runtimeDirectory, { recursive: true, force: true });
     }
   }, 30_000);
+
+  it("treats a blocked website QA verdict as a strict failure", () => {
+    expect(
+      shouldFailStrictDoctorGate({
+        status: { hasStrictIssues: false },
+        brokerFirstGate: { hasStrictIssues: false },
+        hosts: [],
+        adoptionHealth: { status: "green" },
+        websiteQaLoop: { verdict: "blocked" }
+      })
+    ).toBe(true);
+
+    expect(
+      shouldFailStrictDoctorGate({
+        status: { hasStrictIssues: false },
+        brokerFirstGate: { hasStrictIssues: false },
+        hosts: [],
+        adoptionHealth: { status: "green" },
+        websiteQaLoop: { verdict: "in_progress" }
+      })
+    ).toBe(false);
+  });
 
   it("exits non-zero when doctor --strict sees a strict status issue", async () => {
     const scriptPath = resolve("src/bin/skills-broker.ts");

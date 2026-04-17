@@ -709,10 +709,31 @@ describe("doctor shared broker home", () => {
         reuseRecorded: 0,
         downstreamReplayManifests: 1,
         acquisitionMemoryState: "present",
-        verifiedDownstreamState: "present"
+        verifiedDownstreamState: "present",
+        verdict: "in_progress",
+        phase: "cross_host_reuse_pending",
+        proofs: {
+          installRequiredObserved: true,
+          verifyConfirmed: true,
+          crossHostReuseConfirmed: false,
+          replayReady: true
+        },
+        verifyState: "confirmed",
+        crossHostReuseState: "pending",
+        nextAction:
+          "Repeat the same website QA request from another host to record the first proven reuse."
       });
       expect(rendered).toContain(
         "Website QA loop: install_required=observed (1 install_required trace); rerun=confirmed (1 successful rerun); reuse=pending (no website QA reuse recorded yet); replay=ready (1 verified downstream manifest)"
+      );
+      expect(rendered).toContain(
+        "Website QA verify proof: confirmed (successful rerun evidence recorded)"
+      );
+      expect(rendered).toContain(
+        "Website QA cross-host reuse proof: pending (first reuse across hosts not recorded yet)"
+      );
+      expect(rendered).toContain(
+        "Website QA next action: Repeat the same website QA request from another host to record the first proven reuse."
       );
     } finally {
       await rm(runtimeDirectory, { recursive: true, force: true });
@@ -812,18 +833,41 @@ describe("doctor shared broker home", () => {
       const rendered = formatLifecycleResult(result, "text");
 
       expect(result.adoptionHealth.status).toBe("blocked");
+      expect(result.websiteQaLoop.verdict).toBe("blocked");
+      expect(result.websiteQaLoop.phase).toBe("proof_unreadable");
+      expect(result.websiteQaLoop.proofs).toEqual({
+        installRequiredObserved: false,
+        verifyConfirmed: false,
+        crossHostReuseConfirmed: false,
+        replayReady: false
+      });
       expect(result.adoptionHealth.reasons).toEqual(
         expect.arrayContaining([
           expect.objectContaining({
-            code: "ACQUISITION_MEMORY_UNREADABLE"
+            code: "ACQUISITION_MEMORY_UNREADABLE",
+            message: expect.stringContaining(
+              "website QA verify proof is unreadable"
+            )
           }),
           expect.objectContaining({
-            code: "VERIFIED_DOWNSTREAM_MANIFESTS_UNREADABLE"
+            code: "VERIFIED_DOWNSTREAM_MANIFESTS_UNREADABLE",
+            message: expect.stringContaining(
+              "website QA replay/reuse proof is unreadable"
+            )
           })
         ])
       );
       expect(rendered).toContain(
         "Website QA loop: install_required=pending (no website QA install_required trace recorded yet); rerun=unknown (acquisition memory unreadable); reuse=unknown (acquisition memory unreadable); replay=unknown (verified downstream manifests unreadable)"
+      );
+      expect(rendered).toContain(
+        "Website QA verify proof: unknown (acquisition memory unreadable)"
+      );
+      expect(rendered).toContain(
+        "Website QA cross-host reuse proof: unknown (acquisition memory unreadable)"
+      );
+      expect(rendered).toContain(
+        "Website QA next action: Trigger one website QA request until the broker returns INSTALL_REQUIRED."
       );
     } finally {
       await chmod(acquisitionMemoryPath, 0o644).catch(() => undefined);

@@ -296,7 +296,13 @@ This will:
 - attach a Codex thin shell
 - let both hosts reuse the same broker cache and routing history
 
-For automation or CI, every lifecycle command also supports `--json`.
+For automation or CI, every lifecycle command also supports `--json`. For the published website QA proof loop, prefer reading `websiteQaLoop.verdict` as the stable gate field:
+
+- `blocked`: proof rails are unreadable or the loop is otherwise not trustworthy yet
+- `in_progress`: the loop has started, but install -> verify -> cross-host reuse is not fully proven
+- `proven`: the loop has reached cross-host reuse proof
+
+`websiteQaLoop.phase` and `websiteQaLoop.proofs` remain available when a caller needs more detail, but consumers should not have to parse the human-readable doctor text.
 
 ### 5. Clone the repository for local development
 
