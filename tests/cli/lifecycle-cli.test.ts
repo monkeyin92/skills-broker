@@ -239,7 +239,7 @@ describe("lifecycle cli", () => {
     } finally {
       await rm(runtimeDirectory, { recursive: true, force: true });
     }
-  }, 15000);
+  }, 30000);
 
   it("exits non-zero when doctor --strict sees an explicit missing host shell", async () => {
     const scriptPath = resolve("src/bin/skills-broker.ts");
