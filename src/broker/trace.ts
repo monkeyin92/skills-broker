@@ -1,8 +1,10 @@
 import type { CapabilityCard } from "../core/capability-card.js";
 import type { NormalizeRequestInput } from "../core/request.js";
+import type { SemanticResolverVerdict } from "./semantic-resolver.js";
 import type {
   BrokerHostAction,
   BrokerOutcomeCode,
+  CapabilityProofFamily,
   CapabilityPackageInstallState
 } from "../core/types.js";
 
@@ -38,6 +40,7 @@ export type BrokerTraceRequestContract =
   | "query_native_via_legacy_compat"
   | "raw_envelope_fallback";
 export type BrokerTraceSelectionMode = "explicit";
+export type BrokerTraceSemanticMatchReason = SemanticResolverVerdict;
 
 export type BrokerRoutingTrace = {
   traceVersion: typeof BROKER_TRACE_VERSION;
@@ -59,6 +62,9 @@ export type BrokerRoutingTrace = {
   selectedLeafCapabilityId: string | null;
   selectedImplementationId: string | null;
   selectedPackageInstallState: CapabilityPackageInstallState | null;
+  semanticMatchReason: BrokerTraceSemanticMatchReason | null;
+  semanticMatchCandidateId: string | null;
+  semanticMatchProofFamily: CapabilityProofFamily | null;
   workflowId: string | null;
   runId: string | null;
   stageId: string | null;
@@ -109,6 +115,13 @@ type RuntimeTraceOptions = {
   candidateCount: number;
   winner?: Pick<CapabilityCard, "id" | "package" | "leaf" | "implementation">;
   selected?: Pick<CapabilityCard, "package" | "leaf" | "implementation">;
+  semanticRouting?: {
+    verdict: SemanticResolverVerdict;
+    topMatch?: {
+      candidateId: string;
+      proofFamily: CapabilityProofFamily;
+    };
+  };
   workflowId?: string;
   runId?: string;
   stageId?: string | null;
@@ -386,6 +399,11 @@ export function createBrokerRoutingTrace(
     selectedLeafCapabilityId: selected?.leaf.subskillId ?? null,
     selectedImplementationId: selected?.implementation.id ?? null,
     selectedPackageInstallState: selected?.package.installState ?? null,
+    semanticMatchReason: options.semanticRouting?.verdict ?? null,
+    semanticMatchCandidateId:
+      options.semanticRouting?.topMatch?.candidateId ?? null,
+    semanticMatchProofFamily:
+      options.semanticRouting?.topMatch?.proofFamily ?? null,
     workflowId: options.workflowId ?? null,
     runId: options.runId ?? null,
     stageId: options.stageId ?? null,
@@ -417,6 +435,9 @@ export function createSyntheticHostSkippedBrokerTrace(
     selectedLeafCapabilityId: null,
     selectedImplementationId: null,
     selectedPackageInstallState: null,
+    semanticMatchReason: null,
+    semanticMatchCandidateId: null,
+    semanticMatchProofFamily: null,
     workflowId: null,
     runId: null,
     stageId: null,

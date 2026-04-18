@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   BROKER_TRACE_VERSION,
+  createBrokerRoutingTrace,
   summarizeBrokerRoutingTraces,
   type BrokerRoutingTrace
 } from "../../src/broker/trace";
@@ -28,6 +29,9 @@ function createTrace(
     selectedLeafCapabilityId: "winner",
     selectedImplementationId: "pkg.winner",
     selectedPackageInstallState: "installed",
+    semanticMatchReason: null,
+    semanticMatchCandidateId: null,
+    semanticMatchProofFamily: null,
     workflowId: null,
     runId: null,
     stageId: null,
@@ -38,6 +42,98 @@ function createTrace(
 }
 
 describe("summarizeBrokerRoutingTraces", () => {
+  it("includes semantic trace fields in the formal schema for direct and clarify verdicts", () => {
+    const directTrace = createBrokerRoutingTrace({
+      input: {
+        requestText: "turn this webpage into markdown",
+        host: "codex",
+        capabilityQuery: {
+          kind: "capability_request",
+          goal: "convert web content to markdown",
+          host: "codex",
+          requestText: "turn this webpage into markdown",
+          jobFamilies: ["content_acquisition", "web_content_conversion"],
+          artifacts: ["markdown"]
+        }
+      },
+      currentHost: "codex",
+      resultCode: "HANDOFF_READY",
+      now: new Date("2026-04-18T10:00:00.000Z"),
+      hostAction: null,
+      candidateCount: 1,
+      winner: {
+        id: "web-content-to-markdown",
+        package: {
+          packageId: "baoyu"
+        },
+        leaf: {
+          capabilityId: "baoyu.url-to-markdown",
+          subskillId: "url-to-markdown"
+        },
+        implementation: {
+          id: "baoyu.url_to_markdown"
+        }
+      },
+      semanticRouting: {
+        verdict: "direct_route",
+        topMatch: {
+          candidateId: "web-content-to-markdown",
+          proofFamily: "web_content_to_markdown"
+        }
+      }
+    });
+    const clarifyTrace = createBrokerRoutingTrace({
+      input: {
+        requestText: "markdown this link",
+        host: "codex",
+        capabilityQuery: {
+          kind: "capability_request",
+          goal: "convert web content to markdown",
+          host: "codex",
+          requestText: "markdown this link",
+          jobFamilies: ["content_acquisition", "web_content_conversion"],
+          artifacts: ["markdown"]
+        }
+      },
+      currentHost: "codex",
+      resultCode: "HANDOFF_READY",
+      now: new Date("2026-04-18T10:01:00.000Z"),
+      hostAction: null,
+      candidateCount: 1,
+      winner: {
+        id: "web-content-to-markdown",
+        package: {
+          packageId: "baoyu"
+        },
+        leaf: {
+          capabilityId: "baoyu.url-to-markdown",
+          subskillId: "url-to-markdown"
+        },
+        implementation: {
+          id: "baoyu.url_to_markdown"
+        }
+      },
+      semanticRouting: {
+        verdict: "clarify",
+        topMatch: {
+          candidateId: "web-content-to-markdown",
+          proofFamily: "web_content_to_markdown"
+        }
+      }
+    });
+
+    expect(directTrace).toMatchObject({
+      semanticMatchReason: "direct_route",
+      semanticMatchCandidateId: "web-content-to-markdown",
+      semanticMatchProofFamily: "web_content_to_markdown"
+    });
+    expect(clarifyTrace).toMatchObject({
+      semanticMatchReason: "clarify",
+      semanticMatchCandidateId: "web-content-to-markdown",
+      semanticMatchProofFamily: "web_content_to_markdown"
+    });
+  });
+
   it("groups routing hit, misroute, and fallback rates by request surface", () => {
     const summary = summarizeBrokerRoutingTraces(
       [

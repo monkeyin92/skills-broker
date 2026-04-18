@@ -80,6 +80,31 @@ export type CapabilityQueryTarget = {
   value: string;
 };
 
+export const SEMANTIC_CONFIDENCE_HINTS = [
+  "url",
+  "website",
+  "repo",
+  "text",
+  "problem_statement",
+  "codebase",
+  "markdown",
+  "analysis",
+  "design_doc",
+  "qa_report",
+  "recommendation",
+  "installation_plan"
+] as const;
+
+export type SemanticConfidenceHint = (typeof SEMANTIC_CONFIDENCE_HINTS)[number];
+
+export const CAPABILITY_PROOF_FAMILIES = [
+  "web_content_to_markdown",
+  "social_post_to_markdown",
+  "capability_discovery_or_install"
+] as const;
+
+export type CapabilityProofFamily = (typeof CAPABILITY_PROOF_FAMILIES)[number];
+
 export type CapabilityQuery = {
   kind: CapabilityQueryKind;
   goal: string;

@@ -262,6 +262,215 @@ async function writeWebsiteQaInstallRequiredTraceFixture(
   );
 }
 
+async function writeReusableFamilyProofFixtures(
+  brokerHomeDirectory: string
+): Promise<void> {
+  const traceFilePath = routingTraceLogFilePath(brokerHomeDirectory);
+  const acquisitionMemoryPath = acquisitionMemoryFilePath(brokerHomeDirectory);
+  const claudeMarkdownDirectory = join(
+    brokerHomeDirectory,
+    "downstream",
+    "claude-code",
+    "skills",
+    "baoyu",
+    ".agents",
+    "skills",
+    "baoyu-url-to-markdown"
+  );
+  const codexQaDirectory = join(
+    brokerHomeDirectory,
+    "downstream",
+    "codex",
+    "skills",
+    "gstack",
+    ".agents",
+    "skills",
+    "gstack-qa"
+  );
+
+  await mkdir(join(brokerHomeDirectory, "state"), { recursive: true });
+  await mkdir(claudeMarkdownDirectory, { recursive: true });
+  await mkdir(codexQaDirectory, { recursive: true });
+  await writeFile(
+    acquisitionMemoryPath,
+    `${JSON.stringify(
+      {
+        version: "2026-04-16",
+        entries: [
+          {
+            canonicalKey: "query:v2|families:quality_assurance",
+            compatibilityIntent: "capability_discovery_or_install",
+            candidateId: "gstack.qa",
+            packageId: "gstack",
+            leafCapabilityId: "gstack.qa",
+            successfulRoutes: 1,
+            installedAt: "2026-04-16T05:00:00.000Z",
+            verifiedAt: "2026-04-16T05:00:00.000Z",
+            verifiedHosts: ["codex"],
+            provenance: "package_probe"
+          },
+          {
+            canonicalKey:
+              "query:v2|output:markdown_only|families:content_acquisition,web_content_conversion|targets:url:https://example.com/article",
+            compatibilityIntent: "web_content_to_markdown",
+            candidateId: "web-content-to-markdown",
+            packageId: "baoyu",
+            leafCapabilityId: "baoyu.url-to-markdown",
+            successfulRoutes: 1,
+            installedAt: "2026-04-16T06:00:00.000Z",
+            verifiedAt: "2026-04-16T06:05:00.000Z",
+            firstReuseAt: "2026-04-16T06:30:00.000Z",
+            verifiedHosts: ["claude-code", "codex"],
+            provenance: "package_probe"
+          }
+        ]
+      },
+      null,
+      2
+    )}\n`,
+    "utf8"
+  );
+  await writeFile(
+    traceFilePath,
+    [
+      {
+        traceVersion: "2026-03-31",
+        requestText: "QA this website https://example.com",
+        host: "codex",
+        hostDecision: "broker_first",
+        resultCode: "INSTALL_REQUIRED",
+        routingOutcome: "fallback",
+        missLayer: "retrieval",
+        normalizedBy: "structured_query",
+        requestSurface: "structured_query",
+        requestContract: "query_native",
+        selectionMode: "explicit",
+        hostAction: null,
+        candidateCount: 1,
+        winnerId: "website-qa",
+        winnerPackageId: "gstack",
+        selectedCapabilityId: "gstack.qa",
+        selectedLeafCapabilityId: "qa",
+        selectedImplementationId: "gstack.qa",
+        selectedPackageInstallState: "available",
+        semanticMatchReason: null,
+        semanticMatchCandidateId: null,
+        semanticMatchProofFamily: null,
+        workflowId: null,
+        runId: null,
+        stageId: null,
+        reasonCode: null,
+        timestamp: "2026-04-16T05:00:00.000Z"
+      },
+      {
+        traceVersion: "2026-03-31",
+        requestText: "turn this webpage into markdown",
+        host: "claude-code",
+        hostDecision: "broker_first",
+        resultCode: "INSTALL_REQUIRED",
+        routingOutcome: "fallback",
+        missLayer: "retrieval",
+        normalizedBy: "legacy_intent",
+        requestSurface: "legacy_task",
+        requestContract: "query_native_via_legacy_compat",
+        selectionMode: "explicit",
+        hostAction: null,
+        candidateCount: 1,
+        winnerId: "web-content-to-markdown",
+        winnerPackageId: "baoyu",
+        selectedCapabilityId: "baoyu.url-to-markdown",
+        selectedLeafCapabilityId: "url-to-markdown",
+        selectedImplementationId: "baoyu.url_to_markdown",
+        selectedPackageInstallState: "available",
+        semanticMatchReason: "explicit_family",
+        semanticMatchCandidateId: "web-content-to-markdown",
+        semanticMatchProofFamily: "web_content_to_markdown",
+        workflowId: null,
+        runId: null,
+        stageId: null,
+        reasonCode: null,
+        timestamp: "2026-04-16T06:00:00.000Z"
+      }
+    ]
+      .map((trace) => JSON.stringify(trace))
+      .join("\n")
+      .concat("\n"),
+    "utf8"
+  );
+  await writeFile(
+    join(claudeMarkdownDirectory, ".skills-broker.json"),
+    `${JSON.stringify(
+      {
+        schemaVersion: 1,
+        verifiedAt: "2026-04-16T06:05:00.000Z",
+        skillName: "url-to-markdown",
+        verifiedCandidate: {
+          id: "web-content-to-markdown",
+          kind: "skill",
+          label: "Web Content to Markdown",
+          intent: "web_content_to_markdown",
+          package: {
+            packageId: "baoyu",
+            installState: "installed"
+          },
+          leaf: {
+            capabilityId: "baoyu.url-to-markdown",
+            packageId: "baoyu",
+            subskillId: "url-to-markdown"
+          },
+          implementation: {
+            id: "baoyu.url_to_markdown",
+            type: "local_skill",
+            ownerSurface: "broker_owned_downstream"
+          },
+          sourceMetadata: {
+            skillName: "url-to-markdown"
+          }
+        }
+      },
+      null,
+      2
+    )}\n`,
+    "utf8"
+  );
+  await writeFile(
+    join(codexQaDirectory, ".skills-broker.json"),
+    `${JSON.stringify(
+      {
+        schemaVersion: 1,
+        verifiedAt: "2026-04-16T05:00:00.000Z",
+        skillName: "qa",
+        verifiedCandidate: {
+          id: "remembered-qa",
+          kind: "skill",
+          label: "Remembered QA",
+          intent: "capability_discovery_or_install",
+          package: {
+            packageId: "gstack",
+            installState: "installed"
+          },
+          leaf: {
+            capabilityId: "gstack.qa",
+            packageId: "gstack",
+            subskillId: "qa"
+          },
+          implementation: {
+            id: "gstack.qa",
+            type: "local_skill",
+            ownerSurface: "broker_owned_downstream"
+          },
+          sourceMetadata: {
+            skillName: "qa"
+          }
+        }
+      },
+      null,
+      2
+    )}\n`,
+    "utf8"
+  );
+}
+
 describe("doctor shared broker home", () => {
   it("explains why codex was not detected", async () => {
     const runtimeDirectory = await mkdtemp(join(tmpdir(), "skills-broker-doctor-missing-"));
@@ -682,7 +891,7 @@ describe("doctor shared broker home", () => {
     }
   });
 
-  it("renders the website QA install_required -> rerun -> reuse loop explicitly", async () => {
+  it("emits reusable family proofs for website QA and web markdown", async () => {
     const runtimeDirectory = await mkdtemp(join(tmpdir(), "skills-broker-doctor-qa-loop-"));
     const brokerHomeDirectory = join(runtimeDirectory, ".skills-broker");
 
@@ -691,9 +900,7 @@ describe("doctor shared broker home", () => {
         brokerHomeDirectory,
         projectRoot: process.cwd()
       });
-      await writeWebsiteQaInstallRequiredTraceFixture(brokerHomeDirectory);
-      await writeAcquisitionMemoryFixture(brokerHomeDirectory);
-      await writeVerifiedDownstreamManifestFixture(brokerHomeDirectory);
+      await writeReusableFamilyProofFixtures(brokerHomeDirectory);
 
       const result = await doctorSharedBrokerHome({
         brokerHomeDirectory,
@@ -701,9 +908,9 @@ describe("doctor shared broker home", () => {
         cwd: runtimeDirectory,
         now: new Date("2026-04-16T08:00:00.000Z")
       });
-      const rendered = formatLifecycleResult(result, "text");
 
-      expect(result.websiteQaLoop).toEqual({
+      expect(result.familyProofs.website_qa).toEqual({
+        label: "Website QA",
         installRequiredTraces: 1,
         rerunSuccessfulRoutes: 1,
         reuseRecorded: 0,
@@ -723,17 +930,77 @@ describe("doctor shared broker home", () => {
         nextAction:
           "Repeat the same website QA request from another host to record the first proven reuse."
       });
+      expect(result.familyProofs.web_content_to_markdown).toEqual({
+        label: "Web Markdown",
+        installRequiredTraces: 1,
+        rerunSuccessfulRoutes: 1,
+        reuseRecorded: 1,
+        downstreamReplayManifests: 1,
+        acquisitionMemoryState: "present",
+        verifiedDownstreamState: "present",
+        verdict: "proven",
+        phase: "cross_host_reuse_confirmed",
+        proofs: {
+          installRequiredObserved: true,
+          verifyConfirmed: true,
+          crossHostReuseConfirmed: true,
+          replayReady: true
+        },
+        verifyState: "confirmed",
+        crossHostReuseState: "confirmed",
+        nextAction:
+          "Web Markdown loop is proven; keep this request path as the second maintained-family demo."
+      });
+
+      const parsed = JSON.parse(formatLifecycleResult(result, "json")) as typeof result;
+      expect(parsed.familyProofs.website_qa.phase).toBe("cross_host_reuse_pending");
+      expect(parsed.familyProofs.web_content_to_markdown.verdict).toBe("proven");
+      expect(parsed.familyProofs.web_content_to_markdown.phase).toBe(
+        "cross_host_reuse_confirmed"
+      );
+    } finally {
+      await rm(runtimeDirectory, { recursive: true, force: true });
+    }
+  });
+
+  it("renders Website QA and Web Markdown proof loops in text output", async () => {
+    const runtimeDirectory = await mkdtemp(
+      join(tmpdir(), "skills-broker-doctor-family-proof-text-")
+    );
+    const brokerHomeDirectory = join(runtimeDirectory, ".skills-broker");
+
+    try {
+      await installSharedBrokerHome({
+        brokerHomeDirectory,
+        projectRoot: process.cwd()
+      });
+      await writeReusableFamilyProofFixtures(brokerHomeDirectory);
+
+      const result = await doctorSharedBrokerHome({
+        brokerHomeDirectory,
+        homeDirectory: runtimeDirectory,
+        cwd: runtimeDirectory,
+        now: new Date("2026-04-16T08:00:00.000Z")
+      });
+      const rendered = formatLifecycleResult(result, "text");
+
       expect(rendered).toContain(
         "Website QA loop: install_required=observed (1 install_required trace); rerun=confirmed (1 successful rerun); reuse=pending (no website QA reuse recorded yet); replay=ready (1 verified downstream manifest)"
       );
       expect(rendered).toContain(
-        "Website QA verify proof: confirmed (successful rerun evidence recorded)"
-      );
-      expect(rendered).toContain(
-        "Website QA cross-host reuse proof: pending (first reuse across hosts not recorded yet)"
-      );
-      expect(rendered).toContain(
         "Website QA next action: Repeat the same website QA request from another host to record the first proven reuse."
+      );
+      expect(rendered).toContain(
+        "Web Markdown loop: install_required=observed (1 install_required trace); verify=confirmed (1 successful route); reuse=confirmed (1 first reuse event); replay=ready (1 verified downstream manifest)"
+      );
+      expect(rendered).toContain(
+        "Web Markdown verify proof: confirmed (successful verification evidence recorded)"
+      );
+      expect(rendered).toContain(
+        "Web Markdown cross-host reuse proof: confirmed (first reuse across hosts recorded)"
+      );
+      expect(rendered).toContain(
+        "Web Markdown next action: Web Markdown loop is proven; keep this request path as the second maintained-family demo."
       );
     } finally {
       await rm(runtimeDirectory, { recursive: true, force: true });
@@ -833,14 +1100,18 @@ describe("doctor shared broker home", () => {
       const rendered = formatLifecycleResult(result, "text");
 
       expect(result.adoptionHealth.status).toBe("blocked");
-      expect(result.websiteQaLoop.verdict).toBe("blocked");
-      expect(result.websiteQaLoop.phase).toBe("proof_unreadable");
-      expect(result.websiteQaLoop.proofs).toEqual({
+      expect(result.familyProofs.website_qa.verdict).toBe("blocked");
+      expect(result.familyProofs.website_qa.phase).toBe("proof_unreadable");
+      expect(result.familyProofs.website_qa.proofs).toEqual({
         installRequiredObserved: false,
         verifyConfirmed: false,
         crossHostReuseConfirmed: false,
         replayReady: false
       });
+      expect(result.familyProofs.web_content_to_markdown.verdict).toBe("blocked");
+      expect(result.familyProofs.web_content_to_markdown.phase).toBe(
+        "proof_unreadable"
+      );
       expect(result.adoptionHealth.reasons).toEqual(
         expect.arrayContaining([
           expect.objectContaining({

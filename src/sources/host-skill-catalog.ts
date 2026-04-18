@@ -12,7 +12,10 @@ import {
 } from "../core/workflow.js";
 import {
   CAPABILITY_PACKAGE_LAYOUTS,
+  CAPABILITY_PROOF_FAMILIES,
+  SEMANTIC_CONFIDENCE_HINTS,
   type BrokerIntent,
+  type CapabilityProofFamily,
   type CapabilityPackageRef
 } from "../core/types.js";
 
@@ -72,6 +75,8 @@ const PACKAGE_ACQUISITIONS = new Set([
   "mcp_bundle"
 ]);
 const PACKAGE_LAYOUTS = new Set<string>(CAPABILITY_PACKAGE_LAYOUTS);
+const PROOF_FAMILIES = new Set<CapabilityProofFamily>(CAPABILITY_PROOF_FAMILIES);
+const CONFIDENCE_HINTS = new Set(SEMANTIC_CONFIDENCE_HINTS);
 const MANAGED_HOST_CATALOG_BASENAME = "host-skills.seed.json";
 const MANAGED_HOST_CATALOG_SUFFIX = `/config/${MANAGED_HOST_CATALOG_BASENAME}`;
 
@@ -144,6 +149,86 @@ function validateOptionalStringArray(
       fail(filePath, `${path}[${index}]`, "expected a non-empty string");
     }
   });
+}
+
+function validateOptionalString(
+  filePath: string,
+  path: string,
+  value: unknown
+): void {
+  if (value === undefined) {
+    return;
+  }
+
+  if (typeof value !== "string" || value.trim().length === 0) {
+    fail(filePath, path, "expected a non-empty string");
+  }
+}
+
+function validateEnumValue(
+  filePath: string,
+  path: string,
+  value: unknown,
+  allowed: Set<string>,
+  label: string
+): void {
+  if (typeof value !== "string" || !allowed.has(value)) {
+    fail(filePath, path, `expected one of ${label}`);
+  }
+}
+
+function validateEnumArray(
+  filePath: string,
+  path: string,
+  value: unknown,
+  allowed: Set<string>,
+  label: string
+): void {
+  if (!Array.isArray(value)) {
+    fail(filePath, path, `expected an array of ${label}`);
+  }
+
+  value.forEach((entry, index) => {
+    if (typeof entry !== "string" || !allowed.has(entry)) {
+      fail(filePath, `${path}[${index}]`, `expected one of ${label}`);
+    }
+  });
+}
+
+function validateQueryMetadata(
+  filePath: string,
+  path: string,
+  value: unknown
+): void {
+  if (value === undefined) {
+    return;
+  }
+
+  if (!isRecord(value)) {
+    fail(filePath, path, "expected an object");
+  }
+
+  validateOptionalString(filePath, `${path}.summary`, value.summary);
+  validateOptionalStringArray(filePath, `${path}.keywords`, value.keywords);
+  validateOptionalStringArray(filePath, `${path}.antiKeywords`, value.antiKeywords);
+  if (value.confidenceHints !== undefined) {
+    validateEnumArray(
+      filePath,
+      `${path}.confidenceHints`,
+      value.confidenceHints,
+      CONFIDENCE_HINTS,
+      Array.from(CONFIDENCE_HINTS).join(", ")
+    );
+  }
+  if (value.proofFamily !== undefined) {
+    validateEnumValue(
+      filePath,
+      `${path}.proofFamily`,
+      value.proofFamily,
+      PROOF_FAMILIES,
+      Array.from(PROOF_FAMILIES).join(", ")
+    );
+  }
 }
 
 function validatePackageProbe(
@@ -294,6 +379,8 @@ function validateSkillEntry(
 
     validateLeafProbe(filePath, `${path}.leaf.probe`, value.leaf.probe);
   }
+
+  validateQueryMetadata(filePath, `${path}.query`, value.query);
 
   if (options.requireExplicitIdentity === true) {
     if (!isRecord(value.package)) {

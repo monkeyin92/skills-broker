@@ -242,6 +242,8 @@ This is the published host-shell path where the discovery/install flywheel is su
 
 Requirements analysis and investigation are still supported maintained families. They just are not the first thing this README should make you try.
 
+Once that default-entry loop feels clear, the second proven family is **web markdown**: ask for something like `turn this webpage into markdown https://example.com/post`, approve the install if needed, rerun the same request, then repeat it from the other host to prove cross-host reuse.
+
 On the first blocked pass, the host-side outcome should look like:
 
 ```json
@@ -296,13 +298,13 @@ This will:
 - attach a Codex thin shell
 - let both hosts reuse the same broker cache and routing history
 
-For automation or CI, every lifecycle command also supports `--json`. For the published website QA proof loop, prefer reading `websiteQaLoop.verdict` as the stable gate field:
+For automation or CI, every lifecycle command also supports `--json`. For the published family-proof loops, prefer reading `familyProofs.website_qa.verdict` for the default-entry lane and `familyProofs.web_content_to_markdown.verdict` for the second proven lane:
 
 - `blocked`: proof rails are unreadable or the loop is otherwise not trustworthy yet
 - `in_progress`: the loop has started, but install -> verify -> cross-host reuse is not fully proven
 - `proven`: the loop has reached cross-host reuse proof
 
-`websiteQaLoop.phase` and `websiteQaLoop.proofs` remain available when a caller needs more detail, but consumers should not have to parse the human-readable doctor text.
+`familyProofs.<family>.phase` and `familyProofs.<family>.proofs` remain available when a caller needs more detail, but consumers should not have to parse the human-readable doctor text.
 
 ### 5. Clone the repository for local development
 
