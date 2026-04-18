@@ -2,6 +2,23 @@
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-04-18
+
+### Added
+
+- Added deterministic semantic routing for explicit web-markdown requests, so `web_content_to_markdown` can stay on the right winner even when other candidates happen to score better on coarse query fields.
+- Added reusable `familyProofs` to `skills-broker doctor --json`, covering both `website_qa` and `web_content_to_markdown` with stable `verdict`, `phase`, and `proofs` fields for automation and CI.
+
+### Changed
+
+- Changed broker traces and ranking so semantic routing signals are persisted in the formal trace schema and can influence winner selection before fallback query scoring.
+- Changed operator output and README guidance so the second proven family is now web markdown, and JSON consumers should read `familyProofs.<family>.verdict` instead of relying only on the old website-QA-specific gate field.
+
+### Fixed
+
+- Fixed `doctor` proof aggregation so internal downstream-manifest family counters stay private instead of leaking into the public lifecycle result contract.
+- Fixed web-markdown proof output and end-to-end verification so install -> verify -> cross-host reuse is explicitly proven in tests and rendered with web-markdown-specific wording rather than recycled QA rerun text.
+
 ## [0.3.3] - 2026-04-17
 
 ### Changed
