@@ -14,6 +14,8 @@ const FAMILY_FORMAT_CONFIG: Record<
     verifySegmentLabel: string;
     verifySuccessLabel: string;
     verifyPendingLabel: string;
+    verifyProofSuccessLabel: string;
+    verifyProofPendingLabel: string;
   }
 > = {
   website_qa: {
@@ -21,14 +23,18 @@ const FAMILY_FORMAT_CONFIG: Record<
     requestLabel: "website QA",
     verifySegmentLabel: "rerun",
     verifySuccessLabel: "successful rerun",
-    verifyPendingLabel: "successful website QA rerun"
+    verifyPendingLabel: "successful website QA rerun",
+    verifyProofSuccessLabel: "successful rerun",
+    verifyProofPendingLabel: "successful rerun"
   },
   web_content_to_markdown: {
     label: "Web Markdown",
     requestLabel: "web markdown",
     verifySegmentLabel: "verify",
     verifySuccessLabel: "successful route",
-    verifyPendingLabel: "successful web markdown verification"
+    verifyPendingLabel: "successful web markdown verification",
+    verifyProofSuccessLabel: "successful verification",
+    verifyProofPendingLabel: "successful verification"
   }
 };
 
@@ -111,16 +117,17 @@ function formatFamilyVerifyProofLine(
   family: DoctorProofFamily,
   proof: DoctorFamilyProofSummary
 ): string {
-  const label = FAMILY_FORMAT_CONFIG[family].label;
+  const config = FAMILY_FORMAT_CONFIG[family];
+  const label = config.label;
   if (proof.verifyState === "unknown") {
     return `${label} verify proof: unknown (acquisition memory unreadable)`;
   }
 
   if (proof.verifyState === "confirmed") {
-    return `${label} verify proof: confirmed (successful rerun evidence recorded)`;
+    return `${label} verify proof: confirmed (${config.verifyProofSuccessLabel} evidence recorded)`;
   }
 
-  return `${label} verify proof: pending (no successful rerun evidence recorded yet)`;
+  return `${label} verify proof: pending (no ${config.verifyProofPendingLabel} evidence recorded yet)`;
 }
 
 function formatFamilyCrossHostReuseProofLine(

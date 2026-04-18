@@ -1749,6 +1749,294 @@ describe("runBroker", () => {
     }
   });
 
+  it("proves web markdown INSTALL_REQUIRED -> install -> rerun -> cross-host reuse", async () => {
+    const runtime = await createRuntimePaths();
+    const hostCatalogFilePath = join(
+      runtime.directory,
+      "web-markdown-proof-host.json"
+    );
+    const mcpRegistryFilePath = join(
+      runtime.directory,
+      "web-markdown-proof-mcp.json"
+    );
+    const searchRoot = join(runtime.directory, "web-markdown-search-root");
+    const installedSkillDirectory = join(searchRoot, "baoyu-url-to-markdown");
+    const request = {
+      requestText: "turn this webpage into markdown",
+      host: "codex" as const,
+      capabilityQuery: {
+        kind: "capability_request" as const,
+        goal: "convert web content to markdown",
+        host: "codex" as const,
+        requestText: "turn this webpage into markdown",
+        jobFamilies: ["content_acquisition", "web_content_conversion"],
+        targets: [
+          {
+            type: "url" as const,
+            value: "https://example.com/post"
+          }
+        ],
+        artifacts: ["markdown"]
+      }
+    };
+
+    await mkdir(searchRoot, { recursive: true });
+    await writeFile(
+      hostCatalogFilePath,
+      JSON.stringify({
+        packages: [
+          {
+            packageId: "baoyu",
+            label: "baoyu",
+            installState: "available",
+            acquisition: "published_package",
+            probe: {
+              layouts: ["single_skill_directory"]
+            }
+          }
+        ],
+        skills: [
+          {
+            id: "web-content-to-markdown",
+            kind: "skill",
+            label: "Web Content to Markdown",
+            intent: "web_content_to_markdown",
+            package: {
+              packageId: "baoyu"
+            },
+            leaf: {
+              capabilityId: "baoyu.url-to-markdown",
+              packageId: "baoyu",
+              subskillId: "url-to-markdown",
+              probe: {
+                manifestNames: ["baoyu-url-to-markdown"],
+                aliases: ["url-to-markdown"]
+              }
+            },
+            query: {
+              proofFamily: "web_content_to_markdown",
+              jobFamilies: ["content_acquisition", "web_content_conversion"],
+              targetTypes: ["url"],
+              artifacts: ["markdown"],
+              examples: ["turn this webpage into markdown"]
+            },
+            implementation: {
+              id: "baoyu.url_to_markdown",
+              type: "local_skill",
+              ownerSurface: "broker_owned_downstream"
+            }
+          }
+        ]
+      }),
+      "utf8"
+    );
+    await writeFile(mcpRegistryFilePath, JSON.stringify({ servers: [] }), "utf8");
+
+    try {
+      const installRequired = await runBroker(request, {
+        brokerHomeDirectory: runtime.brokerHomeDirectory,
+        cacheFilePath: join(runtime.directory, "web-markdown-install-required.json"),
+        hostCatalogFilePath,
+        mcpRegistryFilePath,
+        currentHost: "codex",
+        packageSearchRoots: [searchRoot],
+        now: new Date("2026-04-18T06:00:00.000Z")
+      });
+
+      expect(installRequired.ok).toBe(false);
+      expect(installRequired.outcome.code).toBe("INSTALL_REQUIRED");
+      expect(installRequired.outcome.message).toContain(
+        'Install and verify package "baoyu" before retrying.'
+      );
+      expect(installRequired.acquisition?.installPlan.steps).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            id: "verify",
+            title: "Verify package and leaf"
+          }),
+          expect.objectContaining({
+            id: "retry",
+            instructions: "After verification succeeds, rerun the same broker request."
+          })
+        ])
+      );
+      expect(installRequired.trace).toMatchObject({
+        host: "codex",
+        hostDecision: "broker_first",
+        resultCode: "INSTALL_REQUIRED",
+        reasonCode: "package_not_installed",
+        winnerId: "web-content-to-markdown",
+        winnerPackageId: "baoyu",
+        semanticMatchReason: "direct_route",
+        semanticMatchCandidateId: "web-content-to-markdown",
+        semanticMatchProofFamily: "web_content_to_markdown"
+      });
+
+      await mkdir(installedSkillDirectory, { recursive: true });
+      await writeFile(
+        join(installedSkillDirectory, "SKILL.md"),
+        "---\nname: baoyu-url-to-markdown\n---\n",
+        "utf8"
+      );
+
+      const verified = await runBroker(request, {
+        brokerHomeDirectory: runtime.brokerHomeDirectory,
+        cacheFilePath: join(runtime.directory, "web-markdown-verified.json"),
+        hostCatalogFilePath,
+        mcpRegistryFilePath,
+        currentHost: "codex",
+        packageSearchRoots: [searchRoot],
+        now: new Date("2026-04-18T06:05:00.000Z")
+      });
+
+      expect(verified.ok).toBe(true);
+      expect(verified.outcome.code).toBe("HANDOFF_READY");
+      expect(verified.winner.id).toBe("web-content-to-markdown");
+      expect(verified.handoff.chosenPackage.installState).toBe("installed");
+      expect(verified.trace).toMatchObject({
+        host: "codex",
+        hostDecision: "broker_first",
+        resultCode: "HANDOFF_READY",
+        reasonCode: "query_native",
+        winnerId: "web-content-to-markdown",
+        winnerPackageId: "baoyu",
+        semanticMatchReason: "direct_route",
+        semanticMatchCandidateId: "web-content-to-markdown",
+        semanticMatchProofFamily: "web_content_to_markdown"
+      });
+
+      const verifiedAcquisitionMemory = JSON.parse(
+        await readFile(
+          acquisitionMemoryFilePath(runtime.brokerHomeDirectory),
+          "utf8"
+        )
+      ) as {
+        entries: Array<{
+          canonicalKey: string;
+          packageId: string;
+          leafCapabilityId: string;
+          successfulRoutes: number;
+          firstReuseAt?: string;
+          verifiedHosts: string[];
+        }>;
+      };
+
+      expect(verifiedAcquisitionMemory.entries).toHaveLength(1);
+      expect(verifiedAcquisitionMemory.entries[0]).toMatchObject({
+        canonicalKey:
+          "query:v2|output:markdown_only|families:content_acquisition,web_content_conversion|artifacts:markdown|constraints:|targets:url:https://example.com/post|preferred:",
+        packageId: "baoyu",
+        leafCapabilityId: "baoyu.url-to-markdown",
+        successfulRoutes: 1,
+        verifiedHosts: ["codex"]
+      });
+      expect(verifiedAcquisitionMemory.entries[0]).not.toHaveProperty(
+        "firstReuseAt"
+      );
+
+      const reused = await runBroker(
+        {
+          ...request,
+          host: "claude-code",
+          capabilityQuery: {
+            ...request.capabilityQuery,
+            host: "claude-code"
+          }
+        },
+        {
+          brokerHomeDirectory: runtime.brokerHomeDirectory,
+          cacheFilePath: join(runtime.directory, "web-markdown-reused.json"),
+          hostCatalogFilePath,
+          mcpRegistryFilePath,
+          currentHost: "claude-code",
+          packageSearchRoots: [searchRoot],
+          now: new Date("2026-04-18T06:10:00.000Z")
+        }
+      );
+
+      expect(reused.ok).toBe(true);
+      expect(reused.outcome.code).toBe("HANDOFF_READY");
+      expect(reused.winner.id).toBe("web-content-to-markdown");
+      expect(reused.trace).toMatchObject({
+        host: "claude-code",
+        hostDecision: "broker_first",
+        resultCode: "HANDOFF_READY",
+        reasonCode: "query_native",
+        winnerId: "web-content-to-markdown",
+        winnerPackageId: "baoyu",
+        semanticMatchReason: "direct_route",
+        semanticMatchCandidateId: "web-content-to-markdown",
+        semanticMatchProofFamily: "web_content_to_markdown"
+      });
+
+      const reusedAcquisitionMemory = JSON.parse(
+        await readFile(
+          acquisitionMemoryFilePath(runtime.brokerHomeDirectory),
+          "utf8"
+        )
+      ) as {
+        entries: Array<{
+          packageId: string;
+          successfulRoutes: number;
+          firstReuseAt?: string;
+          verifiedHosts: string[];
+        }>;
+      };
+
+      expect(reusedAcquisitionMemory.entries).toHaveLength(1);
+      expect(reusedAcquisitionMemory.entries[0]).toMatchObject({
+        packageId: "baoyu",
+        successfulRoutes: 2,
+        firstReuseAt: "2026-04-18T06:10:00.000Z",
+        verifiedHosts: expect.arrayContaining(["codex", "claude-code"])
+      });
+
+      const persistedTraces = (
+        await readFile(
+          routingTraceLogFilePath(runtime.brokerHomeDirectory),
+          "utf8"
+        )
+      )
+        .trim()
+        .split("\n")
+        .map((line) =>
+          JSON.parse(line) as {
+            host: string;
+            resultCode: string;
+            reasonCode: string | null;
+            winnerId: string | null;
+            semanticMatchProofFamily: string | null;
+          }
+        );
+
+      expect(persistedTraces).toEqual([
+        expect.objectContaining({
+          host: "codex",
+          resultCode: "INSTALL_REQUIRED",
+          reasonCode: "package_not_installed",
+          winnerId: "web-content-to-markdown",
+          semanticMatchProofFamily: "web_content_to_markdown"
+        }),
+        expect.objectContaining({
+          host: "codex",
+          resultCode: "HANDOFF_READY",
+          reasonCode: "query_native",
+          winnerId: "web-content-to-markdown",
+          semanticMatchProofFamily: "web_content_to_markdown"
+        }),
+        expect.objectContaining({
+          host: "claude-code",
+          resultCode: "HANDOFF_READY",
+          reasonCode: "query_native",
+          winnerId: "web-content-to-markdown",
+          semanticMatchProofFamily: "web_content_to_markdown"
+        })
+      ]);
+    } finally {
+      await rm(runtime.directory, { recursive: true, force: true });
+    }
+  });
+
   it("returns NO_CANDIDATE when local sources cannot match the request", async () => {
     const runtime = await createRuntimePaths();
     const emptyHostCatalogFilePath = join(runtime.directory, "empty-host.json");

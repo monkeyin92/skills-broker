@@ -800,57 +800,6 @@ async function collectFamilyAcquisitionMetrics(
   }
 }
 
-async function countFamilyManifestsInDirectory(
-  directory: string,
-  counts: Record<DoctorProofFamily, number>
-): Promise<void> {
-  const entries = await readdir(directory, { withFileTypes: true });
-
-  for (const entry of entries) {
-    const entryPath = join(directory, entry.name);
-
-    if (entry.isDirectory()) {
-      await countFamilyManifestsInDirectory(entryPath, counts);
-      continue;
-    }
-
-    if (!entry.isFile() || entry.name !== VERIFIED_MANIFEST_FILE) {
-      continue;
-    }
-
-    const parsed = parseVerifiedManifestCandidate(await readFile(entryPath, "utf8"));
-    if (parsed === null) {
-      continue;
-    }
-
-    for (const config of DOCTOR_FAMILY_CONFIGS) {
-      if (isFamilyManifest(parsed, config)) {
-        counts[config.family] += 1;
-      }
-    }
-  }
-}
-
-async function collectFamilyReplayCounts(
-  brokerHomeDirectory: string,
-  state: DoctorProofRailState
-): Promise<Record<DoctorProofFamily, number>> {
-  const counts = Object.fromEntries(
-    DOCTOR_FAMILY_CONFIGS.map((config) => [config.family, 0])
-  ) as Record<DoctorProofFamily, number>;
-
-  if (state !== "present") {
-    return counts;
-  }
-
-  try {
-    await countFamilyManifestsInDirectory(join(brokerHomeDirectory, "downstream"), counts);
-    return counts;
-  } catch {
-    return counts;
-  }
-}
-
 function conflictReason(
   state: Awaited<ReturnType<typeof readManagedShellManifest>>
 ): string {
@@ -1045,19 +994,20 @@ export async function doctorSharedBrokerHome(
     options.brokerHomeDirectory,
     warnings
   );
-  const verifiedDownstreamManifests =
+  const verifiedDownstreamScan =
     await summarizeDoctorVerifiedDownstreamManifests(
       options.brokerHomeDirectory,
       warnings
     );
+  const {
+    familyManifestCounts,
+    ...verifiedDownstreamManifests
+  } = verifiedDownstreamScan;
   const familyAcquisitionMetrics = await collectFamilyAcquisitionMetrics(
     options.brokerHomeDirectory,
     acquisitionMemory.state
   );
-  const familyReplayCounts = await collectFamilyReplayCounts(
-    options.brokerHomeDirectory,
-    verifiedDownstreamManifests.state
-  );
+  const familyReplayCounts = familyManifestCounts;
   const hosts = [
     ...(
       await Promise.all(

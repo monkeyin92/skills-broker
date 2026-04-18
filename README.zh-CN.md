@@ -249,6 +249,8 @@ npx skills-broker update
 
 requirements analysis 和 investigation 仍然是受支持的 maintained family，只是它们不该和 QA 一起抢 README 里的第一步。
 
+当这条默认入口闭环已经清楚之后，第二条已经证明 install / verify / reuse 的 family 是 **web markdown**：可以直接发 `turn this webpage into markdown https://example.com/post` 这类请求，需要安装时同意安装，然后重跑同一个请求，再从另一个 host 重复一次，确认 cross-host reuse 也成立。
+
 第一次被 install 挡住时，宿主侧 outcome 应该类似：
 
 ```json
@@ -303,13 +305,13 @@ npx skills-broker update \
 - 接上一个 Codex 薄壳
 - 让两个宿主复用同一份 broker cache 和路由历史
 
-如果你要接到自动化或 CI，所有 lifecycle 命令也都支持 `--json`。对于发布态的 website QA proof loop，推荐直接把 `websiteQaLoop.verdict` 当成稳定 gate 字段来读：
+如果你要接到自动化或 CI，所有 lifecycle 命令也都支持 `--json`。对于已经发货的 family-proof loops，推荐把默认入口 lane 读成 `familyProofs.website_qa.verdict`，把第二条已证明 lane 读成 `familyProofs.web_content_to_markdown.verdict`：
 
 - `blocked`：proof rail 不可读，或者这条闭环当前还不可信
 - `in_progress`：闭环已经开始，但 install -> verify -> cross-host reuse 还没有完整证明
 - `proven`：已经拿到 cross-host reuse 级别的闭环证明
 
-如果调用方还想看细节，可以继续读 `websiteQaLoop.phase` 和 `websiteQaLoop.proofs`；但不应该再去解析 `doctor` 的自然语言文本。
+如果调用方还想看细节，可以继续读 `familyProofs.<family>.phase` 和 `familyProofs.<family>.proofs`；但不应该再去解析 `doctor` 的自然语言文本。
 
 ### 5. 为本地开发克隆仓库并安装依赖
 

@@ -954,6 +954,7 @@ describe("doctor shared broker home", () => {
 
       const parsed = JSON.parse(formatLifecycleResult(result, "json")) as typeof result;
       expect(parsed.familyProofs.website_qa.phase).toBe("cross_host_reuse_pending");
+      expect(parsed.familyProofs.web_content_to_markdown.verdict).toBe("proven");
       expect(parsed.familyProofs.web_content_to_markdown.phase).toBe(
         "cross_host_reuse_confirmed"
       );
@@ -993,7 +994,7 @@ describe("doctor shared broker home", () => {
         "Web Markdown loop: install_required=observed (1 install_required trace); verify=confirmed (1 successful route); reuse=confirmed (1 first reuse event); replay=ready (1 verified downstream manifest)"
       );
       expect(rendered).toContain(
-        "Web Markdown verify proof: confirmed (successful rerun evidence recorded)"
+        "Web Markdown verify proof: confirmed (successful verification evidence recorded)"
       );
       expect(rendered).toContain(
         "Web Markdown cross-host reuse proof: confirmed (first reuse across hosts recorded)"
