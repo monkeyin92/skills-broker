@@ -13,7 +13,9 @@ import {
 import {
   BROKER_HOSTS,
   brokerHostKnownShellEntries,
-  type BrokerHost
+  type BrokerHost,
+  type BrokerIntent,
+  type CapabilityProofFamily
 } from "../core/types.js";
 import {
   evaluateBrokerFirstGate,
@@ -39,14 +41,36 @@ import type { PeerSurfaceIntegrityIssue } from "./peer-surface-audit.js";
 import type { PeerSurfaceManualRecoveryMarker } from "./peer-surface-audit.js";
 
 export type DoctorProofRailState = "present" | "missing" | "unreadable";
-export type WebsiteQaLoopPhase =
+export type DoctorProofFamily = "website_qa" | "web_content_to_markdown";
+export type DoctorFamilyProofPhase =
   | "install_required_pending"
   | "verify_pending"
   | "verify_confirmed"
   | "cross_host_reuse_pending"
   | "cross_host_reuse_confirmed"
   | "proof_unreadable";
-export type WebsiteQaLoopVerdict = "blocked" | "in_progress" | "proven";
+export type DoctorFamilyProofVerdict = "blocked" | "in_progress" | "proven";
+
+export type DoctorFamilyProofSummary = {
+  label: string;
+  installRequiredTraces: number;
+  rerunSuccessfulRoutes: number;
+  reuseRecorded: number;
+  downstreamReplayManifests: number;
+  acquisitionMemoryState: DoctorProofRailState;
+  verifiedDownstreamState: DoctorProofRailState;
+  verdict: DoctorFamilyProofVerdict;
+  phase: DoctorFamilyProofPhase;
+  proofs: {
+    installRequiredObserved: boolean;
+    verifyConfirmed: boolean;
+    crossHostReuseConfirmed: boolean;
+    replayReady: boolean;
+  };
+  verifyState: "confirmed" | "pending" | "unknown";
+  crossHostReuseState: "confirmed" | "pending" | "unknown";
+  nextAction: string;
+};
 
 export type DoctorLifecycleResult = {
   command: "doctor";
@@ -77,25 +101,8 @@ export type DoctorLifecycleResult = {
       manifests: number;
     }>;
   };
-  websiteQaLoop: {
-    installRequiredTraces: number;
-    rerunSuccessfulRoutes: number;
-    reuseRecorded: number;
-    downstreamReplayManifests: number;
-    acquisitionMemoryState: DoctorProofRailState;
-    verifiedDownstreamState: DoctorProofRailState;
-    verdict: WebsiteQaLoopVerdict;
-    phase: WebsiteQaLoopPhase;
-    proofs: {
-      installRequiredObserved: boolean;
-      verifyConfirmed: boolean;
-      crossHostReuseConfirmed: boolean;
-      replayReady: boolean;
-    };
-    verifyState: "confirmed" | "pending" | "unknown";
-    crossHostReuseState: "confirmed" | "pending" | "unknown";
-    nextAction: string;
-  };
+  familyProofs: Record<DoctorProofFamily, DoctorFamilyProofSummary>;
+  websiteQaLoop: DoctorFamilyProofSummary;
   routingMetrics: {
     windowDays: number;
     observed: number;
@@ -145,56 +152,124 @@ type DoctorVerifiedDownstreamHostSummary =
   DoctorLifecycleResult["verifiedDownstreamManifests"]["hosts"][number];
 
 type DoctorVerifiedDownstreamHostScan = DoctorVerifiedDownstreamHostSummary & {
+  familyManifestCounts: Record<DoctorProofFamily, number>;
   qualityAssuranceManifests: number;
   unreadableReason?: string;
 };
+
+type DoctorVerifiedDownstreamScan =
+  DoctorLifecycleResult["verifiedDownstreamManifests"] & {
+    familyManifestCounts: Record<DoctorProofFamily, number>;
+  };
 
 type DoctorSharedHomeSummary = DoctorLifecycleResult["sharedHome"];
 
 const WEBSITE_QA_WINNER_ID = "website-qa";
 const WEBSITE_QA_CAPABILITY_ID = "gstack.qa";
 const WEBSITE_QA_SUBSKILL_ID = "qa";
+const WEB_MARKDOWN_WINNER_ID = "web-content-to-markdown";
+const WEB_MARKDOWN_CAPABILITY_ID = "baoyu.url-to-markdown";
+const WEB_MARKDOWN_SUBSKILL_ID = "url-to-markdown";
 const VERIFIED_MANIFEST_FILE = ".skills-broker.json";
 
-function websiteQaNextAction(input: {
+type DoctorFamilyConfig = {
+  family: DoctorProofFamily;
+  label: string;
+  requestLabel: string;
+  winnerIds: string[];
+  candidateIds: string[];
+  capabilityIds: string[];
+  subskillIds: string[];
+  proofFamilies: CapabilityProofFamily[];
+  compatibilityIntents: BrokerIntent[];
+  canonicalKeyFragments: string[];
+  skillNames: string[];
+  provenMessage: string;
+};
+
+const DOCTOR_FAMILY_CONFIGS: readonly DoctorFamilyConfig[] = [
+  {
+    family: "website_qa",
+    label: "Website QA",
+    requestLabel: "website QA",
+    winnerIds: [WEBSITE_QA_WINNER_ID],
+    candidateIds: [WEBSITE_QA_WINNER_ID, WEBSITE_QA_CAPABILITY_ID],
+    capabilityIds: [WEBSITE_QA_CAPABILITY_ID],
+    subskillIds: [WEBSITE_QA_SUBSKILL_ID],
+    proofFamilies: [],
+    compatibilityIntents: [],
+    canonicalKeyFragments: ["families:quality_assurance"],
+    skillNames: [WEBSITE_QA_SUBSKILL_ID],
+    provenMessage:
+      "Website QA loop is proven; keep this request path as the default-entry demo."
+  },
+  {
+    family: "web_content_to_markdown",
+    label: "Web Markdown",
+    requestLabel: "web markdown",
+    winnerIds: [WEB_MARKDOWN_WINNER_ID],
+    candidateIds: [WEB_MARKDOWN_WINNER_ID, WEB_MARKDOWN_CAPABILITY_ID],
+    capabilityIds: [WEB_MARKDOWN_CAPABILITY_ID],
+    subskillIds: [WEB_MARKDOWN_SUBSKILL_ID],
+    proofFamilies: ["web_content_to_markdown"],
+    compatibilityIntents: ["web_content_to_markdown"],
+    canonicalKeyFragments: ["families:content_acquisition,web_content_conversion"],
+    skillNames: [WEB_MARKDOWN_SUBSKILL_ID],
+    provenMessage:
+      "Web Markdown loop is proven; keep this request path as the second maintained-family demo."
+  }
+] as const;
+
+type DoctorFamilyEvidence = {
   installRequiredTraces: number;
   rerunSuccessfulRoutes: number;
   reuseRecorded: number;
   downstreamReplayManifests: number;
   acquisitionMemoryState: DoctorProofRailState;
   verifiedDownstreamState: DoctorProofRailState;
-}): string {
+};
+
+type ParsedVerifiedManifestCandidate = {
+  skillName?: string;
+  candidateId?: string;
+  compatibilityIntent?: string;
+  proofFamily?: string;
+  capabilityId?: string;
+  subskillId?: string;
+};
+
+function familyNextAction(
+  config: DoctorFamilyConfig,
+  input: DoctorFamilyEvidence
+): string {
   if (input.installRequiredTraces === 0) {
-    return "Trigger one website QA request until the broker returns INSTALL_REQUIRED.";
+    return `Trigger one ${config.requestLabel} request until the broker returns INSTALL_REQUIRED.`;
   }
 
   if (input.acquisitionMemoryState === "unreadable") {
-    return "Repair acquisition memory so doctor can prove the install-required and rerun steps.";
+    return `Repair acquisition memory so doctor can prove the install-required and rerun steps for ${config.requestLabel}.`;
   }
 
   if (input.rerunSuccessfulRoutes === 0) {
-    return "Install the suggested website QA package, verify it, then rerun the same request.";
+    return `Install the suggested ${config.requestLabel} package, verify it, then rerun the same request.`;
   }
 
   if (input.verifiedDownstreamState === "unreadable") {
-    return "Repair verified downstream manifests so doctor can prove replay and reuse readiness.";
+    return `Repair verified downstream manifests so doctor can prove replay and reuse readiness for ${config.requestLabel}.`;
   }
 
   if (input.reuseRecorded === 0) {
-    return "Repeat the same website QA request from another host to record the first proven reuse.";
+    return `Repeat the same ${config.requestLabel} request from another host to record the first proven reuse.`;
   }
 
   if (input.downstreamReplayManifests === 0) {
-    return "Verify one successful website QA handoff so the downstream replay manifest is recorded.";
+    return `Verify one successful ${config.requestLabel} handoff so the downstream replay manifest is recorded.`;
   }
 
-  return "Website QA loop is proven; keep this request path as the default-entry demo.";
+  return config.provenMessage;
 }
 
-function websiteQaVerifyState(input: {
-  rerunSuccessfulRoutes: number;
-  acquisitionMemoryState: DoctorProofRailState;
-}): "confirmed" | "pending" | "unknown" {
+function familyVerifyState(input: DoctorFamilyEvidence): "confirmed" | "pending" | "unknown" {
   if (input.acquisitionMemoryState === "unreadable") {
     return "unknown";
   }
@@ -202,10 +277,9 @@ function websiteQaVerifyState(input: {
   return input.rerunSuccessfulRoutes > 0 ? "confirmed" : "pending";
 }
 
-function websiteQaCrossHostReuseState(input: {
-  reuseRecorded: number;
-  acquisitionMemoryState: DoctorProofRailState;
-}): "confirmed" | "pending" | "unknown" {
+function familyCrossHostReuseState(
+  input: DoctorFamilyEvidence
+): "confirmed" | "pending" | "unknown" {
   if (input.acquisitionMemoryState === "unreadable") {
     return "unknown";
   }
@@ -213,12 +287,7 @@ function websiteQaCrossHostReuseState(input: {
   return input.reuseRecorded > 0 ? "confirmed" : "pending";
 }
 
-function websiteQaLoopProofs(input: {
-  installRequiredTraces: number;
-  rerunSuccessfulRoutes: number;
-  reuseRecorded: number;
-  downstreamReplayManifests: number;
-}): {
+function buildFamilyProofFlags(input: DoctorFamilyEvidence): {
   installRequiredObserved: boolean;
   verifyConfirmed: boolean;
   crossHostReuseConfirmed: boolean;
@@ -232,13 +301,7 @@ function websiteQaLoopProofs(input: {
   };
 }
 
-function websiteQaLoopPhase(input: {
-  installRequiredTraces: number;
-  rerunSuccessfulRoutes: number;
-  reuseRecorded: number;
-  acquisitionMemoryState: DoctorProofRailState;
-  verifiedDownstreamState: DoctorProofRailState;
-}): WebsiteQaLoopPhase {
+function familyPhase(input: DoctorFamilyEvidence): DoctorFamilyProofPhase {
   if (
     input.acquisitionMemoryState === "unreadable" ||
     input.verifiedDownstreamState === "unreadable"
@@ -261,7 +324,7 @@ function websiteQaLoopPhase(input: {
   return "cross_host_reuse_confirmed";
 }
 
-function websiteQaLoopVerdict(phase: WebsiteQaLoopPhase): WebsiteQaLoopVerdict {
+function familyVerdict(phase: DoctorFamilyProofPhase): DoctorFamilyProofVerdict {
   if (phase === "proof_unreadable") {
     return "blocked";
   }
@@ -271,6 +334,29 @@ function websiteQaLoopVerdict(phase: WebsiteQaLoopPhase): WebsiteQaLoopVerdict {
   }
 
   return "in_progress";
+}
+
+function buildFamilyProofSummary(
+  config: DoctorFamilyConfig,
+  input: DoctorFamilyEvidence
+): DoctorFamilyProofSummary {
+  const phase = familyPhase(input);
+
+  return {
+    label: config.label,
+    installRequiredTraces: input.installRequiredTraces,
+    rerunSuccessfulRoutes: input.rerunSuccessfulRoutes,
+    reuseRecorded: input.reuseRecorded,
+    downstreamReplayManifests: input.downstreamReplayManifests,
+    acquisitionMemoryState: input.acquisitionMemoryState,
+    verifiedDownstreamState: input.verifiedDownstreamState,
+    verdict: familyVerdict(phase),
+    phase,
+    proofs: buildFamilyProofFlags(input),
+    verifyState: familyVerifyState(input),
+    crossHostReuseState: familyCrossHostReuseState(input),
+    nextAction: familyNextAction(config, input)
+  };
 }
 
 async function pathExists(pathname: string): Promise<boolean> {
@@ -318,19 +404,50 @@ async function summarizeDoctorSharedHome(
   };
 }
 
-function isWebsiteQaAcquisitionEntry(entry: AcquisitionMemoryEntry): boolean {
+function includesConfiguredValue(
+  value: string | null | undefined,
+  candidates: readonly string[]
+): boolean {
+  return value !== undefined && value !== null && candidates.includes(value);
+}
+
+function isFamilyAcquisitionEntry(
+  entry: AcquisitionMemoryEntry,
+  config: DoctorFamilyConfig
+): boolean {
   return (
-    entry.leafCapabilityId === WEBSITE_QA_CAPABILITY_ID ||
-    entry.candidateId === WEBSITE_QA_CAPABILITY_ID ||
-    entry.canonicalKey.includes("families:quality_assurance")
+    includesConfiguredValue(entry.candidateId, config.candidateIds) ||
+    includesConfiguredValue(entry.leafCapabilityId, config.capabilityIds) ||
+    config.compatibilityIntents.includes(entry.compatibilityIntent) ||
+    config.canonicalKeyFragments.some((fragment) =>
+      entry.canonicalKey.includes(fragment)
+    ) ||
+    includesConfiguredValue(entry.winnerSnapshot?.id, config.candidateIds) ||
+    includesConfiguredValue(
+      entry.winnerSnapshot?.leaf.capabilityId,
+      config.capabilityIds
+    ) ||
+    includesConfiguredValue(
+      entry.winnerSnapshot?.leaf.subskillId,
+      config.subskillIds
+    ) ||
+    includesConfiguredValue(
+      entry.winnerSnapshot?.query.proofFamily,
+      config.proofFamilies
+    )
   );
 }
 
-function isWebsiteQaTrace(trace: BrokerRoutingTrace): boolean {
+function isFamilyTrace(
+  trace: BrokerRoutingTrace,
+  config: DoctorFamilyConfig
+): boolean {
   return (
-    trace.winnerId === WEBSITE_QA_WINNER_ID ||
-    trace.selectedCapabilityId === WEBSITE_QA_CAPABILITY_ID ||
-    trace.selectedLeafCapabilityId === WEBSITE_QA_SUBSKILL_ID
+    includesConfiguredValue(trace.winnerId, config.winnerIds) ||
+    includesConfiguredValue(trace.selectedCapabilityId, config.capabilityIds) ||
+    includesConfiguredValue(trace.selectedLeafCapabilityId, config.subskillIds) ||
+    includesConfiguredValue(trace.semanticMatchCandidateId, config.candidateIds) ||
+    includesConfiguredValue(trace.semanticMatchProofFamily, config.proofFamilies)
   );
 }
 
@@ -357,7 +474,9 @@ async function summarizeDoctorAcquisitionMemory(
 
   try {
     const memory = await new AcquisitionMemoryStore(filePath).read();
-    const websiteQaEntries = memory.entries.filter(isWebsiteQaAcquisitionEntry);
+    const websiteQaEntries = memory.entries.filter((entry) =>
+      isFamilyAcquisitionEntry(entry, DOCTOR_FAMILY_CONFIGS[0])
+    );
 
     return {
       path: filePath,
@@ -401,9 +520,7 @@ async function summarizeDoctorAcquisitionMemory(
   }
 }
 
-function parseVerifiedManifestCandidate(raw: string): {
-  isWebsiteQa: boolean;
-} | null {
+function parseVerifiedManifestCandidate(raw: string): ParsedVerifiedManifestCandidate | null {
   try {
     const parsed = JSON.parse(raw) as Record<string, unknown>;
     if (typeof parsed !== "object" || parsed === null) {
@@ -422,16 +539,45 @@ function parseVerifiedManifestCandidate(raw: string): {
       verifiedCandidate.leaf !== null
         ? (verifiedCandidate.leaf as Record<string, unknown>)
         : undefined;
+    const query =
+      verifiedCandidate !== undefined &&
+      typeof verifiedCandidate.query === "object" &&
+      verifiedCandidate.query !== null
+        ? (verifiedCandidate.query as Record<string, unknown>)
+        : undefined;
 
     return {
-      isWebsiteQa:
-        skillName === WEBSITE_QA_SUBSKILL_ID ||
-        leaf?.capabilityId === WEBSITE_QA_CAPABILITY_ID ||
-        leaf?.subskillId === WEBSITE_QA_SUBSKILL_ID
+      skillName,
+      candidateId:
+        typeof verifiedCandidate?.id === "string" ? verifiedCandidate.id : undefined,
+      compatibilityIntent:
+        typeof verifiedCandidate?.intent === "string"
+          ? verifiedCandidate.intent
+          : undefined,
+      proofFamily:
+        typeof query?.proofFamily === "string" ? query.proofFamily : undefined,
+      capabilityId:
+        typeof leaf?.capabilityId === "string" ? leaf.capabilityId : undefined,
+      subskillId:
+        typeof leaf?.subskillId === "string" ? leaf.subskillId : undefined
     };
   } catch {
     return null;
   }
+}
+
+function isFamilyManifest(
+  candidate: ParsedVerifiedManifestCandidate,
+  config: DoctorFamilyConfig
+): boolean {
+  return (
+    includesConfiguredValue(candidate.skillName, config.skillNames) ||
+    includesConfiguredValue(candidate.candidateId, config.candidateIds) ||
+    includesConfiguredValue(candidate.compatibilityIntent, config.compatibilityIntents) ||
+    includesConfiguredValue(candidate.proofFamily, config.proofFamilies) ||
+    includesConfiguredValue(candidate.capabilityId, config.capabilityIds) ||
+    includesConfiguredValue(candidate.subskillId, config.subskillIds)
+  );
 }
 
 async function summarizeVerifiedDownstreamHost(
@@ -442,6 +588,9 @@ async function summarizeVerifiedDownstreamHost(
     const entries = await readdir(directory, { withFileTypes: true });
     let manifests = 0;
     let qualityAssuranceManifests = 0;
+    const familyManifestCounts = Object.fromEntries(
+      DOCTOR_FAMILY_CONFIGS.map((config) => [config.family, 0])
+    ) as Record<DoctorProofFamily, number>;
 
     for (const entry of entries) {
       const entryPath = join(directory, entry.name);
@@ -454,6 +603,10 @@ async function summarizeVerifiedDownstreamHost(
 
         manifests += nested.manifests;
         qualityAssuranceManifests += nested.qualityAssuranceManifests ?? 0;
+        for (const config of DOCTOR_FAMILY_CONFIGS) {
+          familyManifestCounts[config.family] +=
+            nested.familyManifestCounts[config.family];
+        }
         continue;
       }
 
@@ -471,6 +624,7 @@ async function summarizeVerifiedDownstreamHost(
           name: host,
           state: "unreadable",
           manifests,
+          familyManifestCounts,
           qualityAssuranceManifests,
           unreadableReason: `${entryPath}: ${reason}`
         };
@@ -482,21 +636,26 @@ async function summarizeVerifiedDownstreamHost(
           name: host,
           state: "unreadable",
           manifests,
+          familyManifestCounts,
           qualityAssuranceManifests,
           unreadableReason: `${entryPath}: invalid verified downstream manifest`
         };
       }
 
       manifests += 1;
-      if (parsed.isWebsiteQa) {
-        qualityAssuranceManifests += 1;
+      for (const config of DOCTOR_FAMILY_CONFIGS) {
+        if (isFamilyManifest(parsed, config)) {
+          familyManifestCounts[config.family] += 1;
+        }
       }
+      qualityAssuranceManifests = familyManifestCounts.website_qa;
     }
 
     return {
       name: host,
       state: manifests > 0 ? "present" : "missing",
       manifests,
+      familyManifestCounts,
       qualityAssuranceManifests
     };
   } catch (error) {
@@ -506,6 +665,10 @@ async function summarizeVerifiedDownstreamHost(
         name: host,
         state: "missing",
         manifests: 0,
+        familyManifestCounts: {
+          website_qa: 0,
+          web_content_to_markdown: 0
+        },
         qualityAssuranceManifests: 0
       };
     }
@@ -516,6 +679,10 @@ async function summarizeVerifiedDownstreamHost(
       name: host,
       state: "unreadable",
       manifests: 0,
+      familyManifestCounts: {
+        website_qa: 0,
+        web_content_to_markdown: 0
+      },
       qualityAssuranceManifests: 0,
       unreadableReason: `${directory}: ${reason}`
     };
@@ -525,7 +692,7 @@ async function summarizeVerifiedDownstreamHost(
 async function summarizeDoctorVerifiedDownstreamManifests(
   brokerHomeDirectory: string,
   warnings: string[]
-): Promise<DoctorLifecycleResult["verifiedDownstreamManifests"]> {
+): Promise<DoctorVerifiedDownstreamScan> {
   const hosts = await Promise.all(
     BROKER_HOSTS.map(async (host) => {
       const hostSummary = await summarizeVerifiedDownstreamHost(
@@ -547,17 +714,141 @@ async function summarizeDoctorVerifiedDownstreamManifests(
     : hosts.some((host) => host.state === "present")
       ? "present"
       : "missing";
+  const familyManifestCounts = Object.fromEntries(
+    DOCTOR_FAMILY_CONFIGS.map((config) => [
+      config.family,
+      hosts.reduce(
+        (total, host) => total + host.familyManifestCounts[config.family],
+        0
+      )
+    ])
+  ) as DoctorVerifiedDownstreamScan["familyManifestCounts"];
 
   return {
     rootPath: join(brokerHomeDirectory, "downstream"),
     state,
     manifests: hosts.reduce((total, host) => total + host.manifests, 0),
+    familyManifestCounts,
     qualityAssuranceManifests: hosts.reduce(
       (total, host) => total + host.qualityAssuranceManifests,
       0
     ),
-    hosts: hosts.map(({ unreadableReason: _unreadableReason, ...host }) => host)
+    hosts: hosts.map(
+      ({
+        unreadableReason: _unreadableReason,
+        familyManifestCounts: _familyManifestCounts,
+        ...host
+      }) => host
+    )
   };
+}
+
+async function collectFamilyAcquisitionMetrics(
+  brokerHomeDirectory: string,
+  state: DoctorProofRailState
+): Promise<
+  Record<
+    DoctorProofFamily,
+    {
+      rerunSuccessfulRoutes: number;
+      reuseRecorded: number;
+    }
+  >
+> {
+  const empty = Object.fromEntries(
+    DOCTOR_FAMILY_CONFIGS.map((config) => [
+      config.family,
+      {
+        rerunSuccessfulRoutes: 0,
+        reuseRecorded: 0
+      }
+    ])
+  ) as Record<
+    DoctorProofFamily,
+    {
+      rerunSuccessfulRoutes: number;
+      reuseRecorded: number;
+    }
+  >;
+
+  if (state !== "present") {
+    return empty;
+  }
+
+  try {
+    const memory = await new AcquisitionMemoryStore(
+      acquisitionMemoryFilePath(brokerHomeDirectory)
+    ).read();
+
+    for (const config of DOCTOR_FAMILY_CONFIGS) {
+      const entries = memory.entries.filter((entry) =>
+        isFamilyAcquisitionEntry(entry, config)
+      );
+      empty[config.family] = {
+        rerunSuccessfulRoutes: entries.reduce(
+          (total, entry) => total + entry.successfulRoutes,
+          0
+        ),
+        reuseRecorded: entries.filter((entry) => entry.firstReuseAt !== undefined)
+          .length
+      };
+    }
+
+    return empty;
+  } catch {
+    return empty;
+  }
+}
+
+async function countFamilyManifestsInDirectory(
+  directory: string,
+  counts: Record<DoctorProofFamily, number>
+): Promise<void> {
+  const entries = await readdir(directory, { withFileTypes: true });
+
+  for (const entry of entries) {
+    const entryPath = join(directory, entry.name);
+
+    if (entry.isDirectory()) {
+      await countFamilyManifestsInDirectory(entryPath, counts);
+      continue;
+    }
+
+    if (!entry.isFile() || entry.name !== VERIFIED_MANIFEST_FILE) {
+      continue;
+    }
+
+    const parsed = parseVerifiedManifestCandidate(await readFile(entryPath, "utf8"));
+    if (parsed === null) {
+      continue;
+    }
+
+    for (const config of DOCTOR_FAMILY_CONFIGS) {
+      if (isFamilyManifest(parsed, config)) {
+        counts[config.family] += 1;
+      }
+    }
+  }
+}
+
+async function collectFamilyReplayCounts(
+  brokerHomeDirectory: string,
+  state: DoctorProofRailState
+): Promise<Record<DoctorProofFamily, number>> {
+  const counts = Object.fromEntries(
+    DOCTOR_FAMILY_CONFIGS.map((config) => [config.family, 0])
+  ) as Record<DoctorProofFamily, number>;
+
+  if (state !== "present") {
+    return counts;
+  }
+
+  try {
+    await countFamilyManifestsInDirectory(join(brokerHomeDirectory, "downstream"), counts);
+    return counts;
+  } catch {
+    return counts;
+  }
 }
 
 function conflictReason(
@@ -759,16 +1050,14 @@ export async function doctorSharedBrokerHome(
       options.brokerHomeDirectory,
       warnings
     );
-  const websiteQaInstallRequiredTraces = routingTraces.filter(
-    (trace) =>
-      new Date(trace.timestamp) >=
-        new Date(
-          (options.now ?? new Date()).getTime() -
-            routingWindowDays * 24 * 60 * 60 * 1000
-        ) &&
-      trace.resultCode === "INSTALL_REQUIRED" &&
-      isWebsiteQaTrace(trace)
-  ).length;
+  const familyAcquisitionMetrics = await collectFamilyAcquisitionMetrics(
+    options.brokerHomeDirectory,
+    acquisitionMemory.state
+  );
+  const familyReplayCounts = await collectFamilyReplayCounts(
+    options.brokerHomeDirectory,
+    verifiedDownstreamManifests.state
+  );
   const hosts = [
     ...(
       await Promise.all(
@@ -798,55 +1087,37 @@ export async function doctorSharedBrokerHome(
     allowMissingRepoTarget: options.repoRootOverride === undefined
   });
 
-  const phase = websiteQaLoopPhase({
-    installRequiredTraces: websiteQaInstallRequiredTraces,
-    rerunSuccessfulRoutes: acquisitionMemory.qualityAssuranceSuccessfulRoutes,
-    reuseRecorded: acquisitionMemory.qualityAssuranceFirstReuseRecorded,
-    acquisitionMemoryState: acquisitionMemory.state,
-    verifiedDownstreamState: verifiedDownstreamManifests.state
-  });
-
-  const websiteQaLoop = {
-    installRequiredTraces: websiteQaInstallRequiredTraces,
-    rerunSuccessfulRoutes: acquisitionMemory.qualityAssuranceSuccessfulRoutes,
-    reuseRecorded: acquisitionMemory.qualityAssuranceFirstReuseRecorded,
-    downstreamReplayManifests:
-      verifiedDownstreamManifests.qualityAssuranceManifests,
-    acquisitionMemoryState: acquisitionMemory.state,
-    verifiedDownstreamState: verifiedDownstreamManifests.state,
-    verdict: websiteQaLoopVerdict(phase),
-    phase,
-    proofs: websiteQaLoopProofs({
-      installRequiredTraces: websiteQaInstallRequiredTraces,
-      rerunSuccessfulRoutes: acquisitionMemory.qualityAssuranceSuccessfulRoutes,
-      reuseRecorded: acquisitionMemory.qualityAssuranceFirstReuseRecorded,
-      downstreamReplayManifests:
-        verifiedDownstreamManifests.qualityAssuranceManifests
-    }),
-    verifyState: websiteQaVerifyState({
-      rerunSuccessfulRoutes: acquisitionMemory.qualityAssuranceSuccessfulRoutes,
-      acquisitionMemoryState: acquisitionMemory.state
-    }),
-    crossHostReuseState: websiteQaCrossHostReuseState({
-      reuseRecorded: acquisitionMemory.qualityAssuranceFirstReuseRecorded,
-      acquisitionMemoryState: acquisitionMemory.state
-    }),
-    nextAction: websiteQaNextAction({
-      installRequiredTraces: websiteQaInstallRequiredTraces,
-      rerunSuccessfulRoutes: acquisitionMemory.qualityAssuranceSuccessfulRoutes,
-      reuseRecorded: acquisitionMemory.qualityAssuranceFirstReuseRecorded,
-      downstreamReplayManifests:
-        verifiedDownstreamManifests.qualityAssuranceManifests,
-      acquisitionMemoryState: acquisitionMemory.state,
-      verifiedDownstreamState: verifiedDownstreamManifests.state
+  const familyProofs = Object.fromEntries(
+    DOCTOR_FAMILY_CONFIGS.map((config) => {
+      const evidence: DoctorFamilyEvidence = {
+        installRequiredTraces: routingTraces.filter(
+          (trace) =>
+            new Date(trace.timestamp) >=
+              new Date(
+                (options.now ?? new Date()).getTime() -
+                  routingWindowDays * 24 * 60 * 60 * 1000
+              ) &&
+            trace.resultCode === "INSTALL_REQUIRED" &&
+            isFamilyTrace(trace, config)
+        ).length,
+        rerunSuccessfulRoutes:
+          familyAcquisitionMetrics[config.family].rerunSuccessfulRoutes,
+        reuseRecorded: familyAcquisitionMetrics[config.family].reuseRecorded,
+        downstreamReplayManifests: familyReplayCounts[config.family],
+        acquisitionMemoryState: acquisitionMemory.state,
+        verifiedDownstreamState: verifiedDownstreamManifests.state
+      };
+      return [config.family, buildFamilyProofSummary(config, evidence)];
     })
-  };
+  ) as Record<DoctorProofFamily, DoctorFamilyProofSummary>;
+  const websiteQaLoop = familyProofs.website_qa;
 
   return {
     command: "doctor",
     sharedHome,
     acquisitionMemory,
     verifiedDownstreamManifests,
+    familyProofs,
     websiteQaLoop,
     routingMetrics: {
       windowDays: routingWindowDays,

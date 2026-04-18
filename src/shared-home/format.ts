@@ -1,6 +1,36 @@
-import type { DoctorLifecycleResult } from "./doctor.js";
+import type {
+  DoctorFamilyProofSummary,
+  DoctorLifecycleResult,
+  DoctorProofFamily
+} from "./doctor.js";
 import type { RemoveLifecycleResult } from "./remove.js";
 import type { UpdateLifecycleResult } from "./update.js";
+
+const FAMILY_FORMAT_CONFIG: Record<
+  DoctorProofFamily,
+  {
+    label: string;
+    requestLabel: string;
+    verifySegmentLabel: string;
+    verifySuccessLabel: string;
+    verifyPendingLabel: string;
+  }
+> = {
+  website_qa: {
+    label: "Website QA",
+    requestLabel: "website QA",
+    verifySegmentLabel: "rerun",
+    verifySuccessLabel: "successful rerun",
+    verifyPendingLabel: "successful website QA rerun"
+  },
+  web_content_to_markdown: {
+    label: "Web Markdown",
+    requestLabel: "web markdown",
+    verifySegmentLabel: "verify",
+    verifySuccessLabel: "successful route",
+    verifyPendingLabel: "successful web markdown verification"
+  }
+};
 
 function formatAdoptionHealthLine(
   adoptionHealth: DoctorLifecycleResult["adoptionHealth"] | UpdateLifecycleResult["adoptionHealth"]
@@ -39,61 +69,74 @@ function formatSharedHomeExistsLine(result: DoctorLifecycleResult): string {
     .join(", ")})`;
 }
 
-function formatWebsiteQaLoopLine(result: DoctorLifecycleResult): string {
-  const installRequired =
-    result.websiteQaLoop.installRequiredTraces > 0
-      ? `observed (${result.websiteQaLoop.installRequiredTraces} install_required trace${result.websiteQaLoop.installRequiredTraces === 1 ? "" : "s"})`
-      : "pending (no website QA install_required trace recorded yet)";
-  const rerun =
-    result.websiteQaLoop.acquisitionMemoryState === "unreadable"
-      ? "unknown (acquisition memory unreadable)"
-      : result.websiteQaLoop.rerunSuccessfulRoutes > 0
-        ? `confirmed (${result.websiteQaLoop.rerunSuccessfulRoutes} successful rerun${result.websiteQaLoop.rerunSuccessfulRoutes === 1 ? "" : "s"})`
-        : "pending (no successful website QA rerun recorded yet)";
-  const reuse =
-    result.websiteQaLoop.acquisitionMemoryState === "unreadable"
-      ? "unknown (acquisition memory unreadable)"
-      : result.websiteQaLoop.reuseRecorded > 0
-        ? `confirmed (${result.websiteQaLoop.reuseRecorded} first reuse event${result.websiteQaLoop.reuseRecorded === 1 ? "" : "s"})`
-        : "pending (no website QA reuse recorded yet)";
-  const replay =
-    result.websiteQaLoop.verifiedDownstreamState === "unreadable"
-      ? "unknown (verified downstream manifests unreadable)"
-      : result.websiteQaLoop.downstreamReplayManifests > 0
-        ? `ready (${result.websiteQaLoop.downstreamReplayManifests} verified downstream manifest${result.websiteQaLoop.downstreamReplayManifests === 1 ? "" : "s"})`
-        : "pending (no website QA verified downstream manifest yet)";
-
-  return `Website QA loop: install_required=${installRequired}; rerun=${rerun}; reuse=${reuse}; replay=${replay}`;
-}
-
-function formatWebsiteQaNextActionLine(result: DoctorLifecycleResult): string {
-  return `Website QA next action: ${result.websiteQaLoop.nextAction}`;
-}
-
-function formatWebsiteQaVerifyProofLine(result: DoctorLifecycleResult): string {
-  if (result.websiteQaLoop.verifyState === "unknown") {
-    return "Website QA verify proof: unknown (acquisition memory unreadable)";
-  }
-
-  if (result.websiteQaLoop.verifyState === "confirmed") {
-    return "Website QA verify proof: confirmed (successful rerun evidence recorded)";
-  }
-
-  return "Website QA verify proof: pending (no successful rerun evidence recorded yet)";
-}
-
-function formatWebsiteQaCrossHostReuseProofLine(
-  result: DoctorLifecycleResult
+function formatFamilyLoopLine(
+  family: DoctorProofFamily,
+  proof: DoctorFamilyProofSummary
 ): string {
-  if (result.websiteQaLoop.crossHostReuseState === "unknown") {
-    return "Website QA cross-host reuse proof: unknown (acquisition memory unreadable)";
+  const config = FAMILY_FORMAT_CONFIG[family];
+  const installRequired =
+    proof.installRequiredTraces > 0
+      ? `observed (${proof.installRequiredTraces} install_required trace${proof.installRequiredTraces === 1 ? "" : "s"})`
+      : `pending (no ${config.requestLabel} install_required trace recorded yet)`;
+  const verify =
+    proof.acquisitionMemoryState === "unreadable"
+      ? "unknown (acquisition memory unreadable)"
+      : proof.rerunSuccessfulRoutes > 0
+        ? `confirmed (${proof.rerunSuccessfulRoutes} ${config.verifySuccessLabel}${proof.rerunSuccessfulRoutes === 1 ? "" : "s"})`
+        : `pending (no ${config.verifyPendingLabel} recorded yet)`;
+  const reuse =
+    proof.acquisitionMemoryState === "unreadable"
+      ? "unknown (acquisition memory unreadable)"
+      : proof.reuseRecorded > 0
+        ? `confirmed (${proof.reuseRecorded} first reuse event${proof.reuseRecorded === 1 ? "" : "s"})`
+        : `pending (no ${config.requestLabel} reuse recorded yet)`;
+  const replay =
+    proof.verifiedDownstreamState === "unreadable"
+      ? "unknown (verified downstream manifests unreadable)"
+      : proof.downstreamReplayManifests > 0
+        ? `ready (${proof.downstreamReplayManifests} verified downstream manifest${proof.downstreamReplayManifests === 1 ? "" : "s"})`
+        : `pending (no ${config.requestLabel} verified downstream manifest yet)`;
+
+  return `${config.label} loop: install_required=${installRequired}; ${config.verifySegmentLabel}=${verify}; reuse=${reuse}; replay=${replay}`;
+}
+
+function formatFamilyNextActionLine(
+  family: DoctorProofFamily,
+  proof: DoctorFamilyProofSummary
+): string {
+  return `${FAMILY_FORMAT_CONFIG[family].label} next action: ${proof.nextAction}`;
+}
+
+function formatFamilyVerifyProofLine(
+  family: DoctorProofFamily,
+  proof: DoctorFamilyProofSummary
+): string {
+  const label = FAMILY_FORMAT_CONFIG[family].label;
+  if (proof.verifyState === "unknown") {
+    return `${label} verify proof: unknown (acquisition memory unreadable)`;
   }
 
-  if (result.websiteQaLoop.crossHostReuseState === "confirmed") {
-    return "Website QA cross-host reuse proof: confirmed (first reuse across hosts recorded)";
+  if (proof.verifyState === "confirmed") {
+    return `${label} verify proof: confirmed (successful rerun evidence recorded)`;
   }
 
-  return "Website QA cross-host reuse proof: pending (first reuse across hosts not recorded yet)";
+  return `${label} verify proof: pending (no successful rerun evidence recorded yet)`;
+}
+
+function formatFamilyCrossHostReuseProofLine(
+  family: DoctorProofFamily,
+  proof: DoctorFamilyProofSummary
+): string {
+  const label = FAMILY_FORMAT_CONFIG[family].label;
+  if (proof.crossHostReuseState === "unknown") {
+    return `${label} cross-host reuse proof: unknown (acquisition memory unreadable)`;
+  }
+
+  if (proof.crossHostReuseState === "confirmed") {
+    return `${label} cross-host reuse proof: confirmed (first reuse across hosts recorded)`;
+  }
+
+  return `${label} cross-host reuse proof: pending (first reuse across hosts not recorded yet)`;
 }
 
 function formatAdoptionHealthProofLine(
@@ -103,16 +146,17 @@ function formatAdoptionHealthProofLine(
     return undefined;
   }
 
+  const websiteQaProof = result.familyProofs.website_qa;
   const hasWebsiteQaEvidence =
-    result.websiteQaLoop.installRequiredTraces > 0 ||
-    result.websiteQaLoop.rerunSuccessfulRoutes > 0 ||
-    result.websiteQaLoop.reuseRecorded > 0;
+    websiteQaProof.installRequiredTraces > 0 ||
+    websiteQaProof.rerunSuccessfulRoutes > 0 ||
+    websiteQaProof.reuseRecorded > 0;
 
   if (!hasWebsiteQaEvidence) {
     return undefined;
   }
 
-  return `Adoption health proof: website QA verify=${result.websiteQaLoop.verifyState}; cross-host reuse=${result.websiteQaLoop.crossHostReuseState}`;
+  return `Adoption health proof: website QA verify=${websiteQaProof.verifyState}; cross-host reuse=${websiteQaProof.crossHostReuseState}`;
 }
 
 export function formatLifecycleResult(
@@ -169,10 +213,16 @@ export function formatLifecycleResult(
         .map((host) => `${host.name}=${host.manifests}`)
         .join(", ")}`
     );
-    lines.push(formatWebsiteQaLoopLine(result));
-    lines.push(formatWebsiteQaVerifyProofLine(result));
-    lines.push(formatWebsiteQaCrossHostReuseProofLine(result));
-    lines.push(formatWebsiteQaNextActionLine(result));
+    for (const family of [
+      "website_qa",
+      "web_content_to_markdown"
+    ] as const satisfies DoctorProofFamily[]) {
+      const proof = result.familyProofs[family];
+      lines.push(formatFamilyLoopLine(family, proof));
+      lines.push(formatFamilyVerifyProofLine(family, proof));
+      lines.push(formatFamilyCrossHostReuseProofLine(family, proof));
+      lines.push(formatFamilyNextActionLine(family, proof));
+    }
 
     lines.push("");
     if (result.brokerFirstGate.skipped) {
