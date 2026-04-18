@@ -154,10 +154,10 @@ function mergeUniqueStrings(
   });
 }
 
-function mergeAppendUniqueStrings(
-  fallback: string[],
-  preferred: string[] | undefined
-): string[] {
+function mergeAppendUniqueStrings<T extends string>(
+  fallback: T[],
+  preferred: T[] | undefined
+): T[] {
   const merged = [...fallback, ...(preferred ?? [])];
   const seen = new Set<string>();
 
