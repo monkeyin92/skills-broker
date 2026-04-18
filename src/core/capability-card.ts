@@ -1,5 +1,6 @@
 import type {
   BrokerIntent,
+  CapabilityProofFamily,
   CapabilityQueryTargetType,
   CapabilityImplementationType,
   CapabilityOwnershipSurface,
@@ -7,7 +8,8 @@ import type {
   LeafCapabilityRef,
   CapabilityPackageAcquisition,
   CapabilityPackageProbe,
-  LeafCapabilityProbe
+  LeafCapabilityProbe,
+  SemanticConfidenceHint
 } from "./types.js";
 
 export type CapabilityCardKind = "skill" | "mcp";
@@ -19,10 +21,26 @@ export type CapabilityImplementation = {
 };
 
 export type CapabilityQueryMetadata = {
+  summary?: string;
+  keywords?: string[];
+  antiKeywords?: string[];
+  confidenceHints?: SemanticConfidenceHint[];
+  proofFamily?: CapabilityProofFamily;
   jobFamilies: string[];
   targetTypes: CapabilityQueryTargetType[];
   artifacts: string[];
   examples: string[];
+};
+
+export type NormalizedCapabilityQueryMetadata = Omit<
+  CapabilityQueryMetadata,
+  "summary" | "keywords" | "antiKeywords" | "confidenceHints" | "proofFamily"
+> & {
+  summary: string;
+  keywords: string[];
+  antiKeywords: string[];
+  confidenceHints: SemanticConfidenceHint[];
+  proofFamily: CapabilityProofFamily;
 };
 
 export type CapabilityCard = {
@@ -32,7 +50,7 @@ export type CapabilityCard = {
   compatibilityIntent: BrokerIntent;
   package: CapabilityPackageRef;
   leaf: LeafCapabilityRef;
-  query: CapabilityQueryMetadata;
+  query: NormalizedCapabilityQueryMetadata;
   implementation: CapabilityImplementation;
   hosts: {
     currentHostSupported: boolean;
@@ -69,10 +87,15 @@ function defaultImplementationType(
 
 function defaultQueryMetadata(
   intent: BrokerIntent
-): CapabilityQueryMetadata {
+): NormalizedCapabilityQueryMetadata {
   switch (intent) {
     case "web_content_to_markdown":
       return {
+        summary: "Convert web pages into markdown",
+        keywords: ["web", "markdown", "content", "page"],
+        antiKeywords: ["audio", "video", "podcast"],
+        confidenceHints: ["url", "website", "repo"],
+        proofFamily: "web_content_to_markdown",
         jobFamilies: ["content_acquisition", "web_content_conversion"],
         targetTypes: ["url", "website", "repo"],
         artifacts: ["markdown"],
@@ -83,6 +106,11 @@ function defaultQueryMetadata(
       };
     case "social_post_to_markdown":
       return {
+        summary: "Convert social posts into markdown",
+        keywords: ["social", "post", "markdown", "thread"],
+        antiKeywords: ["audio", "video", "podcast"],
+        confidenceHints: ["url", "website"],
+        proofFamily: "social_post_to_markdown",
         jobFamilies: ["content_acquisition", "social_content_conversion"],
         targetTypes: ["url", "website"],
         artifacts: ["markdown"],
@@ -93,6 +121,11 @@ function defaultQueryMetadata(
       };
     case "capability_discovery_or_install":
       return {
+        summary: "Discover or install a capability",
+        keywords: ["skill", "mcp", "install", "discover"],
+        antiKeywords: ["markdown", "transcribe"],
+        confidenceHints: ["text", "problem_statement"],
+        proofFamily: "capability_discovery_or_install",
         jobFamilies: ["capability_acquisition"],
         targetTypes: ["text", "problem_statement"],
         artifacts: ["recommendation", "installation_plan"],
@@ -109,6 +142,23 @@ function mergeUniqueStrings(
   fallback: string[]
 ): string[] {
   const merged = preferred ?? fallback;
+  const seen = new Set<string>();
+
+  return merged.filter((value) => {
+    if (seen.has(value)) {
+      return false;
+    }
+
+    seen.add(value);
+    return true;
+  });
+}
+
+function mergeAppendUniqueStrings(
+  fallback: string[],
+  preferred: string[] | undefined
+): string[] {
+  const merged = [...fallback, ...(preferred ?? [])];
   const seen = new Set<string>();
 
   return merged.filter((value) => {
@@ -402,7 +452,24 @@ export function toCapabilityCard(candidate: CapabilityCandidate): CapabilityCard
     },
     leaf: leafRef,
     query: {
-      jobFamilies: mergeUniqueStrings(candidate.query?.jobFamilies, defaults.jobFamilies),
+      summary: candidate.query?.summary ?? defaults.summary,
+      keywords: mergeAppendUniqueStrings(
+        defaults.keywords,
+        candidate.query?.keywords
+      ),
+      antiKeywords: mergeAppendUniqueStrings(
+        defaults.antiKeywords,
+        candidate.query?.antiKeywords
+      ),
+      confidenceHints: mergeAppendUniqueStrings(
+        defaults.confidenceHints,
+        candidate.query?.confidenceHints
+      ),
+      proofFamily: candidate.query?.proofFamily ?? defaults.proofFamily,
+      jobFamilies: mergeUniqueStrings(
+        candidate.query?.jobFamilies,
+        defaults.jobFamilies
+      ),
       targetTypes: (candidate.query?.targetTypes ?? defaults.targetTypes).slice(),
       artifacts: mergeUniqueStrings(candidate.query?.artifacts, defaults.artifacts),
       examples: mergeUniqueStrings(candidate.query?.examples, defaults.examples)

@@ -49,6 +49,11 @@
         }
       },
       "query": {
+        "summary": "Convert web pages into markdown",
+        "keywords": ["web", "markdown", "content", "page"],
+        "antiKeywords": ["audio", "video", "podcast"],
+        "confidenceHints": ["url", "website", "repo"],
+        "proofFamily": "web_content_to_markdown",
         "jobFamilies": ["content_acquisition", "web_content_conversion"],
         "targetTypes": ["url", "website", "repo"],
         "artifacts": ["markdown"],
