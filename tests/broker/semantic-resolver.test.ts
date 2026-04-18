@@ -2,10 +2,170 @@ import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import {
+  resolveSemanticCandidates,
+  selectSemanticTopMatch
+} from "../../src/broker/semantic-resolver";
 import { toCapabilityCard } from "../../src/core/capability-card";
 import { HostSkillCatalogValidationError, loadHostSkillCandidates } from "../../src/sources/host-skill-catalog";
 
 describe("semantic resolver metadata", () => {
+  it("routes an explicit web markdown request directly", () => {
+    const result = resolveSemanticCandidates({
+      requestText: "turn this webpage into markdown: https://example.com/post",
+      candidates: [
+        {
+          candidateId: "web-content-to-markdown",
+          proofFamily: "web_content_to_markdown",
+          confidence: 0.93
+        }
+      ]
+    });
+
+    expect(result).toEqual({
+      verdict: "direct_route",
+      topMatch: {
+        candidateId: "web-content-to-markdown",
+        proofFamily: "web_content_to_markdown",
+        confidence: 0.93
+      }
+    });
+  });
+
+  it("asks for clarification when only partial web markdown signals are present", () => {
+    const result = resolveSemanticCandidates({
+      requestText: "markdown this link",
+      candidates: [
+        {
+          candidateId: "web-content-to-markdown",
+          proofFamily: "web_content_to_markdown",
+          confidence: 0.58
+        }
+      ]
+    });
+
+    expect(result).toEqual({
+      verdict: "clarify",
+      topMatch: {
+        candidateId: "web-content-to-markdown",
+        proofFamily: "web_content_to_markdown",
+        confidence: 0.58
+      }
+    });
+  });
+
+  it("keeps non-markdown page conversion requests unsupported", () => {
+    expect(
+      resolveSemanticCandidates({
+        requestText: "convert this page to pdf",
+        candidates: [
+          {
+            candidateId: "web-content-to-markdown",
+            proofFamily: "web_content_to_markdown",
+            confidence: 0.91
+          }
+        ]
+      })
+    ).toEqual({
+      verdict: "unsupported"
+    });
+  });
+
+  it("routes an explicit Chinese web markdown request directly", () => {
+    const result = resolveSemanticCandidates({
+      requestText: "把这个页面转成markdown",
+      candidates: [
+        {
+          candidateId: "web-content-to-markdown",
+          proofFamily: "web_content_to_markdown",
+          confidence: 0.89
+        }
+      ]
+    });
+
+    expect(result.verdict).toBe("direct_route");
+    expect(result.topMatch).toEqual({
+      candidateId: "web-content-to-markdown",
+      proofFamily: "web_content_to_markdown",
+      confidence: 0.89
+    });
+  });
+
+  it("routes web pages as markdown directly", () => {
+    const result = resolveSemanticCandidates({
+      requestText: "save web pages as markdown",
+      candidates: [
+        {
+          candidateId: "web-content-to-markdown",
+          proofFamily: "web_content_to_markdown",
+          confidence: 0.9
+        }
+      ]
+    });
+
+    expect(result.verdict).toBe("direct_route");
+    expect(result.topMatch).toEqual({
+      candidateId: "web-content-to-markdown",
+      proofFamily: "web_content_to_markdown",
+      confidence: 0.9
+    });
+  });
+
+  it("marks unrelated requests as unsupported", () => {
+    expect(
+      resolveSemanticCandidates({
+        requestText: "help me plan dinner for tonight",
+        candidates: [
+          {
+            candidateId: "web-content-to-markdown",
+            proofFamily: "web_content_to_markdown",
+            confidence: 0.91
+          }
+        ]
+      })
+    ).toEqual({
+      verdict: "unsupported"
+    });
+  });
+
+  it("keeps non-web proof families unsupported at the routing boundary", () => {
+    expect(
+      resolveSemanticCandidates({
+        requestText: "turn this webpage into markdown",
+        candidates: [
+          {
+            candidateId: "generic-discovery",
+            proofFamily: "capability_discovery_or_install",
+            confidence: 0.99
+          }
+        ]
+      })
+    ).toEqual({
+      verdict: "unsupported"
+    });
+  });
+
+  it("selects topMatch by confidence without hidden family bias", () => {
+    const result = selectSemanticTopMatch([
+      {
+        candidateId: "generic-discovery",
+        proofFamily: "capability_discovery_or_install",
+        confidence: 0.91
+      },
+      {
+        candidateId: "web-content-to-markdown",
+        proofFamily: "web_content_to_markdown",
+        confidence: 0.87
+      }
+    ]);
+
+    expect(result).toEqual({
+      candidateId: "generic-discovery",
+      proofFamily: "capability_discovery_or_install",
+      confidence: 0.91
+    });
+  });
+
   it("retains default semantic query metadata when candidate omits it", () => {
     const card = toCapabilityCard({
       kind: "skill",
