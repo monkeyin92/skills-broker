@@ -23,8 +23,13 @@ import {
 import {
   hasCapabilityQueryMatch,
   rankCapabilities,
+  type SemanticRankingSignal,
   type RoutingHistory
 } from "./rank.js";
+import {
+  resolveSemanticCandidates,
+  type SemanticResolverResult
+} from "./semantic-resolver.js";
 import {
   type BrokerDebug,
   type BrokerFailureResult,
@@ -120,6 +125,75 @@ function mergeHistoryByCandidateId(
   }
 
   return Object.fromEntries(merged);
+}
+
+function resolveSemanticRankingSignal(
+  request: ResolvedBrokerRequest,
+  candidates: CapabilityCard[]
+): {
+  semanticResult?: SemanticResolverResult;
+  semanticSignal?: SemanticRankingSignal;
+} {
+  if (request.compatibilityIntent !== "web_content_to_markdown") {
+    return {};
+  }
+
+  const currentHostCandidates = candidates.filter(
+    (candidate) => candidate.hosts.currentHostSupported
+  );
+  const semanticResult = resolveSemanticCandidates({
+    requestText: request.request.capabilityQuery.requestText,
+    candidates: currentHostCandidates.map((candidate) => ({
+      candidateId: candidate.id,
+      proofFamily: candidate.query.proofFamily,
+      confidence: candidate.ranking.confidence
+    }))
+  });
+
+  if (
+    semanticResult.verdict !== "direct_route" ||
+    semanticResult.topMatch === undefined
+  ) {
+    return {
+      semanticResult
+    };
+  }
+
+  return {
+    semanticResult,
+    semanticSignal: {
+      candidateId: semanticResult.topMatch.candidateId,
+      reason: "direct_route",
+      proofFamily: semanticResult.topMatch.proofFamily
+    }
+  };
+}
+
+function semanticTraceInput(
+  semanticResult: SemanticResolverResult | undefined
+):
+  | {
+      verdict: SemanticResolverResult["verdict"];
+      topMatch?: {
+        candidateId: string;
+        proofFamily: NonNullable<SemanticResolverResult["topMatch"]>["proofFamily"];
+      };
+    }
+  | undefined {
+  if (semanticResult === undefined) {
+    return undefined;
+  }
+
+  return {
+    verdict: semanticResult.verdict,
+    topMatch:
+      semanticResult.topMatch === undefined
+        ? undefined
+        : {
+            candidateId: semanticResult.topMatch.candidateId,
+            proofFamily: semanticResult.topMatch.proofFamily
+          }
+  };
 }
 
 export type RunBrokerOptions = {
@@ -785,13 +859,18 @@ async function runSingleStep(
     acquisitionHistoryByCandidateId,
     cacheHistoryByCandidateId
   );
+  const { semanticResult, semanticSignal } = resolveSemanticRankingSignal(
+    resolvedRequest,
+    candidates
+  );
 
   const ranked = rankCapabilities({
     currentHost,
     requestCompatibilityIntent: resolvedRequest.compatibilityIntent,
     requestCapabilityQuery: request.capabilityQuery,
     candidates,
-    historyByCandidateId
+    historyByCandidateId,
+    semanticSignal
   });
 
   if (ranked.length === 0) {
@@ -807,7 +886,8 @@ async function runSingleStep(
         resultCode: "NO_CANDIDATE",
         now,
         hostAction: "offer_capability_discovery",
-        candidateCount: 0
+        candidateCount: 0,
+        semanticRouting: semanticTraceInput(semanticResult)
       })
     );
   }
@@ -885,7 +965,8 @@ async function runSingleStep(
         hostAction: "offer_package_install",
         candidateCount: ranked.length,
         winner,
-        reasonCode: "package_not_installed"
+        reasonCode: "package_not_installed",
+        semanticRouting: semanticTraceInput(semanticResult)
       })
     );
   }
@@ -911,7 +992,8 @@ async function runSingleStep(
           hostAction: "show_graceful_failure",
           candidateCount: ranked.length,
           winner,
-          reasonCode: error.reasonCode
+          reasonCode: error.reasonCode,
+          semanticRouting: semanticTraceInput(semanticResult)
         }),
         error.message
       );
@@ -929,7 +1011,8 @@ async function runSingleStep(
         now,
         hostAction: "show_graceful_failure",
         candidateCount: ranked.length,
-        winner
+        winner,
+        semanticRouting: semanticTraceInput(semanticResult)
       }),
       "Failed to prepare broker handoff."
     );
@@ -981,7 +1064,8 @@ async function runSingleStep(
       hostAction: null,
       candidateCount: ranked.length,
       winner,
-      reasonCode: winnerReasonCode
+      reasonCode: winnerReasonCode,
+      semanticRouting: semanticTraceInput(semanticResult)
     })
   };
 

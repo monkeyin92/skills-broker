@@ -2,6 +2,7 @@ import type { CapabilityCard } from "../core/capability-card.js";
 import type {
   BrokerIntent,
   CapabilityQuery,
+  CapabilityProofFamily,
   CapabilityQueryTargetType
 } from "../core/types.js";
 
@@ -16,6 +17,13 @@ export type RankCapabilitiesInput = {
   candidates: CapabilityCard[];
   requestCapabilityQuery?: CapabilityQuery;
   historyByCandidateId?: Record<string, RoutingHistory>;
+  semanticSignal?: SemanticRankingSignal;
+};
+
+export type SemanticRankingSignal = {
+  candidateId: string;
+  reason: "direct_route";
+  proofFamily: CapabilityProofFamily;
 };
 
 function preparationBurden(card: CapabilityCard): number {
@@ -99,6 +107,17 @@ function capabilityDiscoveryAlignmentScore(card: CapabilityCard): number {
   );
 }
 
+function semanticSignalScore(
+  card: CapabilityCard,
+  signal: SemanticRankingSignal | undefined
+): number {
+  if (signal === undefined) {
+    return 0;
+  }
+
+  return card.id === signal.candidateId ? 1 : 0;
+}
+
 export function capabilityQueryScore(
   card: CapabilityCard,
   query: CapabilityQuery | undefined
@@ -138,6 +157,13 @@ function compareCards(
     if (leftDiscoveryScore !== rightDiscoveryScore) {
       return rightDiscoveryScore - leftDiscoveryScore;
     }
+  }
+
+  const leftSemanticScore = semanticSignalScore(left, input.semanticSignal);
+  const rightSemanticScore = semanticSignalScore(right, input.semanticSignal);
+
+  if (leftSemanticScore !== rightSemanticScore) {
+    return rightSemanticScore - leftSemanticScore;
   }
 
   const leftQueryScore = capabilityQueryScore(left, input.requestCapabilityQuery);
