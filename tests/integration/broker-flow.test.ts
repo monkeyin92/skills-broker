@@ -246,6 +246,621 @@ describe("runBroker", () => {
     }
   });
 
+  it("reranks to a similar candidate when the previously selected downstream skill is reported broken", async () => {
+    const runtime = await createRuntimePaths();
+    const hostCatalogFilePath = join(runtime.directory, "broken-fallback-host.json");
+    const mcpRegistryFilePath = join(runtime.directory, "broken-fallback-mcp.json");
+    const brokenSkillDirectory = join(runtime.directory, "broken-web-markdown");
+    const healthySkillDirectory = join(runtime.directory, "healthy-web-markdown");
+
+    await mkdir(brokenSkillDirectory, { recursive: true });
+    await mkdir(healthySkillDirectory, { recursive: true });
+    await writeFile(
+      join(brokenSkillDirectory, "SKILL.md"),
+      "---\nname: broken-web-markdown\n---\n",
+      "utf8"
+    );
+    await writeFile(
+      join(healthySkillDirectory, "SKILL.md"),
+      "---\nname: healthy-web-markdown\n---\n",
+      "utf8"
+    );
+    await writeFile(
+      hostCatalogFilePath,
+      JSON.stringify({
+        packages: [
+          {
+            packageId: "broken",
+            label: "Broken bundle",
+            installState: "available",
+            acquisition: "local_skill_bundle",
+            probe: {
+              layouts: ["single_skill_directory"]
+            }
+          },
+          {
+            packageId: "healthy",
+            label: "Healthy bundle",
+            installState: "available",
+            acquisition: "local_skill_bundle",
+            probe: {
+              layouts: ["single_skill_directory"]
+            }
+          }
+        ],
+        skills: [
+          {
+            id: "broken-web-markdown",
+            kind: "skill",
+            label: "Broken Web Markdown",
+            intent: "web_content_to_markdown",
+            package: {
+              packageId: "broken"
+            },
+            leaf: {
+              capabilityId: "broken.url-to-markdown",
+              packageId: "broken",
+              subskillId: "url-to-markdown",
+              probe: {
+                manifestNames: ["broken-web-markdown"]
+              }
+            },
+            query: {
+              proofFamily: "web_content_to_markdown",
+              jobFamilies: ["content_acquisition", "web_content_conversion"],
+              targetTypes: ["url", "website"],
+              artifacts: ["markdown"],
+              examples: ["turn this webpage into markdown"]
+            },
+            implementation: {
+              id: "broken.url_to_markdown",
+              type: "local_skill",
+              ownerSurface: "broker_owned_downstream"
+            },
+            ranking: {
+              confidence: 2
+            }
+          },
+          {
+            id: "healthy-web-markdown",
+            kind: "skill",
+            label: "Healthy Web Markdown",
+            intent: "web_content_to_markdown",
+            package: {
+              packageId: "healthy"
+            },
+            leaf: {
+              capabilityId: "healthy.url-to-markdown",
+              packageId: "healthy",
+              subskillId: "url-to-markdown",
+              probe: {
+                manifestNames: ["healthy-web-markdown"]
+              }
+            },
+            query: {
+              proofFamily: "web_content_to_markdown",
+              jobFamilies: ["content_acquisition", "web_content_conversion"],
+              targetTypes: ["url", "website"],
+              artifacts: ["markdown"],
+              examples: ["turn this webpage into markdown"]
+            },
+            implementation: {
+              id: "healthy.url_to_markdown",
+              type: "local_skill",
+              ownerSurface: "broker_owned_downstream"
+            },
+            ranking: {
+              confidence: 1
+            }
+          }
+        ]
+      }),
+      "utf8"
+    );
+    await writeFile(mcpRegistryFilePath, JSON.stringify({ servers: [] }), "utf8");
+
+    try {
+      const initial = await runBroker(
+        {
+          requestText: "turn this webpage into markdown https://example.com/article",
+          host: "claude-code",
+          capabilityQuery: {
+            kind: "capability_request",
+            goal: "convert web content to markdown",
+            host: "claude-code",
+            requestText: "turn this webpage into markdown https://example.com/article",
+            jobFamilies: ["content_acquisition", "web_content_conversion"],
+            targets: [
+              {
+                type: "url",
+                value: "https://example.com/article"
+              }
+            ],
+            artifacts: ["markdown"]
+          }
+        },
+        {
+          ...runtime,
+          hostCatalogFilePath,
+          mcpRegistryFilePath,
+          packageSearchRoots: [runtime.directory],
+          now: new Date("2026-04-21T09:00:00.000Z")
+        }
+      );
+
+      expect(initial.ok).toBe(true);
+      expect(initial.outcome.code).toBe("HANDOFF_READY");
+      expect(initial.winner.id).toBe("broken-web-markdown");
+      expect(initial.debug.cacheHit).toBe(false);
+
+      const reranked = await runBroker(
+        {
+          requestText: "turn this webpage into markdown https://example.com/article",
+          host: "claude-code",
+          capabilityQuery: {
+            kind: "capability_request",
+            goal: "convert web content to markdown",
+            host: "claude-code",
+            requestText: "turn this webpage into markdown https://example.com/article",
+            jobFamilies: ["content_acquisition", "web_content_conversion"],
+            targets: [
+              {
+                type: "url",
+                value: "https://example.com/article"
+              }
+            ],
+            artifacts: ["markdown"]
+          },
+          executionFailures: [
+            {
+              candidateId: "broken-web-markdown",
+              packageId: "broken",
+              leafCapabilityId: "broken.url-to-markdown",
+              implementationId: "broken.url_to_markdown",
+              reasonCode: "dependency_broken",
+              evidence:
+                "Cannot find module jsdom/lib/jsdom/living/xhr/xhr-sync-worker.js"
+            }
+          ]
+        },
+        {
+          ...runtime,
+          hostCatalogFilePath,
+          mcpRegistryFilePath,
+          packageSearchRoots: [runtime.directory],
+          now: new Date("2026-04-21T09:05:00.000Z")
+        }
+      );
+
+      expect(reranked.ok).toBe(true);
+      expect(reranked.outcome.code).toBe("HANDOFF_READY");
+      expect(reranked.winner.id).toBe("healthy-web-markdown");
+      expect(reranked.debug.cacheHit).toBe(false);
+      expect(reranked.trace).toMatchObject({
+        resultCode: "HANDOFF_READY",
+        winnerId: "healthy-web-markdown",
+        winnerPackageId: "healthy"
+      });
+    } finally {
+      await rm(runtime.directory, { recursive: true, force: true });
+    }
+  });
+
+  it("returns PREPARE_FAILED when all similar downstream candidates are reported broken", async () => {
+    const runtime = await createRuntimePaths();
+    const hostCatalogFilePath = join(runtime.directory, "broken-exhausted-host.json");
+    const mcpRegistryFilePath = join(runtime.directory, "broken-exhausted-mcp.json");
+    const brokenSkillDirectory = join(runtime.directory, "broken-web-markdown");
+
+    await mkdir(brokenSkillDirectory, { recursive: true });
+    await writeFile(
+      join(brokenSkillDirectory, "SKILL.md"),
+      "---\nname: broken-web-markdown\n---\n",
+      "utf8"
+    );
+    await writeFile(
+      hostCatalogFilePath,
+      JSON.stringify({
+        packages: [
+          {
+            packageId: "broken",
+            label: "Broken bundle",
+            installState: "available",
+            acquisition: "local_skill_bundle",
+            probe: {
+              layouts: ["single_skill_directory"]
+            }
+          }
+        ],
+        skills: [
+          {
+            id: "broken-web-markdown",
+            kind: "skill",
+            label: "Broken Web Markdown",
+            intent: "web_content_to_markdown",
+            package: {
+              packageId: "broken"
+            },
+            leaf: {
+              capabilityId: "broken.url-to-markdown",
+              packageId: "broken",
+              subskillId: "url-to-markdown",
+              probe: {
+                manifestNames: ["broken-web-markdown"]
+              }
+            },
+            query: {
+              proofFamily: "web_content_to_markdown",
+              jobFamilies: ["content_acquisition", "web_content_conversion"],
+              targetTypes: ["url", "website"],
+              artifacts: ["markdown"],
+              examples: ["turn this webpage into markdown"]
+            },
+            implementation: {
+              id: "broken.url_to_markdown",
+              type: "local_skill",
+              ownerSurface: "broker_owned_downstream"
+            }
+          }
+        ]
+      }),
+      "utf8"
+    );
+    await writeFile(mcpRegistryFilePath, JSON.stringify({ servers: [] }), "utf8");
+
+    try {
+      const result = await runBroker(
+        {
+          requestText: "turn this webpage into markdown https://example.com/article",
+          host: "claude-code",
+          capabilityQuery: {
+            kind: "capability_request",
+            goal: "convert web content to markdown",
+            host: "claude-code",
+            requestText: "turn this webpage into markdown https://example.com/article",
+            jobFamilies: ["content_acquisition", "web_content_conversion"],
+            targets: [
+              {
+                type: "url",
+                value: "https://example.com/article"
+              }
+            ],
+            artifacts: ["markdown"]
+          },
+          executionFailures: [
+            {
+              candidateId: "broken-web-markdown",
+              packageId: "broken",
+              leafCapabilityId: "broken.url-to-markdown",
+              implementationId: "broken.url_to_markdown",
+              reasonCode: "skill_broken",
+              evidence: "Entry point crashed before producing markdown."
+            }
+          ]
+        },
+        {
+          ...runtime,
+          hostCatalogFilePath,
+          mcpRegistryFilePath,
+          packageSearchRoots: [runtime.directory],
+          now: new Date("2026-04-21T09:10:00.000Z")
+        }
+      );
+
+      expect(result.ok).toBe(false);
+      expect(result.outcome).toMatchObject({
+        code: "PREPARE_FAILED",
+        hostAction: "show_graceful_failure"
+      });
+      expect(result.outcome.message).toContain(
+        "previously failed downstream candidates"
+      );
+      expect(result.error.message).toContain("broken-web-markdown");
+      expect(result.trace).toMatchObject({
+        resultCode: "PREPARE_FAILED",
+        missLayer: "prepare",
+        reasonCode: "downstream_execution_failed"
+      });
+    } finally {
+      await rm(runtime.directory, { recursive: true, force: true });
+    }
+  });
+
+  it("ignores placeholder MCP seed candidates after downstream execution failures", async () => {
+    const runtime = await createRuntimePaths();
+    const hostCatalogFilePath = join(runtime.directory, "broken-seed-host.json");
+    const mcpRegistryFilePath = join(runtime.directory, "mcp-registry.seed.json");
+    const brokenSkillDirectory = join(runtime.directory, "broken-web-markdown");
+
+    await mkdir(brokenSkillDirectory, { recursive: true });
+    await writeFile(
+      join(brokenSkillDirectory, "SKILL.md"),
+      "---\nname: broken-web-markdown\n---\n",
+      "utf8"
+    );
+    await writeFile(
+      hostCatalogFilePath,
+      JSON.stringify({
+        packages: [
+          {
+            packageId: "broken",
+            label: "Broken bundle",
+            installState: "available",
+            acquisition: "local_skill_bundle",
+            probe: {
+              layouts: ["single_skill_directory"]
+            }
+          }
+        ],
+        skills: [
+          {
+            id: "broken-web-markdown",
+            kind: "skill",
+            label: "Broken Web Markdown",
+            intent: "web_content_to_markdown",
+            package: {
+              packageId: "broken"
+            },
+            leaf: {
+              capabilityId: "broken.url-to-markdown",
+              packageId: "broken",
+              subskillId: "url-to-markdown",
+              probe: {
+                manifestNames: ["broken-web-markdown"]
+              }
+            },
+            query: {
+              proofFamily: "web_content_to_markdown",
+              jobFamilies: ["content_acquisition", "web_content_conversion"],
+              targetTypes: ["url", "website"],
+              artifacts: ["markdown"],
+              examples: ["turn this webpage into markdown"]
+            },
+            implementation: {
+              id: "broken.url_to_markdown",
+              type: "local_skill",
+              ownerSurface: "broker_owned_downstream"
+            }
+          }
+        ]
+      }),
+      "utf8"
+    );
+    await writeFile(
+      mcpRegistryFilePath,
+      JSON.stringify({
+        servers: [
+          {
+            server: {
+              name: "io.example/url-to-markdown",
+              title: "URL to Markdown",
+              description: "Fetch a webpage URL and convert the page into markdown."
+            }
+          }
+        ]
+      }),
+      "utf8"
+    );
+
+    try {
+      const result = await runBroker(
+        {
+          requestText: "turn this webpage into markdown https://example.com/article",
+          host: "claude-code",
+          capabilityQuery: {
+            kind: "capability_request",
+            goal: "convert web content to markdown",
+            host: "claude-code",
+            requestText: "turn this webpage into markdown https://example.com/article",
+            jobFamilies: ["content_acquisition", "web_content_conversion"],
+            targets: [
+              {
+                type: "url",
+                value: "https://example.com/article"
+              }
+            ],
+            artifacts: ["markdown"]
+          },
+          executionFailures: [
+            {
+              candidateId: "broken-web-markdown",
+              packageId: "broken",
+              leafCapabilityId: "broken.url-to-markdown",
+              implementationId: "broken.url_to_markdown",
+              reasonCode: "dependency_broken",
+              evidence: "Cannot find module jsdom/xhr-sync-worker.js"
+            }
+          ]
+        },
+        {
+          ...runtime,
+          hostCatalogFilePath,
+          mcpRegistryFilePath,
+          packageSearchRoots: [runtime.directory],
+          now: new Date("2026-04-21T09:20:00.000Z")
+        }
+      );
+
+      expect(result.ok).toBe(false);
+      expect(result.outcome).toMatchObject({
+        code: "PREPARE_FAILED",
+        hostAction: "show_graceful_failure"
+      });
+      expect(result.error.message).toContain("broken-web-markdown");
+      expect(result.debug).toMatchObject({
+        candidateCount: 0
+      });
+      expect(result.trace).toMatchObject({
+        resultCode: "PREPARE_FAILED",
+        missLayer: "prepare",
+        reasonCode: "downstream_execution_failed"
+      });
+    } finally {
+      await rm(runtime.directory, { recursive: true, force: true });
+    }
+  });
+
+  it("keeps recovery reranking inside the same compatibility lane", async () => {
+    const runtime = await createRuntimePaths();
+    const hostCatalogFilePath = join(runtime.directory, "broken-lane-host.json");
+    const mcpRegistryFilePath = join(runtime.directory, "broken-lane-mcp.json");
+    const brokenSkillDirectory = join(runtime.directory, "broken-web-markdown");
+    const socialSkillDirectory = join(runtime.directory, "social-post-markdown");
+
+    await mkdir(brokenSkillDirectory, { recursive: true });
+    await mkdir(socialSkillDirectory, { recursive: true });
+    await writeFile(
+      join(brokenSkillDirectory, "SKILL.md"),
+      "---\nname: broken-web-markdown\n---\n",
+      "utf8"
+    );
+    await writeFile(
+      join(socialSkillDirectory, "SKILL.md"),
+      "---\nname: social-post-markdown\n---\n",
+      "utf8"
+    );
+    await writeFile(
+      hostCatalogFilePath,
+      JSON.stringify({
+        packages: [
+          {
+            packageId: "broken",
+            label: "Broken bundle",
+            installState: "available",
+            acquisition: "local_skill_bundle",
+            probe: {
+              layouts: ["single_skill_directory"]
+            }
+          },
+          {
+            packageId: "baoyu",
+            label: "baoyu",
+            installState: "available",
+            acquisition: "local_skill_bundle",
+            probe: {
+              layouts: ["single_skill_directory"]
+            }
+          }
+        ],
+        skills: [
+          {
+            id: "broken-web-markdown",
+            kind: "skill",
+            label: "Broken Web Markdown",
+            intent: "web_content_to_markdown",
+            package: {
+              packageId: "broken"
+            },
+            leaf: {
+              capabilityId: "broken.url-to-markdown",
+              packageId: "broken",
+              subskillId: "url-to-markdown",
+              probe: {
+                manifestNames: ["broken-web-markdown"]
+              }
+            },
+            query: {
+              proofFamily: "web_content_to_markdown",
+              jobFamilies: ["content_acquisition", "web_content_conversion"],
+              targetTypes: ["url", "website"],
+              artifacts: ["markdown"],
+              examples: ["turn this webpage into markdown"]
+            },
+            implementation: {
+              id: "broken.url_to_markdown",
+              type: "local_skill",
+              ownerSurface: "broker_owned_downstream"
+            }
+          },
+          {
+            id: "social-post-to-markdown",
+            kind: "skill",
+            label: "Social Post to Markdown",
+            intent: "social_post_to_markdown",
+            package: {
+              packageId: "baoyu"
+            },
+            leaf: {
+              capabilityId: "baoyu.x-post-to-markdown",
+              packageId: "baoyu",
+              subskillId: "x-post-to-markdown",
+              probe: {
+                manifestNames: ["baoyu-danger-x-to-markdown"]
+              }
+            },
+            query: {
+              proofFamily: "social_post_to_markdown",
+              jobFamilies: ["content_acquisition", "social_content_conversion"],
+              targetTypes: ["url", "website"],
+              artifacts: ["markdown"],
+              examples: ["save this X post as markdown"]
+            },
+            implementation: {
+              id: "baoyu.x_post_to_markdown",
+              type: "local_skill",
+              ownerSurface: "broker_owned_downstream"
+            }
+          }
+        ]
+      }),
+      "utf8"
+    );
+    await writeFile(mcpRegistryFilePath, JSON.stringify({ servers: [] }), "utf8");
+
+    try {
+      const result = await runBroker(
+        {
+          requestText: "把这个页面转成markdown https://www.baidu.com",
+          host: "claude-code",
+          capabilityQuery: {
+            kind: "capability_request",
+            goal: "convert web content to markdown",
+            host: "claude-code",
+            requestText: "把这个页面转成markdown https://www.baidu.com",
+            jobFamilies: ["content_acquisition", "web_content_conversion"],
+            targets: [
+              {
+                type: "url",
+                value: "https://www.baidu.com"
+              }
+            ],
+            artifacts: ["markdown"]
+          },
+          executionFailures: [
+            {
+              candidateId: "broken-web-markdown",
+              packageId: "broken",
+              leafCapabilityId: "broken.url-to-markdown",
+              implementationId: "broken.url_to_markdown",
+              reasonCode: "dependency_broken",
+              evidence: "Cannot find module jsdom/xhr-sync-worker.js"
+            }
+          ]
+        },
+        {
+          ...runtime,
+          hostCatalogFilePath,
+          mcpRegistryFilePath,
+          packageSearchRoots: [runtime.directory],
+          now: new Date("2026-04-21T09:25:00.000Z")
+        }
+      );
+
+      expect(result.ok).toBe(false);
+      expect(result.outcome).toMatchObject({
+        code: "PREPARE_FAILED",
+        hostAction: "show_graceful_failure"
+      });
+      expect(result.error.message).toContain("broken-web-markdown");
+      expect(result.trace).toMatchObject({
+        resultCode: "PREPARE_FAILED",
+        reasonCode: "downstream_execution_failed"
+      });
+    } finally {
+      await rm(runtime.directory, { recursive: true, force: true });
+    }
+  });
+
   it("does not record a current-host-unsupported candidate as the semantic top match", async () => {
     const runtime = await createRuntimePaths();
     const hostCatalogFilePath = join(runtime.directory, "host.json");
@@ -437,6 +1052,64 @@ describe("runBroker", () => {
       expect(secondResult.winner.id).toBe(firstResult.winner.id);
       expect(secondResult.debug.cacheHit).toBe(true);
       expect(secondResult.debug.cachedCandidateId).toBe(firstResult.winner.id);
+    } finally {
+      await rm(runtime.directory, { recursive: true, force: true });
+    }
+  });
+
+  it("ignores an exact cache entry when the cached winner is from a different compatibility lane", async () => {
+    const runtime = await createRuntimePaths();
+    const socialRequest = {
+      requestText: "save this X post as markdown: https://x.com/example/status/1",
+      host: "claude-code" as const,
+      urls: ["https://x.com/example/status/1"]
+    };
+
+    try {
+      const cachedSocialResult = await runBroker(socialRequest, {
+        ...runtime,
+        now: new Date("2026-03-27T08:00:00.000Z")
+      });
+
+      expect(cachedSocialResult.ok).toBe(true);
+
+      if (!cachedSocialResult.ok) {
+        throw new Error("expected a social-post winner for stale cache setup");
+      }
+
+      const webRequest = normalizeRequest(validUrlRequest, "claude-code");
+      const resolvedWebRequest = resolveBrokerRequest(webRequest);
+
+      await writeFile(
+        runtime.cacheFilePath,
+        `${JSON.stringify(
+          {
+            card: {
+              ...cachedSocialResult.winner,
+              fetchedAt: "2026-03-27T08:00:00.000Z"
+            },
+            lastHost: "claude-code",
+            compatibilityIntent: cachedSocialResult.winner.compatibilityIntent,
+            requestQueryIdentity: resolvedWebRequest.requestQueryIdentity,
+            successfulRoutes: 4
+          },
+          null,
+          2
+        )}\n`,
+        "utf8"
+      );
+
+      const secondResult = await runBroker(validUrlRequest, {
+        ...runtime,
+        now: new Date("2026-03-27T12:00:00.000Z")
+      });
+
+      expect(secondResult.ok).toBe(true);
+      expect(secondResult.outcome.code).toBe("HANDOFF_READY");
+      expect(secondResult.winner.id).toBe("web-content-to-markdown");
+      expect(secondResult.winner.id).not.toBe(cachedSocialResult.winner.id);
+      expect(secondResult.debug.cacheHit).toBe(false);
+      expect(secondResult.debug.cachedCandidateId).toBeUndefined();
     } finally {
       await rm(runtime.directory, { recursive: true, force: true });
     }
@@ -3190,6 +3863,61 @@ describe("runBroker", () => {
     }
   });
 
+  it("routes website_qa structured queries to the qa downstream skill instead of idea-to-ship", async () => {
+    const runtime = await createRuntimePaths();
+
+    try {
+      const result = await runBroker(
+        {
+          requestText: "QA 这个网站 https://www.baidu.com",
+          host: "claude-code",
+          capabilityQuery: {
+            kind: "capability_request",
+            goal: "QA website https://www.baidu.com",
+            host: "claude-code",
+            requestText: "QA 这个网站 https://www.baidu.com",
+            jobFamilies: ["website_qa"],
+            artifacts: ["qa_report"]
+          }
+        },
+        {
+          ...runtime,
+          currentHost: "claude-code",
+          now: new Date("2026-04-21T02:24:05.366Z")
+        }
+      );
+
+      expect(result.ok).toBe(true);
+      expect(result.outcome.code).toBe("HANDOFF_READY");
+      expect(result.winner.id).toBe("website-qa");
+      expect(result.handoff.chosenPackage.packageId).toBe("gstack");
+      expect(result.handoff.chosenLeafCapability.subskillId).toBe("qa");
+      expect(result.handoff.chosenImplementation.id).toBe("gstack.qa");
+      expect(result.handoff.request.capabilityQuery).toMatchObject({
+        goal: "QA website https://www.baidu.com",
+        jobFamilies: ["quality_assurance"],
+        targets: [
+          {
+            type: "website",
+            value: "https://www.baidu.com"
+          }
+        ],
+        artifacts: ["qa_report"]
+      });
+      expect(result.trace).toMatchObject({
+        host: "claude-code",
+        resultCode: "HANDOFF_READY",
+        normalizedBy: "structured_query",
+        requestSurface: "structured_query",
+        winnerId: "website-qa",
+        selectedCapabilityId: "gstack.qa",
+        selectedLeafCapabilityId: "qa"
+      });
+    } finally {
+      await rm(runtime.directory, { recursive: true, force: true });
+    }
+  });
+
   it("routes raw chinese website QA requests to the qa downstream skill", async () => {
     const runtime = await createRuntimePaths();
 
@@ -3223,6 +3951,57 @@ describe("runBroker", () => {
           }
         ],
         artifacts: ["qa_report"]
+      });
+    } finally {
+      await rm(runtime.directory, { recursive: true, force: true });
+    }
+  });
+
+  it("routes raw chinese web markdown requests with inline urls to the markdown downstream skill", async () => {
+    const runtime = await createRuntimePaths();
+
+    try {
+      const result = await runBroker(
+        {
+          requestText: "把这个页面转成markdown https://www.baidu.com",
+          host: "claude-code"
+        },
+        {
+          ...runtime,
+          currentHost: "claude-code",
+          now: new Date("2026-04-21T07:58:43.817Z")
+        }
+      );
+
+      expect(result.ok).toBe(true);
+      expect(result.outcome.code).toBe("HANDOFF_READY");
+      expect(result.winner.id).toBe("web-content-to-markdown");
+      expect(result.handoff.chosenPackage.packageId).toBe("baoyu");
+      expect(result.handoff.chosenLeafCapability.subskillId).toBe(
+        "url-to-markdown"
+      );
+      expect(result.handoff.chosenImplementation.id).toBe(
+        "baoyu.url_to_markdown"
+      );
+      expect(result.handoff.request.capabilityQuery).toMatchObject({
+        goal: "convert web content to markdown",
+        jobFamilies: ["content_acquisition", "web_content_conversion"],
+        targets: [
+          {
+            type: "url",
+            value: "https://www.baidu.com"
+          }
+        ],
+        artifacts: ["markdown"]
+      });
+      expect(result.trace).toMatchObject({
+        host: "claude-code",
+        resultCode: "HANDOFF_READY",
+        normalizedBy: "raw_request_fallback",
+        requestSurface: "raw_envelope",
+        winnerId: "web-content-to-markdown",
+        selectedCapabilityId: "baoyu.url-to-markdown",
+        selectedLeafCapabilityId: "url-to-markdown"
       });
     } finally {
       await rm(runtime.directory, { recursive: true, force: true });

@@ -15,6 +15,7 @@ This file is the repo-native execution board for `skills-broker`.
 - The package-vs-leaf identity migration tail is now shipped on the active shipping ref: discovery, workflow stages, managed host seeds, and legacy workflow sessions all keep package-plus-leaf identity explicit and treat `implementation.id` as execution metadata only.
 - The coarse broker-first host boundary tightening is now shipped on the active shipping ref.
 - The Phase 2 / Phase 3 broker-first compiler, gate, and recovery slice is now shipped on `origin/main`.
+- The web-markdown downstream hardening packet is now shipped on the active shipping ref: broker-selected local skills hand off by file path, broken downstream retries stay in-lane, stale cross-lane cache winners are ignored, and shared-home update auto-repairs the broker-managed `baoyu-fetch` runtime.
 
 <!-- skills-broker-status:start -->
 ```json
@@ -249,6 +250,54 @@ This file is the repo-native execution board for `skills-broker`.
           "type": "test",
           "path": "tests/cli/lifecycle-cli.test.ts",
           "label": "clear-manual-recovery keeps doctor strict green"
+        }
+      ]
+    },
+    {
+      "id": "web-markdown-downstream-hardening",
+      "title": "Web-markdown downstream hardening packet",
+      "summary": "Broker-selected local skills now hand off by file path, broken downstream retries rerank only within the active compatibility lane, stale cross-lane cache winners are ignored, and shared-home update auto-repairs the broker-managed baoyu-fetch runtime used by web-markdown downstream skills.",
+      "status": "shipped_remote",
+      "proofs": [
+        {
+          "type": "file",
+          "path": "src/broker/local-skill-handoff.ts",
+          "label": "local-skill handoff source resolution"
+        },
+        {
+          "type": "file",
+          "path": "src/broker/handoff.ts",
+          "label": "handoff envelope carries broker-resolved local-skill source"
+        },
+        {
+          "type": "file",
+          "path": "src/broker/run.ts",
+          "label": "in-lane recovery reranking, stale-cache guard, and placeholder-seed filtering"
+        },
+        {
+          "type": "file",
+          "path": "src/shared-home/downstream-runtime-repair.ts",
+          "label": "baoyu-fetch runtime auto-repair"
+        },
+        {
+          "type": "file",
+          "path": "src/shared-home/update.ts",
+          "label": "shared-home update invokes downstream runtime repair"
+        },
+        {
+          "type": "test",
+          "path": "tests/integration/broker-flow.test.ts",
+          "label": "routing, retry, and stale-cache recovery coverage"
+        },
+        {
+          "type": "test",
+          "path": "tests/broker/local-skill-handoff.test.ts",
+          "label": "local-skill handoff resolution coverage"
+        },
+        {
+          "type": "test",
+          "path": "tests/shared-home/update-lifecycle.test.ts",
+          "label": "downstream runtime repair lifecycle coverage"
         }
       ]
     }

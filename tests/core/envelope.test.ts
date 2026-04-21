@@ -75,6 +75,34 @@ describe("parseBrokerEnvelope", () => {
     });
   });
 
+  it("accepts downstream execution failures for broker reranking", () => {
+    const envelope = parseBrokerEnvelope({
+      requestText: "把这个页面转成markdown https://example.com/article",
+      host: "claude-code",
+      executionFailures: [
+        {
+          candidateId: "web-content-to-markdown",
+          packageId: "baoyu",
+          leafCapabilityId: "baoyu.url-to-markdown",
+          implementationId: "baoyu.url_to_markdown",
+          reasonCode: "dependency_broken",
+          evidence: "Cannot find module jsdom/xhr-sync-worker.js"
+        }
+      ]
+    });
+
+    expect(envelope.executionFailures).toEqual([
+      {
+        candidateId: "web-content-to-markdown",
+        packageId: "baoyu",
+        leafCapabilityId: "baoyu.url-to-markdown",
+        implementationId: "baoyu.url_to_markdown",
+        reasonCode: "dependency_broken",
+        evidence: "Cannot find module jsdom/xhr-sync-worker.js"
+      }
+    ]);
+  });
+
   it("rejects envelopes that carry both a capability query and workflow resume", () => {
     expect(() =>
       parseBrokerEnvelope({
@@ -110,6 +138,22 @@ describe("parseBrokerEnvelope", () => {
       })
     ).toThrow(
       /Expected broker envelope\.workflowResume\.decision to be one of confirm\./
+    );
+  });
+
+  it("rejects downstream execution failures without any identifying fields", () => {
+    expect(() =>
+      parseBrokerEnvelope({
+        requestText: "把这个页面转成markdown https://example.com/article",
+        host: "codex",
+        executionFailures: [
+          {
+            reasonCode: "skill_broken"
+          }
+        ]
+      })
+    ).toThrow(
+      /Expected broker envelope\.executionFailures\[0\] to include at least one identifier field\./
     );
   });
 });

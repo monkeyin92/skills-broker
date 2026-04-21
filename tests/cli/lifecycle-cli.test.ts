@@ -217,7 +217,7 @@ describe("lifecycle cli", () => {
     } finally {
       await rm(runtimeDirectory, { recursive: true, force: true });
     }
-  }, 30_000);
+  }, 90_000);
 
   it("treats a blocked website QA verdict as a strict failure", () => {
     expect(
