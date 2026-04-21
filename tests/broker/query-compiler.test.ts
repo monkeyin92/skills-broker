@@ -56,6 +56,27 @@ describe("broker query compiler contract", () => {
         artifacts: ["markdown"]
       }
     });
+
+    const chineseWeb = compileEnvelopeRequest({
+      requestText: "把这个页面转成markdown https://www.baidu.com",
+      host: "claude-code"
+    });
+
+    expect(chineseWeb).toMatchObject({
+      kind: "compiled",
+      capabilityQuery: {
+        goal: "convert web content to markdown",
+        requestText: "把这个页面转成markdown https://www.baidu.com",
+        jobFamilies: ["content_acquisition", "web_content_conversion"],
+        targets: [
+          {
+            type: "url",
+            value: "https://www.baidu.com"
+          }
+        ],
+        artifacts: ["markdown"]
+      }
+    });
   });
 
   it("compiles supported maintained-family raw requests into discovery-lane queries", () => {
@@ -190,6 +211,29 @@ describe("broker query compiler contract", () => {
     expect(discovery.capabilityQuery).toMatchObject({
       jobFamilies: ["requirements_analysis"],
       artifacts: ["design_doc"]
+    });
+  });
+
+  it("canonicalizes website QA host aliases in structured capability queries", () => {
+    const qa = compileCapabilityQueryRequest({
+      kind: "capability_request",
+      goal: "QA website https://www.baidu.com",
+      host: "claude-code",
+      requestText: "QA 这个网站 https://www.baidu.com",
+      jobFamilies: ["website_qa"],
+      artifacts: ["qa_report"]
+    });
+
+    expectQueryNativeRequest(qa);
+    expect(qa.capabilityQuery).toMatchObject({
+      jobFamilies: ["quality_assurance"],
+      targets: [
+        {
+          type: "website",
+          value: "https://www.baidu.com"
+        }
+      ],
+      artifacts: ["qa_report"]
     });
   });
 });

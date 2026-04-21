@@ -1,6 +1,6 @@
 {
   "name": "skills-broker",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "Install-once shared broker runtime for routing skills and MCP capabilities across Claude Code and Codex.",
   "type": "module",
   "license": "MIT",

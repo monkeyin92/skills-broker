@@ -131,6 +131,22 @@ export function buildHostShellSkillMarkdown(
       artifacts: ["design_doc", "analysis"]
     }
   };
+  const executionFailureRetryPayload = {
+    requestText: "turn this webpage into markdown: https://example.com/article",
+    host: options.host,
+    invocationMode: options.invocationMode,
+    urls: ["https://example.com/article"],
+    executionFailures: [
+      {
+        candidateId: "web-content-to-markdown",
+        packageId: "baoyu",
+        leafCapabilityId: "baoyu.url-to-markdown",
+        implementationId: "baoyu.url_to_markdown",
+        reasonCode: "dependency_broken",
+        evidence: "Cannot find module jsdom/xhr-sync-worker.js"
+      }
+    ]
+  };
 
   return `---
 name: "skills-broker"
@@ -247,6 +263,11 @@ If you are not confident, omit \`capabilityQuery\` and still send the raw envelo
 - If the broker returns \`AMBIGUOUS_REQUEST\`, ask a clarifying question.
 - If the broker returns \`NO_CANDIDATE\`, offer capability discovery help.
 - If the broker returns \`INSTALL_REQUIRED\`, offer package install help using the broker-provided install plan, verify it, then rerun the same request.
+- If the broker returns \`HANDOFF_READY\`, keep the broker-selected downstream path as the source of truth.
+- If \`handoff.localSkill.skillFilePath\` is present, read that \`SKILL.md\` from disk and execute it directly.
+- Only invoke a downstream skill by name when it is already listed by the host.
+- If the broker-selected downstream skill fails because the skill itself or its required runtime dependencies are broken or unusable, rerun the broker with the same request plus \`executionFailures\` describing that failed downstream candidate.
+- Do not silently substitute a host-native fallback while retrying broker-owned downstream selection.
 - If the broker returns \`WORKFLOW_STAGE_READY\` or \`WORKFLOW_BLOCKED\`, keep following the broker-owned workflow contract instead of switching to a host-native plan.
 - If the broker returns \`PREPARE_FAILED\`, explain the failure clearly and do not silently substitute a native tool path.
 
@@ -259,5 +280,7 @@ ${renderCommand(options.runnerCommand, markdownPayload)}
 ${renderCommand(options.runnerCommand, structuredPayload)}
 
 ${renderCommand(options.runnerCommand, workflowResumePayload)}
+
+${renderCommand(options.runnerCommand, executionFailureRetryPayload)}
 `;
 }

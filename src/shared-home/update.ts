@@ -29,6 +29,7 @@ import {
   resolveSharedBrokerHomeLayout,
   type InstallSharedBrokerHomeOptions
 } from "./install.js";
+import { repairBrokerManagedDownstreamRuntimes } from "./downstream-runtime-repair.js";
 import { materializeBrokerFirstGateArtifact } from "./broker-first-gate.js";
 import {
   appendPeerSurfaceLedgerEvent,
@@ -1127,6 +1128,16 @@ export async function updateSharedBrokerHome(
             );
           })
         ]);
+
+  if (!options.dryRun && sharedHome.status !== "failed") {
+    const downstreamRepair = await repairBrokerManagedDownstreamRuntimes(
+      options.brokerHomeDirectory
+    );
+
+    warnings.push(
+      ...downstreamRepair.warnings.map((warning) => `shared-home: ${warning}`)
+    );
+  }
 
   return buildUpdateLifecycleResult({
     dryRun: options.dryRun ?? false,

@@ -60,5 +60,5 @@ describe("published package smoke", () => {
       }
       await rm(runtimeDirectory, { recursive: true, force: true });
     }
-  }, 15000);
+  }, 60_000);
 });

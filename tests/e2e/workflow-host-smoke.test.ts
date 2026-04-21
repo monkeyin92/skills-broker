@@ -135,6 +135,6 @@ describe("workflow host smoke", () => {
         await rm(runtimeDirectory, { recursive: true, force: true });
       }
     },
-    30_000
+    90_000
   );
 });

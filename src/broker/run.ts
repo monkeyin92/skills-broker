@@ -1,4 +1,4 @@
-import { dirname, join } from "node:path";
+import { basename, dirname, join } from "node:path";
 import { tmpdir } from "node:os";
 import { discoverCandidates } from "./discover.js";
 import { buildPackageAcquisitionHint } from "./acquisition.js";
@@ -12,6 +12,7 @@ import {
 } from "./downstream-manifest-source.js";
 import { explainDecision } from "./explain.js";
 import { buildHandoffEnvelope } from "./handoff.js";
+import { resolveLocalSkillHandoffSource } from "./local-skill-handoff.js";
 import { hydratePackageAvailability } from "./package-availability.js";
 import { PrepareCandidateError, prepareCandidate } from "./prepare.js";
 import {
@@ -68,7 +69,8 @@ import type {
   BrokerHost,
   BrokerHostAction,
   BrokerIntent,
-  BrokerOutcomeCode
+  BrokerOutcomeCode,
+  DownstreamExecutionFailure
 } from "../core/types.js";
 import { BROKER_HOSTS, isBrokerHost } from "../core/types.js";
 import {
@@ -243,6 +245,39 @@ function defaultMcpRegistryFilePath(): string {
   return join(process.cwd(), "config/mcp-registry.seed.json");
 }
 
+function isPackagedMcpSeedFilePath(filePath: string): boolean {
+  return basename(filePath) === "mcp-registry.seed.json";
+}
+
+function isPlaceholderSeedMcpCandidate(candidate: CapabilityCard): boolean {
+  const identifiers = [
+    candidate.id,
+    candidate.package.packageId,
+    candidate.leaf.capabilityId,
+    candidate.sourceMetadata.registryName
+  ];
+
+  return identifiers.some(
+    (value) =>
+      typeof value === "string" &&
+      /^io\.example(?:[/:.-]|$)/i.test(value.trim())
+  );
+}
+
+function filterPackagedSeedMcpCandidates(
+  candidates: CapabilityCard[],
+  filePath: string
+): CapabilityCard[] {
+  if (!isPackagedMcpSeedFilePath(filePath)) {
+    return candidates;
+  }
+
+  // The packaged seed registry is demonstrative. Keep obvious placeholder
+  // namespaces out of real broker runs so reranking does not surface fake
+  // install targets after a downstream execution failure.
+  return candidates.filter((candidate) => !isPlaceholderSeedMcpCandidate(candidate));
+}
+
 function defaultCacheFilePath(): string {
   return join(tmpdir(), "skills-broker-cache.json");
 }
@@ -378,6 +413,31 @@ function createPackageInstallRequiredResult(
   };
 }
 
+function createExecutionFailureExhaustedResult(
+  excludedCandidateIds: string[],
+  debug: BrokerDebug,
+  trace: BrokerRoutingTrace
+): BrokerFailureResult {
+  const excludedList = excludedCandidateIds.join(", ");
+  const message =
+    "The broker excluded previously failed downstream candidates but found no healthy alternative. Explain the failure clearly and do not silently bypass the broker.";
+
+  return {
+    ok: false,
+    outcome: {
+      code: "PREPARE_FAILED",
+      message,
+      hostAction: "show_graceful_failure"
+    },
+    error: {
+      code: "PREPARE_FAILED",
+      message: `No healthy alternative remained after excluding previously failed downstream candidates: ${excludedList}.`
+    },
+    debug,
+    trace
+  };
+}
+
 function createFailureResult(
   code: Exclude<
     BrokerOutcomeCode,
@@ -432,6 +492,85 @@ function packageInstalled(card: CapabilityCard): boolean {
   return card.package.installState === "installed";
 }
 
+function downstreamExecutionFailuresFromInput(
+  input: NormalizeRequestInput
+): DownstreamExecutionFailure[] {
+  if ("task" in input) {
+    return [];
+  }
+
+  return input.executionFailures ?? [];
+}
+
+function matchesExecutionFailure(
+  candidate: CapabilityCard,
+  failure: DownstreamExecutionFailure
+): boolean {
+  const hasSpecificIdentity =
+    failure.candidateId !== undefined ||
+    failure.leafCapabilityId !== undefined ||
+    failure.implementationId !== undefined;
+
+  if (hasSpecificIdentity) {
+    return (
+      failure.candidateId === candidate.id ||
+      failure.leafCapabilityId === candidate.leaf.capabilityId ||
+      failure.implementationId === candidate.implementation.id
+    );
+  }
+
+  return failure.packageId === candidate.package.packageId;
+}
+
+function excludeFailedCandidates(
+  candidates: CapabilityCard[],
+  failures: DownstreamExecutionFailure[]
+): {
+  candidates: CapabilityCard[];
+  excludedCandidateIds: string[];
+} {
+  if (failures.length === 0) {
+    return {
+      candidates,
+      excludedCandidateIds: []
+    };
+  }
+
+  const excludedCandidateIds = candidates
+    .filter((candidate) =>
+      failures.some((failure) => matchesExecutionFailure(candidate, failure))
+    )
+    .map((candidate) => candidate.id);
+
+  if (excludedCandidateIds.length === 0) {
+    return {
+      candidates,
+      excludedCandidateIds
+    };
+  }
+
+  const excludedIdSet = new Set(excludedCandidateIds);
+
+  return {
+    candidates: candidates.filter((candidate) => !excludedIdSet.has(candidate.id)),
+    excludedCandidateIds
+  };
+}
+
+function filterExecutionFailureRecoveryCandidates(
+  candidates: CapabilityCard[],
+  requestCompatibilityIntent: BrokerIntent,
+  failures: DownstreamExecutionFailure[]
+): CapabilityCard[] {
+  if (failures.length === 0) {
+    return candidates;
+  }
+
+  return candidates.filter(
+    (candidate) => candidate.compatibilityIntent === requestCompatibilityIntent
+  );
+}
+
 function workflowCandidate(recipe: WorkflowRecipe): CapabilityCandidate {
   return {
     id: recipe.id,
@@ -481,6 +620,16 @@ function cacheRecordMatchesLegacyKey(
   );
 }
 
+function cacheRecordMatchesCompatibilityIntent(
+  record: BrokerCacheRecord,
+  request: ResolvedBrokerRequest
+): boolean {
+  const recordIntent =
+    record.requestIntent ?? record.compatibilityIntent ?? record.card.compatibilityIntent;
+
+  return recordIntent === request.compatibilityIntent;
+}
+
 async function discoverCapabilityCards(
   request: ResolvedBrokerRequest,
   hostCatalogFilePath: string,
@@ -526,7 +675,10 @@ async function discoverCapabilityCards(
   const normalizedWorkflowCandidates = workflowRecipes
     .map((recipe) => workflowCandidate(recipe))
     .map(toCapabilityCard);
-  const normalizedMcpCandidates = mcpCandidates.map(toCapabilityCard);
+  const normalizedMcpCandidates = filterPackagedSeedMcpCandidates(
+    mcpCandidates.map(toCapabilityCard),
+    mcpRegistryFilePath
+  );
   const mergedCandidates = discoverCandidates(
     {
       source: "downstream_manifest",
@@ -763,11 +915,14 @@ async function runSingleStep(
       : new AcquisitionMemoryStore(
           acquisitionMemoryFilePath(options.brokerHomeDirectory)
         );
+  const executionFailures = downstreamExecutionFailuresFromInput(input);
+  const hasExecutionFailures = executionFailures.length > 0;
 
   const cachedRecord = await cacheStore.read();
   const exactCachedCard =
     cachedRecord !== null &&
     cacheRecordMatchesQueryIdentity(cachedRecord, resolvedRequest) &&
+    cacheRecordMatchesCompatibilityIntent(cachedRecord, resolvedRequest) &&
     isWithinHardTtl(cachedRecord.card, now)
       ? cachedRecord
       : null;
@@ -776,6 +931,7 @@ async function runSingleStep(
     cachedRecord !== null &&
     cachedRecord.requestQueryIdentity === undefined &&
     cacheRecordMatchesLegacyKey(cachedRecord, resolvedRequest) &&
+    cacheRecordMatchesCompatibilityIntent(cachedRecord, resolvedRequest) &&
     isWithinHardTtl(cachedRecord.card, now)
       ? cachedRecord
       : null;
@@ -784,7 +940,11 @@ async function runSingleStep(
   let candidates: CapabilityCard[] = [];
   let workflowsById = new Map<string, WorkflowRecipe>();
 
-  if (exactCachedCard !== null && !shouldRefreshToday(exactCachedCard.card, now)) {
+  if (
+    !hasExecutionFailures &&
+    exactCachedCard !== null &&
+    !shouldRefreshToday(exactCachedCard.card, now)
+  ) {
     cacheHit = true;
     candidates = [
       {
@@ -838,6 +998,15 @@ async function runSingleStep(
     brokerHomeDirectory: options.brokerHomeDirectory,
     packageSearchRoots: options.packageSearchRoots
   });
+  const failedCandidateFilter = excludeFailedCandidates(
+    candidates,
+    executionFailures
+  );
+  candidates = filterExecutionFailureRecoveryCandidates(
+    failedCandidateFilter.candidates,
+    resolvedRequest.compatibilityIntent,
+    executionFailures
+  );
 
   const acquisitionHistoryByCandidateId =
     acquisitionMemoryStore === undefined
@@ -874,6 +1043,27 @@ async function runSingleStep(
   });
 
   if (ranked.length === 0) {
+    if (failedCandidateFilter.excludedCandidateIds.length > 0) {
+      return createExecutionFailureExhaustedResult(
+        failedCandidateFilter.excludedCandidateIds,
+        {
+          cacheHit,
+          cachedCandidateId: exactCachedCard?.card.id,
+          candidateCount: 0
+        },
+        createBrokerRoutingTrace({
+          input,
+          currentHost,
+          resultCode: "PREPARE_FAILED",
+          now,
+          hostAction: "show_graceful_failure",
+          candidateCount: 0,
+          reasonCode: "downstream_execution_failed",
+          semanticRouting: semanticTraceInput(semanticResult)
+        })
+      );
+    }
+
     return createNoCandidateResult(
       {
         cacheHit,
@@ -911,6 +1101,10 @@ async function runSingleStep(
           : undefined
     })
   };
+
+  if (failedCandidateFilter.excludedCandidateIds.length > 0) {
+    debug.decision = `${debug.decision}; excluded previously failed candidates: ${failedCandidateFilter.excludedCandidateIds.join(", ")}`;
+  }
 
   if (winner.implementation.type === "broker_workflow") {
     let recipe = workflowsById.get(winner.id);
@@ -1018,11 +1212,17 @@ async function runSingleStep(
     );
   }
 
+  const localSkill = await resolveLocalSkillHandoffSource(prepared.candidate, {
+    currentHost,
+    brokerHomeDirectory: options.brokerHomeDirectory,
+    packageSearchRoots: options.packageSearchRoots
+  });
   const handoff = buildHandoffEnvelope(
     prepared.candidate,
     prepared.context,
     request,
-    prepared.selection
+    prepared.selection,
+    localSkill
   );
 
   await writeWinnerCache(

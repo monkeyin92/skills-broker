@@ -27,6 +27,10 @@ function normalizeText(text: string): string {
   return text.trim().toLowerCase();
 }
 
+const CAPABILITY_QUERY_FAMILY_ALIASES = {
+  website_qa: "quality_assurance"
+} as const satisfies Record<string, string>;
+
 function mergeUniqueStrings(
   ...collections: Array<string[] | undefined>
 ): string[] | undefined {
@@ -65,6 +69,16 @@ function firstQueryUrl(query: CapabilityQuery): string | undefined {
   return target?.value;
 }
 
+function extractFirstUrlFromText(text: string): string | undefined {
+  const match = text.match(/https?:\/\/\S+/i);
+
+  if (match === null) {
+    return undefined;
+  }
+
+  return match[0].replace(/[)\]}>.,!?;:，。！？；：]+$/u, "");
+}
+
 function isSocialUrl(url: string | undefined): boolean {
   if (url === undefined) {
     return false;
@@ -94,7 +108,7 @@ function hasSocialSignal(requestText: string): boolean {
 }
 
 function hasRoutingVerb(requestText: string): boolean {
-  return /(?:\bturn\b|\bconvert\b|\bsave\b|\bfetch\b|\bgrab\b|\bextract\b|\bpull\b|\bexport\b|\brender\b)/i.test(
+  return /(?:\bturn\b|\bconvert\b|\bsave\b|\bfetch\b|\bgrab\b|\bextract\b|\bpull\b|\bexport\b|\brender\b|转成|转为|转换|导出|提取|抓取|保存)/i.test(
     requestText
   );
 }
@@ -328,6 +342,59 @@ function hasQueryArtifact(query: CapabilityQuery, artifact: string): boolean {
   return query.artifacts?.includes(artifact) ?? false;
 }
 
+function canonicalizeCapabilityQueryJobFamilies(
+  jobFamilies: string[] | undefined
+): string[] | undefined {
+  if (jobFamilies === undefined) {
+    return undefined;
+  }
+
+  return mergeUniqueStrings(
+    jobFamilies.map(
+      (family) =>
+        CAPABILITY_QUERY_FAMILY_ALIASES[
+          family as keyof typeof CAPABILITY_QUERY_FAMILY_ALIASES
+        ] ?? family
+    )
+  );
+}
+
+function inferStructuredQueryTargets(
+  query: CapabilityQuery,
+  canonicalJobFamilies: string[] | undefined
+): CapabilityQuery["targets"] {
+  if (query.targets !== undefined && query.targets.length > 0) {
+    return query.targets;
+  }
+
+  const inferredUrl = extractFirstUrlFromText(query.requestText);
+
+  if (
+    inferredUrl !== undefined &&
+    canonicalJobFamilies?.includes("quality_assurance") === true
+  ) {
+    return [
+      {
+        type: "website",
+        value: inferredUrl
+      }
+    ];
+  }
+
+  return query.targets;
+}
+
+function canonicalizeCapabilityQuery(query: CapabilityQuery): CapabilityQuery {
+  const canonicalJobFamilies = canonicalizeCapabilityQueryJobFamilies(query.jobFamilies);
+  const canonicalTargets = inferStructuredQueryTargets(query, canonicalJobFamilies);
+
+  return {
+    ...query,
+    jobFamilies: canonicalJobFamilies,
+    targets: canonicalTargets
+  };
+}
+
 export function synthesizeWebContentCapabilityQuery(
   input: QuerySynthesisInput,
   url: string | undefined
@@ -537,12 +604,13 @@ function buildCapabilityDiscoveryCapabilityQuery(
 export function compileCapabilityQueryRequest(
   query: CapabilityQuery
 ): QueryBackedBrokerRequest {
-  const url = firstQueryUrl(query);
-  const compatibilityIntent = deriveCompatibilityIntent(query);
+  const canonicalQuery = canonicalizeCapabilityQuery(query);
+  const url = firstQueryUrl(canonicalQuery);
+  const compatibilityIntent = deriveCompatibilityIntent(canonicalQuery);
 
   return buildBrokerRequest(
     compatibilityIntent === "capability_discovery_or_install" ? undefined : url,
-    query
+    canonicalQuery
   );
 }
 
@@ -600,7 +668,7 @@ export function compileEnvelopeRequest(
   input: BrokerEnvelope
 ): CompileEnvelopeRequestResult {
   const requestText = normalizeText(input.requestText);
-  const url = firstUrl(input.urls);
+  const url = firstUrl(input.urls) ?? extractFirstUrlFromText(input.requestText);
 
   if (looksLikeCapabilityDiscovery(requestText)) {
     return {

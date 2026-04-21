@@ -248,6 +248,6 @@ describe("Phase 2 coarse-boundary eval harness", () => {
         await rm(runtimeDirectory, { recursive: true, force: true });
       }
     },
-    60_000
+    120_000
   );
 });

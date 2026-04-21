@@ -6,9 +6,11 @@ import {
 } from "./workflow.js";
 import {
   BROKER_HOSTS,
+  DOWNSTREAM_EXECUTION_FAILURE_REASON_CODES,
   isBrokerHost,
   type BrokerHost,
-  type CapabilityQuery
+  type CapabilityQuery,
+  type DownstreamExecutionFailure
 } from "./types.js";
 
 export type BrokerInvocationMode = "auto" | "explicit";
@@ -22,6 +24,7 @@ export type BrokerEnvelope = {
   attachments?: string[];
   metadata?: Record<string, string>;
   capabilityQuery?: CapabilityQuery;
+  executionFailures?: DownstreamExecutionFailure[];
   workflowResume?: WorkflowResume;
 };
 
@@ -96,6 +99,76 @@ function parseWorkflowResume(value: unknown): WorkflowResume {
   };
 }
 
+function parseDownstreamExecutionFailure(
+  value: unknown,
+  index: number
+): DownstreamExecutionFailure {
+  if (!isRecord(value)) {
+    throw new Error(
+      `Expected broker envelope.executionFailures[${index}] to be an object.`
+    );
+  }
+
+  const candidateId =
+    typeof value.candidateId === "string" && value.candidateId.trim() !== ""
+      ? value.candidateId
+      : undefined;
+  const packageId =
+    typeof value.packageId === "string" && value.packageId.trim() !== ""
+      ? value.packageId
+      : undefined;
+  const leafCapabilityId =
+    typeof value.leafCapabilityId === "string" &&
+    value.leafCapabilityId.trim() !== ""
+      ? value.leafCapabilityId
+      : undefined;
+  const implementationId =
+    typeof value.implementationId === "string" &&
+    value.implementationId.trim() !== ""
+      ? value.implementationId
+      : undefined;
+
+  if (
+    candidateId === undefined &&
+    packageId === undefined &&
+    leafCapabilityId === undefined &&
+    implementationId === undefined
+  ) {
+    throw new Error(
+      `Expected broker envelope.executionFailures[${index}] to include at least one identifier field.`
+    );
+  }
+
+  if (
+    typeof value.reasonCode !== "string" ||
+    !DOWNSTREAM_EXECUTION_FAILURE_REASON_CODES.includes(
+      value.reasonCode as DownstreamExecutionFailure["reasonCode"]
+    )
+  ) {
+    throw new Error(
+      `Expected broker envelope.executionFailures[${index}].reasonCode to be one of ${DOWNSTREAM_EXECUTION_FAILURE_REASON_CODES.join(", ")}.`
+    );
+  }
+
+  if (
+    value.evidence !== undefined &&
+    (typeof value.evidence !== "string" || value.evidence.trim() === "")
+  ) {
+    throw new Error(
+      `Expected broker envelope.executionFailures[${index}].evidence to be a non-empty string.`
+    );
+  }
+
+  return {
+    candidateId,
+    packageId,
+    leafCapabilityId,
+    implementationId,
+    reasonCode: value.reasonCode as DownstreamExecutionFailure["reasonCode"],
+    evidence: value.evidence
+  };
+}
+
 export function parseBrokerEnvelope(value: unknown): BrokerEnvelope {
   if (!isRecord(value)) {
     throw new Error("Expected broker envelope to be a JSON object.");
@@ -141,10 +214,23 @@ export function parseBrokerEnvelope(value: unknown): BrokerEnvelope {
     );
   }
 
+  if (
+    value.executionFailures !== undefined &&
+    !Array.isArray(value.executionFailures)
+  ) {
+    throw new Error(
+      "Expected broker envelope.executionFailures to be an array."
+    );
+  }
+
   const capabilityQuery =
     value.capabilityQuery !== undefined
       ? parseCapabilityQuery(value.capabilityQuery)
       : undefined;
+  const executionFailures =
+    value.executionFailures?.map((failure, index) =>
+      parseDownstreamExecutionFailure(failure, index)
+    ) ?? undefined;
   const workflowResume =
     value.workflowResume !== undefined
       ? parseWorkflowResume(value.workflowResume)
@@ -180,6 +266,7 @@ export function parseBrokerEnvelope(value: unknown): BrokerEnvelope {
     attachments: value.attachments,
     metadata: value.metadata,
     capabilityQuery,
+    executionFailures,
     workflowResume
   };
 }

@@ -118,6 +118,23 @@ export type CapabilityQuery = {
   metadata?: Record<string, string>;
 };
 
+export const DOWNSTREAM_EXECUTION_FAILURE_REASON_CODES = [
+  "skill_broken",
+  "dependency_broken"
+] as const;
+
+export type DownstreamExecutionFailureReasonCode =
+  (typeof DOWNSTREAM_EXECUTION_FAILURE_REASON_CODES)[number];
+
+export type DownstreamExecutionFailure = {
+  candidateId?: string;
+  packageId?: string;
+  leafCapabilityId?: string;
+  implementationId?: string;
+  reasonCode: DownstreamExecutionFailureReasonCode;
+  evidence?: string;
+};
+
 export type BrokerOutcomeCode =
   | "NO_CANDIDATE"
   | "INSTALL_REQUIRED"

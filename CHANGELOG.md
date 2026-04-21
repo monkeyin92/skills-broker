@@ -2,6 +2,23 @@
 
 ## [Unreleased]
 
+## [0.4.1] - 2026-04-21
+
+### Added
+
+- Added broker-local downstream handoff source resolution so hosts can execute broker-selected local skills directly from broker-managed downstream directories instead of assuming the selected skill is host-visible by name.
+- Added explicit downstream execution failure retry coverage for broken-skill and broken-dependency reports, including in-lane reranking and exhausted-recovery failure handling.
+
+### Changed
+
+- Changed broker recovery so previously failed downstream candidates are excluded on retry, recovery reranking stays inside the current compatibility lane, and packaged placeholder MCP seed entries stay out of real reranking paths.
+- Changed shared-home update to auto-repair broker-managed `baoyu-url-to-markdown` runtimes, including existing installs, so vendored `baoyu-fetch` resolves `xhr-sync-worker.js` relative to its installed location.
+
+### Fixed
+
+- Fixed stale cache reuse so a cached winner from a different compatibility lane is no longer reused just because the current request query identity happens to match.
+- Fixed explicit and free-form website-QA / web-markdown routing so broker-first requests land on the intended downstream winner instead of drifting into the wrong family.
+
 ## [0.4.0] - 2026-04-18
 
 ### Added

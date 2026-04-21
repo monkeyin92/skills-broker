@@ -2,6 +2,7 @@ import { buildHandoffEnvelope } from "./handoff.js";
 import { buildPackageAcquisitionHint } from "./acquisition.js";
 import { AcquisitionMemoryStore } from "./acquisition-memory.js";
 import { writeVerifiedDownstreamManifest } from "./downstream-manifest-source.js";
+import { resolveLocalSkillHandoffSource } from "./local-skill-handoff.js";
 import {
   type BrokerDebug,
   type BrokerFailureResult,
@@ -518,6 +519,11 @@ async function presentCurrentStage(
   const prepared = await prepareCandidate(stageCard, {
     currentHost: context.currentHost
   });
+  const localSkill = await resolveLocalSkillHandoffSource(prepared.candidate, {
+    currentHost: context.currentHost,
+    brokerHomeDirectory: context.brokerHomeDirectory,
+    packageSearchRoots: context.packageSearchRoots
+  });
   const handoff = buildHandoffEnvelope(
     prepared.candidate,
     {
@@ -529,7 +535,8 @@ async function presentCurrentStage(
       }
     },
     context.request,
-    prepared.selection
+    prepared.selection,
+    localSkill
   );
   const readySession: WorkflowSession = {
     ...session,

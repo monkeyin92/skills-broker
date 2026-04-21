@@ -60,6 +60,32 @@ async function seedManualRecovery(
   );
 }
 
+const BROKEN_BAOYU_FETCH_CLI = `#!/usr/bin/env bun
+var __require = import.meta.require;
+var syncWorkerFile = __require.resolve ? __require.resolve("/Users/jimliu/GitHub/baoyu-skills/node_modules/jsdom/lib/jsdom/living/xhr/xhr-sync-worker.js") : null;
+`;
+
+const FIXED_BAOYU_FETCH_CLI_FRAGMENT =
+  'fileURLToPath(new URL("../../jsdom/lib/jsdom/living/xhr/xhr-sync-worker.js", import.meta.url))';
+
+async function writeBrokenBaoyuFetchCli(skillDirectory: string): Promise<string> {
+  const cliPath = join(
+    skillDirectory,
+    "scripts",
+    "node_modules",
+    "baoyu-fetch",
+    "dist",
+    "cli.js"
+  );
+
+  await mkdir(join(skillDirectory, "scripts", "node_modules", "baoyu-fetch", "dist"), {
+    recursive: true
+  });
+  await writeFile(cliPath, BROKEN_BAOYU_FETCH_CLI, "utf8");
+
+  return cliPath;
+}
+
 describe("shared-home lifecycle paths", () => {
   it("prefers overrides but falls back to ~/.skills-broker and default host dirs", () => {
     const paths = resolveLifecyclePaths({
@@ -480,6 +506,65 @@ describe("shared-home lifecycle paths", () => {
     }
   });
 
+  it("repairs baoyu-fetch after migrating baoyu-url-to-markdown behind broker home", async () => {
+    const runtimeDirectory = await mkdtemp(
+      join(tmpdir(), "skills-broker-update-peer-runtime-repair-")
+    );
+    const brokerHomeDirectory = join(runtimeDirectory, ".skills-broker");
+    const claudeCodeInstallDirectory = join(
+      runtimeDirectory,
+      ".claude",
+      "skills",
+      "skills-broker"
+    );
+    const peerSkillDirectory = join(
+      runtimeDirectory,
+      ".claude",
+      "skills",
+      "baoyu-url-to-markdown"
+    );
+
+    try {
+      await mkdir(peerSkillDirectory, { recursive: true });
+      await writeFile(join(peerSkillDirectory, "SKILL.md"), "# peer skill\n", "utf8");
+
+      const originalCliPath = await writeBrokenBaoyuFetchCli(peerSkillDirectory);
+
+      const result = await updateSharedBrokerHome({
+        brokerHomeDirectory,
+        claudeCodeInstallDirectory,
+        homeDirectory: runtimeDirectory,
+        repairHostSurface: true
+      });
+
+      const repairedCliPath = join(
+        brokerHomeDirectory,
+        "downstream",
+        "claude-code",
+        "skills",
+        "baoyu-url-to-markdown",
+        "scripts",
+        "node_modules",
+        "baoyu-fetch",
+        "dist",
+        "cli.js"
+      );
+
+      expect(result.status).toBe("success");
+      expect(result.hosts).toContainEqual({
+        name: "claude-code",
+        status: "installed",
+        migratedPeerSkills: ["baoyu-url-to-markdown"]
+      });
+      await expect(access(originalCliPath)).rejects.toThrow();
+      await expect(readFile(repairedCliPath, "utf8")).resolves.toContain(
+        FIXED_BAOYU_FETCH_CLI_FRAGMENT
+      );
+    } finally {
+      await rm(runtimeDirectory, { recursive: true, force: true });
+    }
+  });
+
   it("records a repair audit event and leaves no manual recovery marker on the happy path", async () => {
     const runtimeDirectory = await mkdtemp(
       join(tmpdir(), "skills-broker-update-peer-repair-audit-")
@@ -533,6 +618,54 @@ describe("shared-home lifecycle paths", () => {
             migratedPeerSkills: ["baoyu-url-to-markdown"]
           }
         })
+      );
+    } finally {
+      await rm(runtimeDirectory, { recursive: true, force: true });
+    }
+  });
+
+  it("repairs existing broker-managed baoyu-url-to-markdown runtimes during update", async () => {
+    const runtimeDirectory = await mkdtemp(
+      join(tmpdir(), "skills-broker-update-existing-runtime-repair-")
+    );
+    const brokerHomeDirectory = join(runtimeDirectory, ".skills-broker");
+    const claudeCodeInstallDirectory = join(
+      runtimeDirectory,
+      ".claude",
+      "skills",
+      "skills-broker"
+    );
+    const downstreamSkillDirectory = join(
+      brokerHomeDirectory,
+      "downstream",
+      "claude-code",
+      "skills",
+      "baoyu-url-to-markdown"
+    );
+
+    try {
+      await installSharedBrokerHome({
+        brokerHomeDirectory,
+        projectRoot: process.cwd()
+      });
+      await mkdir(downstreamSkillDirectory, { recursive: true });
+      await writeFile(join(downstreamSkillDirectory, "SKILL.md"), "# downstream skill\n", "utf8");
+
+      const brokenCliPath = await writeBrokenBaoyuFetchCli(downstreamSkillDirectory);
+
+      const result = await updateSharedBrokerHome({
+        brokerHomeDirectory,
+        claudeCodeInstallDirectory,
+        homeDirectory: runtimeDirectory
+      });
+
+      expect(result.status).toBe("success");
+      expect(result.hosts).toContainEqual({
+        name: "claude-code",
+        status: "installed"
+      });
+      await expect(readFile(brokenCliPath, "utf8")).resolves.toContain(
+        FIXED_BAOYU_FETCH_CLI_FRAGMENT
       );
     } finally {
       await rm(runtimeDirectory, { recursive: true, force: true });
