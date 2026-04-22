@@ -985,6 +985,12 @@ describe("doctor shared broker home", () => {
       const rendered = formatLifecycleResult(result, "text");
 
       expect(rendered).toContain(
+        "Website QA verdict: in_progress (phase=cross_host_reuse_pending)"
+      );
+      expect(rendered.indexOf("Website QA verdict: in_progress")).toBeLessThan(
+        rendered.indexOf("Routing metrics")
+      );
+      expect(rendered).toContain(
         "Website QA loop: install_required=observed (1 install_required trace); rerun=confirmed (1 successful rerun); reuse=pending (no website QA reuse recorded yet); replay=ready (1 verified downstream manifest)"
       );
       expect(rendered).toContain(
@@ -1127,6 +1133,9 @@ describe("doctor shared broker home", () => {
             )
           })
         ])
+      );
+      expect(rendered).toContain(
+        "Website QA verdict: blocked (phase=proof_unreadable)"
       );
       expect(rendered).toContain(
         "Website QA loop: install_required=pending (no website QA install_required trace recorded yet); rerun=unknown (acquisition memory unreadable); reuse=unknown (acquisition memory unreadable); replay=unknown (verified downstream manifests unreadable)"

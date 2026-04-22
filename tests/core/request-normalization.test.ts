@@ -299,12 +299,32 @@ describe("normalizeRequest", () => {
     );
   });
 
+  it("rejects QA this page as unsupported when the request lacks a website target", () => {
+    expectRejected(
+      {
+        requestText: "QA this page",
+        host: "codex"
+      },
+      "UNSUPPORTED_REQUEST"
+    );
+  });
+
   it("rejects 看下这个页面 as unsupported instead of misrouting it to website QA", () => {
     expectRejected(
       {
         requestText: "看下这个页面",
         host: "codex",
         urls: ["https://example.com/page"]
+      },
+      "UNSUPPORTED_REQUEST"
+    );
+  });
+
+  it("rejects QA 这个页面 as unsupported when the request lacks a website target", () => {
+    expectRejected(
+      {
+        requestText: "QA 这个页面",
+        host: "codex"
       },
       "UNSUPPORTED_REQUEST"
     );

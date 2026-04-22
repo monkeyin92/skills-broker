@@ -8,7 +8,7 @@
 
 **Why:** Right now the higher-leverage gap is operator-visible QA conversion truth, not prettier family schema. Generalizing too early risks adding structure with no runtime consumer.
 
-**Context:** The current packet should harden `website QA` as the default-entry loop. Generic semantic-contract expansion becomes valuable again only after that loop has dedicated install-required -> rerun -> reuse proof and doctor truth.
+**Context:** The current packet should harden `website QA` as the QA default-entry loop. Generic semantic-contract expansion becomes valuable again only after that loop has dedicated install-required -> rerun -> reuse proof and operator-visible doctor truth.
 
 **Effort:** M
 **Priority:** P2

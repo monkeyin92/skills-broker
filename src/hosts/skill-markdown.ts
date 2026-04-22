@@ -186,7 +186,7 @@ Treat the examples below as semantic anchors, not literal trigger phrases.
 Start here when you need one first-use path that proves the host shell is routing correctly.
 
 - If the user clearly wants a website tested, or wants help finding/installing the website QA winner, choose \`broker_first\`.
-- Keep website QA visually first. It is the calibration lane. Other maintained lanes are still valid, but secondary.
+- Keep website QA visually first. It is the QA default-entry lane and the calibration lane. Other maintained lanes are still valid, but secondary.
 
 Examples:
 
@@ -194,7 +194,7 @@ ${renderExamples(heroExamples)}
 
 ### Secondary maintained lanes
 
-Requirements analysis and investigation still stay broker-first. They are maintained lanes, but they should not outrank website QA when the host is learning the boundary.
+Requirements analysis and investigation still stay broker-first. They are maintained lanes, but they should not be the first thing this installed shell makes you try.
 
 Examples:
 
