@@ -14,14 +14,16 @@ See: `.planning/PROJECT.md` (updated 2026-04-22)
 
 - **Phase 1:** Prove The QA Hero Loop
 - **Goal:** 把 `website QA` 从默认入口文案推进成 operator-visible 的产品闭环
-- **Status:** context gathered / ready for planning
+- **Status:** planned / ready to execute
 - **Primary requirements:** `ENTRY-01`, `ENTRY-02`, `ROUTE-01`, `ROUTE-02`, `ROUTE-03`
+- **Plan count:** 3
+- **Wave count:** 1
 
 ## Phase Status
 
 | Phase | Name | Status | Notes |
 |-------|------|--------|-------|
-| 1 | Prove The QA Hero Loop | Context gathered | 已完成 discuss-phase，下一步进入 plan-phase |
+| 1 | Prove The QA Hero Loop | Planned | 3 个计划已通过 plan-checker，下一步执行 |
 | 2 | Generalize Family Proofs | Pending | 在不重开已完成迁移的前提下扩 family proof |
 | 3 | Harden Runtime And Verification | Pending | 降低 shared-home / runner / verification 高 blast radius 风险 |
 | 4 | Lock Operator Truth And Expansion Readiness | Pending | 保持多文档 truth 一致，并为第三宿主壳保留接入面 |
@@ -36,6 +38,7 @@ See: `.planning/PROJECT.md` (updated 2026-04-22)
 ## Session History
 
 - 2026-04-22: Phase 1 context gathered — resume from `.planning/phases/01-prove-the-qa-hero-loop/01-CONTEXT.md`
+- 2026-04-22: Phase 1 planned — execute from `.planning/phases/01-prove-the-qa-hero-loop/01-01-PLAN.md`, `01-02-PLAN.md`, `01-03-PLAN.md`
 
 ## Workflow Settings
 
@@ -50,10 +53,11 @@ See: `.planning/PROJECT.md` (updated 2026-04-22)
 
 ## Next Up
 
-`$gsd-plan-phase 1`
+`$gsd-execute-phase 1`
 
 Also available:
-- `$gsd-discuss-phase 1 --chain`
+- `cat .planning/phases/01-prove-the-qa-hero-loop/*-PLAN.md`
+- `$gsd-review --phase 1 --all`
 
 ---
 *State initialized: 2026-04-22*
