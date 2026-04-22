@@ -9,7 +9,7 @@ This file is the repo-native execution board for `skills-broker`.
 ## Human Summary
 
 - The discovery/install flywheel packet is now shipped on the active shipping ref: install-required is a first-class outcome, acquisition memory and verified downstream manifests both compound reuse, and `doctor` / repo docs now tell the same operator truth.
-- Phase 1 adoption proof is now shipped on `origin/main`: `update` / `doctor` expose `adoptionHealth`, installed-shell smoke keeps that proof honest, and repo docs mirror the operator-facing verdict.
+- Phase 1 QA default-entry proof is now shipped on `origin/main`: website QA stays the single first move across repo docs and installed shells, and doctor truth keeps that operator-facing loop honest.
 - Compatibility-intent routing metrics are shipped on `origin/main`.
 - The query-native request migration tail is now shipped on the active shipping ref: top-level public requests stay `capabilityQuery`-native, and legacy cache/session records migrate forward without hiding compatibility-assisted routing.
 - The package-vs-leaf identity migration tail is now shipped on the active shipping ref: discovery, workflow stages, managed host seeds, and legacy workflow sessions all keep package-plus-leaf identity explicit and treat `implementation.id` as execution metadata only.
@@ -77,8 +77,8 @@ This file is the repo-native execution board for `skills-broker`.
     },
     {
       "id": "adoption-proof",
-      "title": "Phase 1 adoption proof",
-      "summary": "Shared-home lifecycle commands now surface an explicit adoption health verdict, and the installed-shell smoke plus repo docs mirror that operator-visible truth.",
+      "title": "Phase 1 QA default-entry proof",
+      "summary": "Shared-home lifecycle commands now surface an explicit adoption health verdict, while website QA remains the QA default-entry lane and doctor truth is mirrored across installed-shell smoke plus repo docs.",
       "status": "shipped_remote",
       "proofs": [
         {

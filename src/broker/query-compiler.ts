@@ -158,6 +158,18 @@ function hasWebsiteTargetSignal(
   );
 }
 
+function hasWebsiteQaTargetSignal(
+  requestText: string,
+  url: string | undefined
+): boolean {
+  return (
+    (url !== undefined && !isSocialUrl(url)) ||
+    /(?:\bwebsite\b|\bsite\b|\bweb app\b|\bwebapp\b|网站|站点)/i.test(
+      requestText
+    )
+  );
+}
+
 function hasQaSignal(requestText: string): boolean {
   return /(?:\bqa\b|\bquality(?:\s|-)?check(?:ing)?\b|\bquality assurance\b|\btest(?:ing)?\b|\baudit\b|质量|测试|测下|检测)/i.test(
     requestText
@@ -255,7 +267,7 @@ function looksLikeWebsiteQaRequest(
 ): boolean {
   return (
     hasQaSignal(requestText) &&
-    hasWebsiteTargetSignal(requestText, url) &&
+    hasWebsiteQaTargetSignal(requestText, url) &&
     !hasMarkdownTarget(requestText) &&
     !hasNonMarkdownTarget(requestText)
   );

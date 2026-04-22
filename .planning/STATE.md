@@ -8,22 +8,22 @@
 See: `.planning/PROJECT.md` (updated 2026-04-22)
 
 **Core value:** 用户只需要描述想达成的结果，broker 就能在当前宿主里找到、准备并复用合适的能力，而不用让用户记住工具名、重新发现赢家、或自己判断安装路径。
-**Current focus:** Phase 1 - Prove The QA Hero Loop
+**Current focus:** Phase 2 - Generalize Family Proofs
 
 ## Current Phase
 
-- **Phase 1:** Prove The QA Hero Loop
-- **Goal:** 把 `website QA` 从默认入口文案推进成 operator-visible 的产品闭环
-- **Status:** planned / ready to execute
-- **Primary requirements:** `ENTRY-01`, `ENTRY-02`, `ROUTE-01`, `ROUTE-02`, `ROUTE-03`
-- **Plan count:** 3
-- **Wave count:** 1
+- **Phase 2:** Generalize Family Proofs
+- **Goal:** 在不重开已完成迁移的前提下，把 QA proof loop 推广到 `web_content_to_markdown` 等 proven family
+- **Status:** pending / ready for discussion
+- **Primary requirements:** `ENTRY-03`, `ROUTE-04`, `GROW-01`
+- **Plan count:** 0
+- **Wave count:** 0
 
 ## Phase Status
 
 | Phase | Name | Status | Notes |
 |-------|------|--------|-------|
-| 1 | Prove The QA Hero Loop | Planned | 3 个计划已通过 plan-checker，下一步执行 |
+| 1 | Prove The QA Hero Loop | Complete | Verified by `.planning/phases/01-prove-the-qa-hero-loop/01-VERIFICATION.md` |
 | 2 | Generalize Family Proofs | Pending | 在不重开已完成迁移的前提下扩 family proof |
 | 3 | Harden Runtime And Verification | Pending | 降低 shared-home / runner / verification 高 blast radius 风险 |
 | 4 | Lock Operator Truth And Expansion Readiness | Pending | 保持多文档 truth 一致，并为第三宿主壳保留接入面 |
@@ -39,6 +39,8 @@ See: `.planning/PROJECT.md` (updated 2026-04-22)
 
 - 2026-04-22: Phase 1 context gathered — resume from `.planning/phases/01-prove-the-qa-hero-loop/01-CONTEXT.md`
 - 2026-04-22: Phase 1 planned — execute from `.planning/phases/01-prove-the-qa-hero-loop/01-01-PLAN.md`, `01-02-PLAN.md`, `01-03-PLAN.md`
+- 2026-04-22: Phase 1 execution started — Wave 1 running plans `01-01`, `01-02`, `01-03`
+- 2026-04-22: Phase 1 executed and verified — see `01-prove-the-qa-hero-loop-0{1,2,3}-SUMMARY.md` and `01-VERIFICATION.md`
 
 ## Workflow Settings
 
@@ -53,11 +55,11 @@ See: `.planning/PROJECT.md` (updated 2026-04-22)
 
 ## Next Up
 
-`$gsd-execute-phase 1`
+`$gsd-discuss-phase 2`
 
 Also available:
-- `cat .planning/phases/01-prove-the-qa-hero-loop/*-PLAN.md`
-- `$gsd-review --phase 1 --all`
+- `cat .planning/phases/01-prove-the-qa-hero-loop/01-VERIFICATION.md`
+- `cat .planning/phases/01-prove-the-qa-hero-loop/*-SUMMARY.md`
 
 ---
 *State initialized: 2026-04-22*

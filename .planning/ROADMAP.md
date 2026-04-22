@@ -26,6 +26,8 @@
 
 **Plans:** 3 plans
 
+**Status:** Complete (2026-04-22)
+
 **UI hint**: no
 
 **Success criteria:**
@@ -36,9 +38,11 @@
 5. Claude Code 与 Codex 都能复用同一条已验证 QA lane，并保留可读的跨宿主 proof / reuse evidence
 
 Plans:
-- [ ] `01-01-PLAN.md` — 对齐 README、README.zh-CN、repo truth 与宿主壳，让 website QA 成为唯一 first move
-- [ ] `01-02-PLAN.md` — 收紧 QA precision-first 边界并锁住 miss-layer eval 证明面
-- [ ] `01-03-PLAN.md` — 用 verdict-first doctor 与跨宿主 proof loop 证明 same-request QA 闭环
+- [x] `01-01-PLAN.md` — 对齐 README、README.zh-CN、repo truth 与宿主壳，让 website QA 成为唯一 first move
+- [x] `01-02-PLAN.md` — 收紧 QA precision-first 边界并锁住 miss-layer eval 证明面
+- [x] `01-03-PLAN.md` — 用 verdict-first doctor 与跨宿主 proof loop 证明 same-request QA 闭环
+
+**Verification:** `.planning/phases/01-prove-the-qa-hero-loop/01-VERIFICATION.md` (`passed`)
 
 **Depends on:** brownfield runtime truth and existing shared-home lifecycle already shipped
 
@@ -104,4 +108,4 @@ Deliver Phases 1-4 to turn `skills-broker` from a “small but interesting route
 
 ---
 *Roadmap created: 2026-04-22*
-*Last updated: 2026-04-22 after initialization*
+*Last updated: 2026-04-22 after Phase 1 execution*

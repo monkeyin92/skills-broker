@@ -217,6 +217,8 @@ skills-broker update
 
 如果你今天只跑一条发布态主路径，就跑这一条：先装 shared broker home，然后让宿主去 QA 一个网站，需要时同意 `INSTALL_REQUIRED`，再把同一个请求重跑一遍，最后用 `doctor` 看证据。
 
+这个 packet 把 website QA 当成 QA default-entry loop，也是 operator 最快看到 doctor truth 的路径。其他 maintained lanes 继续支持，但不该先试。
+
 ### 1. 初始化或刷新共享 broker home
 
 ```bash
@@ -248,6 +250,8 @@ npx skills-broker update
 4. 跑 `npx skills-broker doctor`，确认 shared home 已经开始记录 reuse，也能看见后续可 replay 的 verified downstream manifests。
 
 requirements analysis 和 investigation 仍然是受支持的 maintained family，只是它们不该和 QA 一起抢 README 里的第一步。
+
+web markdown 仍然是下一条已经被证明的 lane，但前提是 QA default-entry loop 和 doctor truth 已经先讲清楚。
 
 当这条默认入口闭环已经清楚之后，第二条已经证明 install / verify / reuse 的 family 是 **web markdown**：可以直接发 `turn this webpage into markdown https://example.com/post` 这类请求，需要安装时同意安装，然后重跑同一个请求，再从另一个 host 重复一次，确认 cross-host reuse 也成立。
 

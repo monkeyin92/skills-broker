@@ -38,7 +38,7 @@ type HostRunnerEvalCase = EvalCaseBase & {
   mode: "host_runner";
   invocationMode: "auto" | "explicit";
   urls?: string[];
-  catalogVariant?: "default" | "empty";
+  catalogVariant?: "default" | "empty" | "website_qa_install_required";
   registryVariant?: "default" | "empty";
 };
 
@@ -100,12 +100,81 @@ async function writeEmptyRegistry(runtimeDirectory: string): Promise<string> {
   return filePath;
 }
 
+async function writeWebsiteQaInstallRequiredCatalog(
+  runtimeDirectory: string
+): Promise<string> {
+  const filePath = join(
+    runtimeDirectory,
+    "website-qa-install-required.seed.json"
+  );
+
+  await writeFile(
+    filePath,
+    `${JSON.stringify(
+      {
+        packages: [
+          {
+            packageId: "gstack",
+            label: "gstack",
+            installState: "available",
+            acquisition: "local_skill_bundle",
+            probe: {
+              layouts: ["bundle_root_children", "nested_agent_skills"],
+              manifestNames: ["gstack"]
+            }
+          }
+        ],
+        skills: [
+          {
+            id: "website-qa",
+            kind: "skill",
+            label: "Website QA",
+            intent: "capability_discovery_or_install",
+            package: {
+              packageId: "gstack"
+            },
+            leaf: {
+              capabilityId: "gstack.qa",
+              packageId: "gstack",
+              subskillId: "qa",
+              probe: {
+                manifestNames: ["qa"],
+                aliases: ["gstack-qa"]
+              }
+            },
+            query: {
+              jobFamilies: ["quality_assurance"],
+              targetTypes: ["website", "url"],
+              artifacts: ["qa_report"],
+              examples: ["QA this website", "测下这个网站的质量"]
+            },
+            implementation: {
+              id: "gstack.qa",
+              type: "local_skill",
+              ownerSurface: "broker_owned_downstream"
+            },
+            sourceMetadata: {
+              skillName: "qa"
+            }
+          }
+        ]
+      },
+      null,
+      2
+    )}\n`,
+    "utf8"
+  );
+
+  return filePath;
+}
+
 async function runHostRunnerEvalCase(
   testCase: HostRunnerEvalCase,
   codexShellDirectory: string,
   overrides: {
     emptyCatalogPath: string;
     emptyRegistryPath: string;
+    websiteQaInstallRequiredCatalogPath: string;
   }
 ): Promise<BrokerRoutingTrace> {
   const result = await runCodexAdapter(
@@ -121,6 +190,11 @@ async function runHostRunnerEvalCase(
       now: new Date(testCase.now),
       ...(testCase.catalogVariant === "empty"
         ? { hostCatalogFilePath: overrides.emptyCatalogPath }
+        : testCase.catalogVariant === "website_qa_install_required"
+          ? {
+              hostCatalogFilePath:
+                overrides.websiteQaInstallRequiredCatalogPath
+            }
         : {}),
       ...(testCase.registryVariant === "empty"
         ? { mcpRegistryFilePath: overrides.emptyRegistryPath }
@@ -183,6 +257,8 @@ describe("Phase 1 website QA eval harness", () => {
         const cases = await loadEvalFixture();
         const emptyCatalogPath = await writeEmptyCatalog(runtimeDirectory);
         const emptyRegistryPath = await writeEmptyRegistry(runtimeDirectory);
+        const websiteQaInstallRequiredCatalogPath =
+          await writeWebsiteQaInstallRequiredCatalog(runtimeDirectory);
 
         await installSharedBrokerHome({
           brokerHomeDirectory,
@@ -209,7 +285,8 @@ describe("Phase 1 website QA eval harness", () => {
                     codexShellDirectory,
                     {
                       emptyCatalogPath,
-                      emptyRegistryPath
+                      emptyRegistryPath,
+                      websiteQaInstallRequiredCatalogPath
                     }
                   )
                 : await runPrepareFailureEvalCase(testCase);

@@ -7,15 +7,15 @@
 
 ### Default Entry
 
-- [ ] **ENTRY-01**: 新用户在 `README.md`、`README.zh-CN.md` 和安装后的宿主说明中，都能在首屏明确知道 `website QA` 是第一条推荐尝试路径
-- [ ] **ENTRY-02**: 快速开始必须给出一条可复制的 website QA 请求，以及 `INSTALL_REQUIRED -> install -> rerun -> doctor` 的明确顺序
+- [x] **ENTRY-01**: 新用户在 `README.md`、`README.zh-CN.md` 和安装后的宿主说明中，都能在首屏明确知道 `website QA` 是第一条推荐尝试路径
+- [x] **ENTRY-02**: 快速开始必须给出一条可复制的 website QA 请求，以及 `INSTALL_REQUIRED -> install -> rerun -> doctor` 的明确顺序
 - [ ] **ENTRY-03**: `skills-broker doctor` 能用 family-specific 证明面解释默认入口是否健康，而不是只输出通用计数
 
 ### Routing And Reuse
 
-- [ ] **ROUTE-01**: 当 website QA 的最佳下游能力尚未安装时，broker 必须返回明确的 `INSTALL_REQUIRED`，而不是模糊失败或错误 family
-- [ ] **ROUTE-02**: 在安装完成后，重跑同一句 website QA 请求必须能得到 `HANDOFF_READY`
-- [ ] **ROUTE-03**: website QA 的已验证赢家与证明状态必须可在 Claude Code 与 Codex 之间复用，而不需要重新发现
+- [x] **ROUTE-01**: 当 website QA 的最佳下游能力尚未安装时，broker 必须返回明确的 `INSTALL_REQUIRED`，而不是模糊失败或错误 family
+- [x] **ROUTE-02**: 在安装完成后，重跑同一句 website QA 请求必须能得到 `HANDOFF_READY`
+- [x] **ROUTE-03**: website QA 的已验证赢家与证明状态必须可在 Claude Code 与 Codex 之间复用，而不需要重新发现
 - [ ] **ROUTE-04**: 明确要求“把网页转成 markdown”的请求必须能进入 `web_content_to_markdown` family，且不回归 website QA 的 hero lane 语义
 
 ### Runtime Hardening
@@ -61,12 +61,12 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| ENTRY-01 | Phase 1 | Pending |
-| ENTRY-02 | Phase 1 | Pending |
+| ENTRY-01 | Phase 1 | Complete |
+| ENTRY-02 | Phase 1 | Complete |
 | ENTRY-03 | Phase 2 | Pending |
-| ROUTE-01 | Phase 1 | Pending |
-| ROUTE-02 | Phase 1 | Pending |
-| ROUTE-03 | Phase 1 | Pending |
+| ROUTE-01 | Phase 1 | Complete |
+| ROUTE-02 | Phase 1 | Complete |
+| ROUTE-03 | Phase 1 | Complete |
 | ROUTE-04 | Phase 2 | Pending |
 | HARD-01 | Phase 3 | Pending |
 | HARD-02 | Phase 3 | Pending |
@@ -82,4 +82,4 @@
 
 ---
 *Requirements defined: 2026-04-22*
-*Last updated: 2026-04-22 after initial definition*
+*Last updated: 2026-04-22 after Phase 1 execution*

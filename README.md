@@ -210,6 +210,8 @@ That distinction matters because the hardest part is not storing tools. The hard
 
 If you only try one published path, make it this one: install the shared broker home, ask the host to QA a website, approve `INSTALL_REQUIRED` if needed, then rerun the same request and inspect `doctor`.
 
+This packet treats website QA as the QA default-entry loop and the fastest operator path to doctor truth. Other maintained lanes stay supported, but they are not the first move.
+
 ### 1. Install or refresh the shared broker home
 
 ```bash
@@ -241,6 +243,8 @@ This is the published host-shell path where the discovery/install flywheel is su
 4. Run `npx skills-broker doctor` to confirm the shared-home state is recording reuse and any verified downstream manifests that can be replayed later.
 
 Requirements analysis and investigation are still supported maintained families. They just are not the first thing this README should make you try.
+
+Web markdown is still a proven next lane, but only after the QA default-entry loop and doctor truth already feel clear.
 
 Once that default-entry loop feels clear, the second proven family is **web markdown**: ask for something like `turn this webpage into markdown https://example.com/post`, approve the install if needed, rerun the same request, then repeat it from the other host to prove cross-host reuse.
 

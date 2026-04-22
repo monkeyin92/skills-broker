@@ -166,6 +166,14 @@ function formatAdoptionHealthProofLine(
   return `Adoption health proof: website QA verify=${websiteQaProof.verifyState}; cross-host reuse=${websiteQaProof.crossHostReuseState}`;
 }
 
+function formatWebsiteQaVerdictLine(result: DoctorLifecycleResult): string {
+  return `Website QA verdict: ${result.websiteQaLoop.verdict} (phase=${result.websiteQaLoop.phase})`;
+}
+
+function formatWebsiteQaNextActionLine(result: DoctorLifecycleResult): string {
+  return `Website QA next action: ${result.websiteQaLoop.nextAction}`;
+}
+
 export function formatLifecycleResult(
   result: UpdateLifecycleResult | DoctorLifecycleResult | RemoveLifecycleResult,
   outputMode: "text" | "json"
@@ -187,6 +195,9 @@ export function formatLifecycleResult(
     if (adoptionHealthProofLine !== undefined) {
       lines.push(adoptionHealthProofLine);
     }
+
+    lines.push(formatWebsiteQaVerdictLine(result));
+    lines.push(formatWebsiteQaNextActionLine(result));
 
     if (result.routingMetrics.observed === 0) {
       lines.push(
