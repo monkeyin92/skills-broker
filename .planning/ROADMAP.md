@@ -24,6 +24,8 @@
 
 **Requirements:** `ENTRY-01`, `ENTRY-02`, `ROUTE-01`, `ROUTE-02`, `ROUTE-03`
 
+**Plans:** 3 plans
+
 **UI hint**: no
 
 **Success criteria:**
@@ -32,6 +34,11 @@
 3. 在未安装最佳赢家时，同一句 website QA 请求返回 `INSTALL_REQUIRED`，且失败原因对 operator 可解释
 4. 安装后重跑同一句请求得到 `HANDOFF_READY`，不需要更换措辞或走新路径
 5. Claude Code 与 Codex 都能复用同一条已验证 QA lane，并保留可读的跨宿主 proof / reuse evidence
+
+Plans:
+- [ ] `01-01-PLAN.md` — 对齐 README、README.zh-CN、repo truth 与宿主壳，让 website QA 成为唯一 first move
+- [ ] `01-02-PLAN.md` — 收紧 QA precision-first 边界并锁住 miss-layer eval 证明面
+- [ ] `01-03-PLAN.md` — 用 verdict-first doctor 与跨宿主 proof loop 证明 same-request QA 闭环
 
 **Depends on:** brownfield runtime truth and existing shared-home lifecycle already shipped
 
