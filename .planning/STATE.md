@@ -14,17 +14,17 @@ See: `.planning/PROJECT.md` (updated 2026-04-22)
 
 - **Phase 2:** Generalize Family Proofs
 - **Goal:** 在不重开已完成迁移的前提下，把 QA proof loop 推广到 `web_content_to_markdown` 等 proven family
-- **Status:** discussed / ready for planning
+- **Status:** planned / ready to execute
 - **Primary requirements:** `ENTRY-03`, `ROUTE-04`, `GROW-01`
-- **Plan count:** 0
-- **Wave count:** 0
+- **Plan count:** 3
+- **Wave count:** 2
 
 ## Phase Status
 
 | Phase | Name | Status | Notes |
 |-------|------|--------|-------|
 | 1 | Prove The QA Hero Loop | Complete | Verified by `.planning/phases/01-prove-the-qa-hero-loop/01-VERIFICATION.md` |
-| 2 | Generalize Family Proofs | In Progress | Context captured in `.planning/phases/02-generalize-family-proofs/02-CONTEXT.md` |
+| 2 | Generalize Family Proofs | In Progress | Plans captured in `.planning/phases/02-generalize-family-proofs/02-01-PLAN.md`, `02-02-PLAN.md`, `02-03-PLAN.md` |
 | 3 | Harden Runtime And Verification | Pending | 降低 shared-home / runner / verification 高 blast radius 风险 |
 | 4 | Lock Operator Truth And Expansion Readiness | Pending | 保持多文档 truth 一致，并为第三宿主壳保留接入面 |
 
@@ -42,6 +42,7 @@ See: `.planning/PROJECT.md` (updated 2026-04-22)
 - 2026-04-22: Phase 1 execution started — Wave 1 running plans `01-01`, `01-02`, `01-03`
 - 2026-04-22: Phase 1 executed and verified — see `01-prove-the-qa-hero-loop-0{1,2,3}-SUMMARY.md` and `01-VERIFICATION.md`
 - 2026-04-22: Phase 2 context gathered — see `.planning/phases/02-generalize-family-proofs/02-CONTEXT.md`
+- 2026-04-22: Phase 2 planned — execute from `.planning/phases/02-generalize-family-proofs/02-01-PLAN.md`, `02-02-PLAN.md`, `02-03-PLAN.md`
 
 ## Workflow Settings
 
@@ -56,11 +57,11 @@ See: `.planning/PROJECT.md` (updated 2026-04-22)
 
 ## Next Up
 
-`$gsd-plan-phase 2`
+`$gsd-execute-phase 2`
 
 Also available:
 - `cat .planning/phases/02-generalize-family-proofs/02-CONTEXT.md`
-- `cat .planning/phases/02-generalize-family-proofs/02-DISCUSSION-LOG.md`
+- `cat .planning/phases/02-generalize-family-proofs/02-PATTERNS.md`
 
 ---
 *State initialized: 2026-04-22*

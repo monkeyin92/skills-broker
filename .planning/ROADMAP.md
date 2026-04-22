@@ -52,6 +52,10 @@ Plans:
 
 **Requirements:** `ENTRY-03`, `ROUTE-04`, `GROW-01`
 
+**Plans:** 3 plans
+
+**Status:** Planned (2026-04-22)
+
 **UI hint**: no
 
 **Success criteria:**
@@ -59,6 +63,11 @@ Plans:
 2. 明确的网页转 markdown 请求稳定进入 `web_content_to_markdown` family，而不是落入 QA 或 generic unsupported
 3. semantic metadata / proof family 结构能支持后续 family 扩展，但不重开 query-native 或 package-vs-leaf 已完成迁移
 4. website QA 的默认入口语义、negative boundary 和 operator wording 在泛化后保持稳定
+
+Plans:
+- [ ] `02-01-PLAN.md` — 收口 canonical family proof surface，同时保留 `websiteQaLoop` alias 与 QA-first operator truth
+- [ ] `02-02-PLAN.md` — 锁定 proven family metadata contract 与 web markdown-only 的 fail-closed semantic boundary
+- [ ] `02-03-PLAN.md` — 用 integration proof 和多表面 wording 发布 “one hero lane, two proven loops”
 
 **Depends on:** Phase 1 proof loop and existing deterministic routing model
 
