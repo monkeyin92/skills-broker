@@ -14,14 +14,14 @@ See: `.planning/PROJECT.md` (updated 2026-04-22)
 
 - **Phase 1:** Prove The QA Hero Loop
 - **Goal:** 把 `website QA` 从默认入口文案推进成 operator-visible 的产品闭环
-- **Status:** pending discussion / planning
+- **Status:** context gathered / ready for planning
 - **Primary requirements:** `ENTRY-01`, `ENTRY-02`, `ROUTE-01`, `ROUTE-02`, `ROUTE-03`
 
 ## Phase Status
 
 | Phase | Name | Status | Notes |
 |-------|------|--------|-------|
-| 1 | Prove The QA Hero Loop | Pending | 当前最值钱的产品阶段，直接对应 README/TODOS 当前叙事 |
+| 1 | Prove The QA Hero Loop | Context gathered | 已完成 discuss-phase，下一步进入 plan-phase |
 | 2 | Generalize Family Proofs | Pending | 在不重开已完成迁移的前提下扩 family proof |
 | 3 | Harden Runtime And Verification | Pending | 降低 shared-home / runner / verification 高 blast radius 风险 |
 | 4 | Lock Operator Truth And Expansion Readiness | Pending | 保持多文档 truth 一致，并为第三宿主壳保留接入面 |
@@ -32,6 +32,10 @@ See: `.planning/PROJECT.md` (updated 2026-04-22)
 - 共享 broker home、Claude Code / Codex thin host shell、discovery/install flywheel、query-native request tail、package-vs-leaf identity tail、adoption proof 等基础能力已经 shipped
 - 当前最明确的 active packet 是把 `website QA` 默认入口从 docs truth 提升为 operator-visible truth，并把同一套 proof family 继续推广到 `web_content_to_markdown`
 - 关键工程风险集中在 oversized lifecycle/runtime modules、doc parity drift、awkward path runner safety、rollback branch coverage 与 contributor dependency health
+
+## Session History
+
+- 2026-04-22: Phase 1 context gathered — resume from `.planning/phases/01-prove-the-qa-hero-loop/01-CONTEXT.md`
 
 ## Workflow Settings
 
@@ -46,10 +50,10 @@ See: `.planning/PROJECT.md` (updated 2026-04-22)
 
 ## Next Up
 
-`$gsd-discuss-phase 1`
+`$gsd-plan-phase 1`
 
 Also available:
-- `$gsd-plan-phase 1`
+- `$gsd-discuss-phase 1 --chain`
 
 ---
 *State initialized: 2026-04-22*
