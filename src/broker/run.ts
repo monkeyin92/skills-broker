@@ -32,6 +32,7 @@ import {
   type SemanticResolverResult
 } from "./semantic-resolver.js";
 import {
+  type BrokerAdvisory,
   type BrokerDebug,
   type BrokerFailureResult,
   type BrokerSuccessResult,
@@ -301,9 +302,9 @@ function defaultWorkflowSessionFilePath(options: RunBrokerOptions): string {
 async function persistTraceIfConfigured(
   trace: BrokerRoutingTrace,
   brokerHomeDirectory: string | undefined
-): Promise<void> {
+): Promise<BrokerAdvisory | undefined> {
   if (brokerHomeDirectory === undefined) {
-    return;
+    return undefined;
   }
 
   try {
@@ -311,8 +312,17 @@ async function persistTraceIfConfigured(
       routingTraceLogFilePath(brokerHomeDirectory),
       trace
     );
-  } catch {
-    // Trace logging must never break broker routing.
+    return undefined;
+  } catch (error) {
+    const detail =
+      error instanceof Error ? error.message : "unknown routing trace failure";
+
+    return {
+      code: "routing_trace_write_failed",
+      message:
+        "Routing succeeded, but the routing trace could not be persisted. Repair broker-home state before relying on trace history.",
+      detail
+    };
   }
 }
 
@@ -325,15 +335,24 @@ async function persistAcquisitionMemoryIfConfigured(
     currentHost: BrokerHost;
     now: Date;
   }
-): Promise<void> {
+): Promise<BrokerAdvisory | undefined> {
   if (store === undefined) {
-    return;
+    return undefined;
   }
 
   try {
     await store.recordVerifiedWinner(input);
-  } catch {
-    // Acquisition memory is advisory only.
+    return undefined;
+  } catch (error) {
+    const detail =
+      error instanceof Error ? error.message : "unknown acquisition memory failure";
+
+    return {
+      code: "acquisition_memory_write_failed",
+      message:
+        "Routing succeeded, but acquisition memory could not be updated. Verify/reuse proof may remain incomplete until repaired.",
+      detail
+    };
   }
 }
 
@@ -357,12 +376,37 @@ async function persistVerifiedDownstreamManifestIfConfigured(input: {
   winner: CapabilityCard;
   currentHost: BrokerHost;
   now: Date;
-}): Promise<void> {
+}): Promise<BrokerAdvisory | undefined> {
   try {
     await writeVerifiedDownstreamManifest(input);
-  } catch {
-    // Verified downstream manifests are advisory only.
+    return undefined;
+  } catch (error) {
+    const detail =
+      error instanceof Error
+        ? error.message
+        : "unknown verified downstream manifest failure";
+
+    return {
+      code: "verified_downstream_manifest_write_failed",
+      message:
+        "Routing succeeded, but the verified downstream manifest could not be written. Replay proof may remain incomplete until repaired.",
+      detail
+    };
   }
+}
+
+function withAdvisories<T extends RunBrokerResult>(
+  result: T,
+  advisories: BrokerAdvisory[]
+): T {
+  if (advisories.length === 0) {
+    return result;
+  }
+
+  return {
+    ...result,
+    advisories: [...(result.advisories ?? []), ...advisories]
+  };
 }
 
 function createNoCandidateResult(
@@ -1233,19 +1277,30 @@ async function runSingleStep(
     resolvedRequest,
     now
   );
-  await persistAcquisitionMemoryIfConfigured(acquisitionMemoryStore, {
-    canonicalKey: resolvedRequest.requestQueryIdentity,
-    compatibilityIntent: resolvedRequest.compatibilityIntent,
-    winner,
-    currentHost,
-    now
-  });
-  await persistVerifiedDownstreamManifestIfConfigured({
-    brokerHomeDirectory: options.brokerHomeDirectory,
-    winner,
-    currentHost,
-    now
-  });
+  const advisories: BrokerAdvisory[] = [];
+  const acquisitionAdvisory = await persistAcquisitionMemoryIfConfigured(
+    acquisitionMemoryStore,
+    {
+      canonicalKey: resolvedRequest.requestQueryIdentity,
+      compatibilityIntent: resolvedRequest.compatibilityIntent,
+      winner,
+      currentHost,
+      now
+    }
+  );
+  if (acquisitionAdvisory !== undefined) {
+    advisories.push(acquisitionAdvisory);
+  }
+  const verifiedManifestAdvisory =
+    await persistVerifiedDownstreamManifestIfConfigured({
+      brokerHomeDirectory: options.brokerHomeDirectory,
+      winner,
+      currentHost,
+      now
+    });
+  if (verifiedManifestAdvisory !== undefined) {
+    advisories.push(verifiedManifestAdvisory);
+  }
 
   const result: BrokerSuccessResult = {
     ok: true,
@@ -1255,6 +1310,7 @@ async function runSingleStep(
       message: `Winner ${winner.id} is ready for handoff.`
     },
     handoff,
+    ...(advisories.length > 0 ? { advisories } : {}),
     debug,
     trace: createBrokerRoutingTrace({
       input,
@@ -1293,12 +1349,22 @@ export async function runBroker(
       hostCatalogFilePath
     );
 
-    await persistTraceIfConfigured(result.trace, options.brokerHomeDirectory);
-    return result;
+    const traceAdvisory = await persistTraceIfConfigured(
+      result.trace,
+      options.brokerHomeDirectory
+    );
+    return traceAdvisory === undefined
+      ? result
+      : withAdvisories(result, [traceAdvisory]);
   }
 
   const result = await runSingleStep(input, options, currentHost, now);
 
-  await persistTraceIfConfigured(result.trace, options.brokerHomeDirectory);
-  return result;
+  const traceAdvisory = await persistTraceIfConfigured(
+    result.trace,
+    options.brokerHomeDirectory
+  );
+  return traceAdvisory === undefined
+    ? result
+    : withAdvisories(result, [traceAdvisory]);
 }

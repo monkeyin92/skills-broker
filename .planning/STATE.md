@@ -1,39 +1,39 @@
 # State
 
 **Initialized:** 2026-04-22
-**Status:** active
+**Status:** awaiting_next_milestone
 
 ## Project Reference
 
-See: `.planning/PROJECT.md` (updated 2026-04-22)
+See: `.planning/PROJECT.md` (updated 2026-04-23)
 
 **Core value:** 用户只需要描述想达成的结果，broker 就能在当前宿主里找到、准备并复用合适的能力，而不用让用户记住工具名、重新发现赢家、或自己判断安装路径。
-**Current focus:** Phase 2 - Generalize Family Proofs
+**Current focus:** v1.0 已归档，等待定义下一 milestone。
 
-## Current Phase
+## Current Milestone
 
-- **Phase 2:** Generalize Family Proofs
-- **Goal:** 在不重开已完成迁移的前提下，把 QA proof loop 推广到 `web_content_to_markdown` 等 proven family
-- **Status:** pending / ready for discussion
-- **Primary requirements:** `ENTRY-03`, `ROUTE-04`, `GROW-01`
-- **Plan count:** 0
-- **Wave count:** 0
+- **Milestone:** v1.0 Default-Entry Trust And Growth Readiness
+- **Status:** complete / archived
+- **Archive:** `.planning/milestones/v1.0-ROADMAP.md`
+- **Audit:** `.planning/milestones/v1.0-MILESTONE-AUDIT.md`
+- **Requirements archive:** `.planning/milestones/v1.0-REQUIREMENTS.md`
 
 ## Phase Status
 
 | Phase | Name | Status | Notes |
 |-------|------|--------|-------|
-| 1 | Prove The QA Hero Loop | Complete | Verified by `.planning/phases/01-prove-the-qa-hero-loop/01-VERIFICATION.md` |
-| 2 | Generalize Family Proofs | Pending | 在不重开已完成迁移的前提下扩 family proof |
-| 3 | Harden Runtime And Verification | Pending | 降低 shared-home / runner / verification 高 blast radius 风险 |
-| 4 | Lock Operator Truth And Expansion Readiness | Pending | 保持多文档 truth 一致，并为第三宿主壳保留接入面 |
+| 1 | Prove The QA Hero Loop | Archived | Verified by `.planning/phases/01-prove-the-qa-hero-loop/01-VERIFICATION.md` |
+| 2 | Generalize Family Proofs | Archived | Verified by `.planning/phases/02-generalize-family-proofs/02-VERIFICATION.md` |
+| 3 | Harden Runtime And Verification | Archived | Verified by `.planning/phases/03-harden-runtime-and-verification/03-VERIFICATION.md` |
+| 4 | Lock Operator Truth And Expansion Readiness | Archived | Verified by `.planning/phases/04-lock-operator-truth-and-expansion-readiness/04-VERIFICATION.md` |
 
 ## Known Context
 
 - Repo 已完成 brownfield 代码地图，见 `.planning/codebase/`
-- 共享 broker home、Claude Code / Codex thin host shell、discovery/install flywheel、query-native request tail、package-vs-leaf identity tail、adoption proof 等基础能力已经 shipped
-- 当前最明确的 active packet 是把 `website QA` 默认入口从 docs truth 提升为 operator-visible truth，并把同一套 proof family 继续推广到 `web_content_to_markdown`
-- 关键工程风险集中在 oversized lifecycle/runtime modules、doc parity drift、awkward path runner safety、rollback branch coverage 与 contributor dependency health
+- v1.0 已经把 `website QA` 锁成默认入口 hero lane，把 `web markdown` 锁成第二条 proven family
+- shared-home、runner、rollback/manual-recovery、advisory persistence 与 contributor verification 都已有更硬的 fail-closed / deterministic truth
+- README、README.zh-CN、TODOS、STATUS 与 installed host shell 已通过 canonical operator truth contract 与 parity tests 对齐
+- 下一轮的主要问题不再是“能不能证明默认入口存在”，而是“能否在扩展第三宿主与更多 proven families 时守住当前边界”
 
 ## Session History
 
@@ -41,6 +41,18 @@ See: `.planning/PROJECT.md` (updated 2026-04-22)
 - 2026-04-22: Phase 1 planned — execute from `.planning/phases/01-prove-the-qa-hero-loop/01-01-PLAN.md`, `01-02-PLAN.md`, `01-03-PLAN.md`
 - 2026-04-22: Phase 1 execution started — Wave 1 running plans `01-01`, `01-02`, `01-03`
 - 2026-04-22: Phase 1 executed and verified — see `01-prove-the-qa-hero-loop-0{1,2,3}-SUMMARY.md` and `01-VERIFICATION.md`
+- 2026-04-22: Phase 2 context gathered — see `.planning/phases/02-generalize-family-proofs/02-CONTEXT.md`
+- 2026-04-22: Phase 2 planned — execute from `.planning/phases/02-generalize-family-proofs/02-01-PLAN.md`, `02-02-PLAN.md`, `02-03-PLAN.md`
+- 2026-04-22: Phase 2 executed and verified — see `02-generalize-family-proofs-0{1,2,3}-SUMMARY.md` and `02-VERIFICATION.md`
+- 2026-04-22: Phase 3 context gathered — see `.planning/phases/03-harden-runtime-and-verification/03-CONTEXT.md`
+- 2026-04-22: Phase 3 planned — execute from `.planning/phases/03-harden-runtime-and-verification/03-01-PLAN.md`, `03-02-PLAN.md`, `03-03-PLAN.md`, `03-04-PLAN.md`
+- 2026-04-22: Phase 3 executed and verified — see `03-harden-runtime-and-verification-0{1,2,3,4}-SUMMARY.md` and `03-VERIFICATION.md`
+- 2026-04-22: Phase 4 context gathered — see `.planning/phases/04-lock-operator-truth-and-expansion-readiness/04-CONTEXT.md`
+- 2026-04-22: Phase 4 planned — execute from `.planning/phases/04-lock-operator-truth-and-expansion-readiness/04-01-PLAN.md`, `04-02-PLAN.md`, `04-03-PLAN.md`
+- 2026-04-22: Phase 4 execution started — inline sequential execution for `04-01`, `04-02`, `04-03`
+- 2026-04-22: Phase 4 executed and verified — see `04-lock-operator-truth-and-expansion-readiness-0{1,2,3}-SUMMARY.md` and `04-VERIFICATION.md`
+- 2026-04-22: Milestone v1.0 audited — see `.planning/milestones/v1.0-MILESTONE-AUDIT.md`
+- 2026-04-23: Milestone v1.0 archived — see `.planning/milestones/v1.0-ROADMAP.md`, `.planning/milestones/v1.0-REQUIREMENTS.md`
 
 ## Workflow Settings
 
@@ -55,11 +67,13 @@ See: `.planning/PROJECT.md` (updated 2026-04-22)
 
 ## Next Up
 
-`$gsd-discuss-phase 2`
+`$gsd-new-milestone`
 
 Also available:
-- `cat .planning/phases/01-prove-the-qa-hero-loop/01-VERIFICATION.md`
-- `cat .planning/phases/01-prove-the-qa-hero-loop/*-SUMMARY.md`
+- `cat .planning/MILESTONES.md`
+- `cat .planning/milestones/v1.0-ROADMAP.md`
+- `cat .planning/milestones/v1.0-REQUIREMENTS.md`
+- `cat .planning/milestones/v1.0-MILESTONE-AUDIT.md`
 
 ---
 *State initialized: 2026-04-22*

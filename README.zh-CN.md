@@ -103,6 +103,8 @@ broker 决定：
 
 在这个小湖里，**website QA 是今天最适合当默认入口的 lane**。requirements analysis 和 investigation 继续保持 supported maintained families，但第一条该教用户去试的路径应该先是 QA。
 
+第二条已经证明的 family 是 **web markdown**。它应该排在 website QA 之后作为下一条 operator loop，而不是和 QA 并列抢第一步。
+
 v0 当前包含：
 
 - 一套跨宿主共享的 broker envelope
@@ -182,7 +184,7 @@ flowchart LR
 这个模型下，产品级统一维护命令定为：
 
 ```bash
-skills-broker update
+npx skills-broker update
 ```
 
 它的职责应该是：
@@ -197,7 +199,11 @@ skills-broker update
 
 - 现在支持：Claude Code、Codex
 - 已 defer 但计划中：OpenCode 薄宿主壳
+- 发布态 lifecycle 命令统一为：npx skills-broker update / npx skills-broker doctor / npx skills-broker remove
+- 第三宿主 readiness 继续受同一套 shared broker home、thin host shell、proof/reuse state 与 published lifecycle parity 约束。
 - v0 当前不支持：其它宿主
+
+OpenCode 继续保持 defer，直到 `docs/superpowers/specs/2026-04-22-third-host-thin-shell-readiness.md` 里定义的第三宿主 readiness contract 被满足。
 
 ## 它和别的东西本质上有什么不同
 
@@ -325,12 +331,14 @@ cd skills-broker
 npm ci
 ```
 
-### 6. 构建并验证本地 checkout
+### 6. 先做预检，再验证本地 checkout
 
 ```bash
-npm run build
-npx vitest run
+# 与 CI 对齐的本地基线：Node 22 + npm ci + npm run build + npm test
+npm run verify:local
 ```
+
+如果你只想先诊断环境、不启动整套验证，运行 `npm run verify:local -- --check-only`。如果预检报告 npm / Rollup / Vitest 依赖损坏，先执行 `npm ci`，再重新跑 `npm run verify:local -- --check-only`，确认健康后再执行 `npm run verify:local`。
 
 ### 7. 安装仓库内的 Claude Code 本地包
 
@@ -504,7 +512,7 @@ npx vitest run
 
 会。仓库里现在已经有一条实验性的共享 home 流程，Claude Code 和 Codex 可以复用同一份 capability cache、history 和 runtime，而不是各自维护一份孤岛副本。
 
-### `skills-broker update` 以后负责什么？
+### `npx skills-broker update` 以后负责什么？
 
 它现在就是共享 home 模型下的正式维护命令。它负责更新共享 runtime、重新扫描宿主、补装或修复薄适配层，并且默认不清空已有 broker 知识。
 

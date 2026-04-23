@@ -8,6 +8,17 @@ import type {
 import type { HandoffEnvelope } from "./handoff.js";
 import type { BrokerRoutingTrace } from "./trace.js";
 
+export type BrokerAdvisoryCode =
+  | "routing_trace_write_failed"
+  | "acquisition_memory_write_failed"
+  | "verified_downstream_manifest_write_failed";
+
+export type BrokerAdvisory = {
+  code: BrokerAdvisoryCode;
+  message: string;
+  detail?: string;
+};
+
 export type BrokerDebug = {
   cacheHit: boolean;
   cachedCandidateId?: string;
@@ -56,6 +67,7 @@ export type BrokerSuccessResult = {
   };
   handoff: HandoffEnvelope;
   acquisition?: undefined;
+  advisories?: BrokerAdvisory[];
   debug: BrokerDebug;
   trace: BrokerRoutingTrace;
 };
@@ -69,6 +81,7 @@ export type WorkflowStageReadyResult = {
   };
   workflow: WorkflowRunView;
   stage: WorkflowStageView;
+  advisories?: BrokerAdvisory[];
   debug: BrokerDebug;
   trace: BrokerRoutingTrace;
 };
@@ -82,6 +95,7 @@ export type WorkflowBlockedResult = {
   };
   workflow: WorkflowRunView;
   block: WorkflowBlock;
+  advisories?: BrokerAdvisory[];
   debug: BrokerDebug;
   trace: BrokerRoutingTrace;
 };
@@ -97,6 +111,7 @@ export type WorkflowCompletedResult = {
   completed: {
     stageId: string;
   };
+  advisories?: BrokerAdvisory[];
   debug: BrokerDebug;
   trace: BrokerRoutingTrace;
 };
@@ -125,6 +140,7 @@ export type BrokerFailureResult = {
     runId?: string;
     stageId?: string;
   };
+  advisories?: BrokerAdvisory[];
   debug: BrokerDebug;
   trace: BrokerRoutingTrace;
 };

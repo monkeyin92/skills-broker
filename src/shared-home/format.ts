@@ -346,7 +346,7 @@ export function formatLifecycleResult(
       }
       if (host.manualRecovery) {
         lines.push(
-          `Host ${host.name} manual recovery: marker=${host.manualRecovery.markerId}, failurePhase=${host.manualRecovery.failurePhase}`
+          `Host ${host.name} manual recovery: markerId=${host.manualRecovery.markerId}, failurePhase=${host.manualRecovery.failurePhase}, rollbackStatus=${host.manualRecovery.rollbackStatus}`
         );
         lines.push(`Host ${host.name} clear command: ${host.manualRecovery.clearCommand}`);
       }
@@ -414,7 +414,7 @@ export function formatLifecycleResult(
     }
     if (host.manualRecovery) {
       lines.push(
-        `Host ${host.name} manual recovery: marker=${host.manualRecovery.markerId}, failurePhase=${host.manualRecovery.failurePhase}`
+        `Host ${host.name} manual recovery: markerId=${host.manualRecovery.markerId}, failurePhase=${host.manualRecovery.failurePhase}, rollbackStatus=${host.manualRecovery.rollbackStatus}`
       );
       lines.push(`Host ${host.name} clear command: ${host.manualRecovery.clearCommand}`);
     }

@@ -13,6 +13,7 @@ import {
 import {
   CAPABILITY_PACKAGE_LAYOUTS,
   CAPABILITY_PROOF_FAMILIES,
+  CAPABILITY_QUERY_TARGET_TYPES,
   SEMANTIC_CONFIDENCE_HINTS,
   type BrokerIntent,
   type CapabilityProofFamily,
@@ -77,6 +78,7 @@ const PACKAGE_ACQUISITIONS = new Set([
 const PACKAGE_LAYOUTS = new Set<string>(CAPABILITY_PACKAGE_LAYOUTS);
 const PROOF_FAMILIES = new Set<CapabilityProofFamily>(CAPABILITY_PROOF_FAMILIES);
 const CONFIDENCE_HINTS = new Set(SEMANTIC_CONFIDENCE_HINTS);
+const QUERY_TARGET_TYPES = new Set(CAPABILITY_QUERY_TARGET_TYPES);
 const MANAGED_HOST_CATALOG_BASENAME = "host-skills.seed.json";
 const MANAGED_HOST_CATALOG_SUFFIX = `/config/${MANAGED_HOST_CATALOG_BASENAME}`;
 
@@ -211,6 +213,9 @@ function validateQueryMetadata(
   validateOptionalString(filePath, `${path}.summary`, value.summary);
   validateOptionalStringArray(filePath, `${path}.keywords`, value.keywords);
   validateOptionalStringArray(filePath, `${path}.antiKeywords`, value.antiKeywords);
+  validateOptionalStringArray(filePath, `${path}.jobFamilies`, value.jobFamilies);
+  validateOptionalStringArray(filePath, `${path}.artifacts`, value.artifacts);
+  validateOptionalStringArray(filePath, `${path}.examples`, value.examples);
   if (value.confidenceHints !== undefined) {
     validateEnumArray(
       filePath,
@@ -227,6 +232,15 @@ function validateQueryMetadata(
       value.proofFamily,
       PROOF_FAMILIES,
       Array.from(PROOF_FAMILIES).join(", ")
+    );
+  }
+  if (value.targetTypes !== undefined) {
+    validateEnumArray(
+      filePath,
+      `${path}.targetTypes`,
+      value.targetTypes,
+      QUERY_TARGET_TYPES,
+      Array.from(QUERY_TARGET_TYPES).join(", ")
     );
   }
 }

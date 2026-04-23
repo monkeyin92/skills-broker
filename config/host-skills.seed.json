@@ -191,6 +191,11 @@
         }
       },
       "query": {
+        "summary": "QA websites and produce reusable QA reports",
+        "keywords": ["website", "qa", "quality", "test", "audit"],
+        "antiKeywords": ["markdown", "social", "installation"],
+        "confidenceHints": ["website", "url", "qa_report"],
+        "proofFamily": "website_qa",
         "jobFamilies": ["quality_assurance"],
         "targetTypes": ["website", "url"],
         "artifacts": ["qa_report"],

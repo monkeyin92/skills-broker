@@ -1,4 +1,11 @@
 import type { BrokerHost } from "../core/types.js";
+import {
+  OPERATOR_TRUTH_CONTRACT,
+  formatDeferredHostsLine,
+  formatPublishedLifecycleCommandsLine,
+  formatSupportedHostsLine,
+  formatThirdHostReadinessLine
+} from "../core/operator-truth.js";
 
 type HostShellSkillMarkdownOptions = {
   host: BrokerHost;
@@ -20,9 +27,12 @@ const OTHER_BROKER_FIRST_EXAMPLES = [
   "我有一个想法：做一个自动串起评审和发版的工具",
   "帮我做需求分析并产出设计文档",
   "帮我看看这个需求有没有漏洞",
-  "把这个页面转成 markdown: https://example.com/a",
-  "convert this webpage to markdown https://example.com/a",
   "investigate this site failure with a reusable workflow"
+] as const;
+
+const WEB_MARKDOWN_SECOND_PROVEN_EXAMPLES = [
+  "把这个页面转成 markdown: https://example.com/a",
+  "convert this webpage to markdown https://example.com/a"
 ] as const;
 
 const HANDLE_NORMALLY_EXAMPLES = [
@@ -44,6 +54,11 @@ const CLARIFY_BEFORE_BROKER_EXAMPLES = [
   "test this",
   "帮我分析一下"
 ] as const;
+
+const {
+  heroLane: HERO_LANE,
+  secondProvenFamily: SECOND_PROVEN_FAMILY
+} = OPERATOR_TRUTH_CONTRACT;
 
 function renderExamples(examples: readonly string[]): string {
   return examples.map((example) => `- "${example}"`).join("\n");
@@ -82,7 +97,12 @@ function partitionExamples(
 
   return {
     heroExamples,
-    secondaryMaintainedExamples,
+    secondaryMaintainedExamples: Array.from(
+      new Set([
+        ...WEB_MARKDOWN_SECOND_PROVEN_EXAMPLES,
+        ...secondaryMaintainedExamples
+      ])
+    ),
     otherBrokerFirstExamples: OTHER_BROKER_FIRST_EXAMPLES
   };
 }
@@ -165,6 +185,13 @@ The host decides only one of these boundary outcomes:
 
 Do not decide whether the request is QA, markdown conversion, requirements analysis, investigation, or capability discovery at the host layer. That selection belongs to the broker after handoff.
 
+## Supported Host Truth
+
+- ${formatSupportedHostsLine()}
+- ${formatDeferredHostsLine()}
+- ${formatPublishedLifecycleCommandsLine()}
+- ${formatThirdHostReadinessLine()}
+
 ## Broker-First (\`broker_first\`)
 
 Use the broker first when the user is asking for:
@@ -173,26 +200,28 @@ Use the broker first when the user is asking for:
 - capability lookup or install help
 - external capability execution instead of ordinary model-native work
 
-If you need one concrete broker-first example to calibrate the boundary, start with website QA.
+If you need one concrete broker-first example to calibrate the boundary, start with ${HERO_LANE}.
 
 Treat the examples below as semantic anchors, not literal trigger phrases.
 
 - Minor wording changes that preserve the same intent should keep the same boundary decision.
 - Prefer semantic judgment over exact string overlap.
-- If the user clearly wants website QA, requirements analysis, investigation, or capability lookup, choose \`broker_first\` even when the wording is a paraphrase rather than one of the example sentences.
+- If the user clearly wants ${HERO_LANE}, requirements analysis, investigation, or capability lookup, choose \`broker_first\` even when the wording is a paraphrase rather than one of the example sentences.
 
-### Hero lane: website QA
+### Hero lane: ${HERO_LANE}
 
 Start here when you need one first-use path that proves the host shell is routing correctly.
 
-- If the user clearly wants a website tested, or wants help finding/installing the website QA winner, choose \`broker_first\`.
-- Keep website QA visually first. It is the QA default-entry lane and the calibration lane. Other maintained lanes are still valid, but secondary.
+- If the user clearly wants a website tested, or wants help finding/installing the ${HERO_LANE} winner, choose \`broker_first\`.
+- Keep ${HERO_LANE} visually first. It is the QA default-entry lane and the calibration lane. Other maintained lanes are still valid, but secondary.
 
 Examples:
 
 ${renderExamples(heroExamples)}
 
 ### Secondary maintained lanes
+
+The second proven family is ${SECOND_PROVEN_FAMILY}. Keep it visible here after ${HERO_LANE}, not as a competing first move.
 
 Requirements analysis and investigation still stay broker-first. They are maintained lanes, but they should not be the first thing this installed shell makes you try.
 
@@ -202,7 +231,7 @@ ${renderExamples(secondaryMaintainedExamples)}
 
 ### Other broker-first lanes
 
-Use the broker first for other reusable capability execution too, including markdown conversion and broader workflow or capability lookup paths.
+Use the broker first for other reusable capability execution too, including broader workflow or capability lookup paths.
 
 Examples:
 

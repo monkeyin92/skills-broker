@@ -1,19 +1,5 @@
 # TODOS
 
-## Ecosystem
-
-### Generalize maintained-family semantic contract after QA default-entry proof is hard
-
-**What:** Revisit richer maintained-family semantic boundary structure only after the website QA default-entry loop is proven end to end in docs, host shell, doctor, and QA-specific proof rails.
-
-**Why:** Right now the higher-leverage gap is operator-visible QA conversion truth, not prettier family schema. Generalizing too early risks adding structure with no runtime consumer.
-
-**Context:** The current packet should harden `website QA` as the QA default-entry loop. Generic semantic-contract expansion becomes valuable again only after that loop has dedicated install-required -> rerun -> reuse proof and operator-visible doctor truth.
-
-**Effort:** M
-**Priority:** P2
-**Depends on:** website QA default-entry conversion hardening landing first
-
 ## Host Expansion
 
 ### Add OpenCode as the third thin host shell
@@ -22,13 +8,30 @@
 
 **Why:** This validates that the current host-agnostic design is real, not just "Claude plus Codex with some duplication."
 
-**Context:** The current supported host matrix is still Claude Code plus Codex only. OpenCode remains the next deferred thin-host shell once the query-native ingress and package-vs-leaf migration tail stop leaking compatibility debt.
+**Context:** Supported now: Claude Code, Codex. Deferred but planned: OpenCode thin host shell. Keep website QA as the hero lane, web markdown as the second proven family, and keep published lifecycle commands on `npx skills-broker update`, `npx skills-broker doctor`, and `npx skills-broker remove`.
+
+**Readiness contract:** `docs/superpowers/specs/2026-04-22-third-host-thin-shell-readiness.md`
+
+**Readiness gate:** Third-host readiness stays gated on the same shared broker home, thin host shell, proof/reuse state, and published lifecycle parity.
 
 **Effort:** M
 **Priority:** P2
 **Depends on:** the current host shell contract staying thin and stable
 
 ## Completed
+
+### Generalized family proofs after the QA default-entry proof landed
+
+**What:** Promote `familyProofs` into the canonical operator surface, keep `websiteQaLoop` as the compatibility alias, and publish web markdown as the second proven family instead of a vague secondary lane.
+
+**Why:** Once website QA had real default-entry proof, the next leverage point was to generalize that proof surface without weakening the hero lane or reopening generic semantic-contract work prematurely.
+
+**Shipped locally:** `doctor` now exposes canonical `familyProofs` for website QA plus web markdown, strict consumers still work through the `websiteQaLoop` alias, semantic metadata and loader validation explicitly recognize `website_qa` plus `web_content_to_markdown`, the canonical web-markdown install -> verify -> cross-host reuse loop is locked in integration tests, and repo docs plus installed shells now say the same thing: website QA is the hero lane and web markdown is the second proven family.
+
+**Effort:** M
+**Priority:** P2
+**Depends on:** website QA default-entry conversion hardening landing first
+**Completed:** shipped_local (2026-04-22)
 
 ### Turn discovery and install into a real flywheel
 
@@ -85,7 +88,7 @@
 
 **Why:** Users should be able to install and maintain the broker through one stable product command instead of cloning the repository first.
 
-**Shipped:** published `npx skills-broker update`, `doctor`, `remove`, JSON output support, official host path detection, and npm package distribution.
+**Shipped:** published `npx skills-broker update`, `npx skills-broker doctor`, `npx skills-broker remove`, JSON output support, official host path detection, and npm package distribution.
 
 ### Shipped the first host-agnostic broker auto-router contract
 
