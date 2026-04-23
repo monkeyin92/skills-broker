@@ -1,99 +1,111 @@
 # Roadmap: skills-broker
 
 **Created:** 2026-04-23
-**Source Requirements:** 8 v1.1 requirements from `.planning/REQUIREMENTS.md`
+**Source Requirements:** 8 v1.2 requirements from `.planning/REQUIREMENTS.md`
 **Granularity:** coarse
 **Project Type:** brownfield
 
 ## Roadmap Summary
 
-**4 phases** | **8 requirements mapped** | All v1.1 requirements covered ✓
+**3 phases** | **8 requirements mapped** | All v1.2 requirements covered ✓
 
 | # | Phase | Goal | Requirements | Success Criteria | UI Hint |
 |---|-------|------|--------------|------------------|---------|
-| 5 | Ship The OpenCode Thin Host Shell | 把 OpenCode 从 readiness contract 推进成真正 shipping 的第三宿主，同时继续守住 thin-shell 与 shared-home 边界 | HOST-01, HOST-02 | 4 | no |
-| 6 | Prove OpenCode Lifecycle And Reuse | 让 OpenCode 拿到与 Claude Code / Codex 对等的 lifecycle、doctor 与 proof / reuse 体验 | HOST-03 | 4 | no |
-| 7 | Expand Evidence-Backed Capability Surface | 在不稀释可解释性的前提下，继续增加 proven family、broker-owned workflow 与 registry-ready MCP discovery | CAP-01, CAP-02, CAP-03 | 4 | no |
-| 8 | Install CI Trust Guardrails | 把 blind-spot reporting 与 narrative parity 从 repo truth 提升为 CI truth | QUAL-01, QUAL-02 | 4 | no |
+| 9 | Lock Release Gate Verdicts | 把现有 CI trust rails 收口成 ship/release 可直接消费的 canonical gate | REL-01, REL-02, REL-03 | 4 | no |
+| 10 | Ship Repo-Owned Proof Promotion | 为 canonical `STATUS.md` truth 提供显式、fail-closed 的 shipped-proof promotion flow | PROOF-01, PROOF-02, PROOF-03 | 4 | no |
+| 11 | Close Publish Flow On Canonical Release Truth | 让 publish/release automation 直接复用 canonical status/doctor truth，并锁住 operator wording | SHIP-01, SHIP-02 | 4 | no |
 
 ## Phase Details
 
-### Phase 5: Ship The OpenCode Thin Host Shell
+### Phase 9: Lock Release Gate Verdicts
 
-**Goal:** 把 OpenCode 从 deferred readiness contract 推进成真正 shipping 的第三宿主，同时继续守住 thin-shell 与 shared broker home 边界。
+**Goal:** 把 `ci:blind-spot`、`test:ci:narrative-parity` 与 strict repo-scoped `doctor` 收口成 ship/release 可直接消费的 canonical gate，而不是三条彼此分离的 CI rail。
 
-**Requirements:** `HOST-01`, `HOST-02`
+**Requirements:** `REL-01`, `REL-02`, `REL-03`
 
-**UI hint**: no
+**Status:** pending
 
-**Success criteria:**
-1. OpenCode 可以安装 `skills-broker` host shell，并继续复用现有 shared broker home，而不是再创建第二套 runtime
-2. OpenCode host shell 的 installed copy 继续只决定 `broker_first` / `handle_normally` / `clarify_before_broker`
-3. OpenCode 集成不会让 Claude Code / Codex 的现有 host shell、shared-home 或 routing truth 回归
-4. repo docs 与 installed shell 对 OpenCode 的支持表述只在真实 shipping 能力存在后更新，不再停留在 deferred note
-
-**Depends on:** v1.0 third-host readiness contract and existing shared broker home architecture
-
-### Phase 6: Prove OpenCode Lifecycle And Reuse
-
-**Goal:** 让 OpenCode 拿到与 Claude Code / Codex 对等的 lifecycle、doctor 与 proof / reuse 体验，而不是只多了一个安装入口。
-
-**Requirements:** `HOST-03`
+**Verification:** —
 
 **UI hint**: no
 
+Plans:
+
+- [ ] `09-01-PLAN.md` — Gate ship/release on the existing CI trust rails instead of ad hoc manual checks
+- [ ] `09-02-PLAN.md` — Emit a machine-readable release verdict with failing rail, shipping ref, and remote freshness diagnostics
+
 **Success criteria:**
-1. OpenCode 用户可以执行 `install`、`update`、`doctor`、`remove`，且输出契约与现有宿主保持同级清晰度
-2. `doctor` 会把 OpenCode 纳入同一份 adoption / proof / reuse truth，而不是分叉出 OpenCode-only surface
-3. OpenCode 运行后的 verified downstream manifests、routing traces 与 acquisition memory 继续写入同一份 shared truth
-4. 至少一条跨宿主 proof 证明 OpenCode 与现有宿主之间可以共享 reuse evidence
+1. ship/release automation 可以把 `ci:blind-spot`、`test:ci:narrative-parity` 与 strict `doctor` 当成同一条 release gate，而不是继续拆成多条人工判断
+2. gate 输出能明确指出失败 rail、评估使用的 shipping ref，以及 remote truth 是否被刷新，maintainer 不必回看原始 workflow log 才知道哪里出错
+3. `verify:local` 继续保持 contributor 机器预检职责，不会被 release automation 误当成 shipping proof
+4. 任何缺失或损坏的 release-gate 输入都会在 publish 之前 fail closed
 
-**Depends on:** Phase 5 shipping OpenCode thin host shell without boundary regression
+**Depends on:** Phase 8 having already shipped CI blind-spot, narrative parity, and strict repo proof rails
 
-### Phase 7: Expand Evidence-Backed Capability Surface
+### Phase 10: Ship Repo-Owned Proof Promotion
 
-**Goal:** 在不稀释 deterministic、metadata-driven、可解释 routing 的前提下，继续增加 proven family、broker-owned workflow 与 registry-ready MCP discovery。
+**Goal:** 为 canonical `STATUS.md` truth 增加显式、repo-owned、fail-closed 的 shipped-proof promotion flow，结束 milestone 末尾人工补 `shipped_remote` 的做法。
 
-**Requirements:** `CAP-01`, `CAP-02`, `CAP-03`
+**Requirements:** `PROOF-01`, `PROOF-02`, `PROOF-03`
+
+**Status:** pending
+
+**Verification:** —
 
 **UI hint**: no
 
+Plans:
+
+- [ ] `10-01-PLAN.md` — Add an explicit promotion flow that reevaluates canonical status-board proofs against the shipping ref
+- [ ] `10-02-PLAN.md` — Fail close on broken ship-ref resolution, remote refresh, or canonical proof evaluation states
+- [ ] `10-03-PLAN.md` — Keep `STATUS.md`, doctor/status diagnostics, and promotion output aligned after successful upgrades
+
 **Success criteria:**
-1. 新增至少一条 default-entry family，且具备 install -> verify -> cross-host reuse 证据，而不是只新增 catalog entry
-2. 除 `idea-to-ship` 外至少一条 broker-owned workflow 成为正式 shipped path，并有清晰的 stage / handoff truth
-3. MCP discovery source 拿到可验证元数据与解释面，让 broker 能说明“为什么是这个 MCP”
-4. 新 surface 的接入不会迫使 broker 重写 routing core 或牺牲 explainable trace fields
+1. maintainer 可以运行明确的 promotion flow，把 eligible `shipped_local` canonical proofs 按 shipping ref 重新评估并升级成 `shipped_remote`
+2. shipping ref 解析失败、remote refresh 失败、canonical proof evaluation 失败都会阻止 promotion，而不是静默升级 shipped truth
+3. promotion 成功后，`STATUS.md`、doctor/status diagnostics 与 automation output 继续讲同一份 shipped truth，不需要手工补文案或状态
+4. promotion flow 的输入、输出与失败模式都是可审计、可重复执行的 repo-owned contract
 
-**Depends on:** Phase 6 stabilizing OpenCode lifecycle and shared proof / reuse truth
+**Depends on:** Phase 9 defining the canonical release gate verdict and shipping-ref diagnostics
 
-### Phase 8: Install CI Trust Guardrails
+### Phase 11: Close Publish Flow On Canonical Release Truth
 
-**Goal:** 把 blind-spot reporting 与 narrative parity 从 repo truth 提升为 CI truth，让 ship 前的关键回归不再只靠 milestone 末尾人工补账。
+**Goal:** 让 publish/release automation 直接复用 canonical status/doctor truth，并把 `shipped_local` / `shipped_remote` 与 lifecycle wording 锁成单一 operator story。
 
-**Requirements:** `QUAL-01`, `QUAL-02`
+**Requirements:** `SHIP-01`, `SHIP-02`
+
+**Status:** pending
+
+**Verification:** —
 
 **UI hint**: no
 
-**Success criteria:**
-1. CI 会输出 coverage budget 或 blind-spot report，明确标出高风险 runtime / proof surfaces 的覆盖缺口
-2. README、README.zh-CN、STATUS、TODOS、installed shell 等关键 narrative truth 的 parity 检查进入 CI
-3. 新增宿主、新增 family、新增 workflow 的 narrative / proof drift 会在 CI 中 fail closed，而不是只在人工审阅中暴露
-4. 本地 verify 与 CI quality gates 的职责边界清晰，不会重复制造一套新的 operator confusion
+Plans:
 
-**Depends on:** Phase 7 establishing the next wave of product surface worth protecting in CI
+- [ ] `11-01-PLAN.md` — Reuse the existing strict-doctor/status evaluator inside publish automation instead of adding release-only logic
+- [ ] `11-02-PLAN.md` — Lock release-facing wording and docs to the canonical shipped-local/shipped-remote contract
+
+**Success criteria:**
+1. published release automation 直接复用 CI 已验证过的 status-board / strict-doctor evaluator，而不是再分叉出 release-only evaluator
+2. canonical repo truth 变红、shipping ref 不可解析、或 remote truth 无法刷新时，publish 不会继续执行
+3. automation logs、README / README.zh-CN / STATUS / TODOS 与 published lifecycle wording 会继续对齐 `shipped_local` / `shipped_remote` 与 proven-family hierarchy
+4. maintainer 可以把一次成功发布追溯回同一份 canonical release truth，而不是在 CI、publish 与 docs 之间来回拼接证据
+
+**Depends on:** Phase 10 shipping the explicit proof-promotion flow on top of Phase 9 release-gate verdicts
 
 ## Milestone View
 
-### Milestone 2: Third-Host Expansion And Trust Scaling
+### Milestone 3: Release Truth And Shipping Closure
 
-Deliver Phases 5-8 to turn `skills-broker` from a two-host trusted broker into a three-host runtime with a broader proven surface and CI-backed trust guardrails.
+Deliver Phases 9-11 to turn the shipped CI trust rails into the default release gate, add an explicit shipped-proof promotion flow, and close the publish loop on one canonical release truth.
 
 ## Notes
 
-- This roadmap continues numbering from milestone v1.0; no phase renumber reset was used.
+- This roadmap continues numbering from milestone v1.1; no phase renumber reset was used.
 - Research was skipped for this milestone because `workflow.research` is currently disabled and repo-native product truth is already specific enough to scope the work.
-- The roadmap intentionally sequences OpenCode shipping before broader capability expansion so new surface area inherits the same shared-home and proof/reuse constraints.
+- Previous milestone phase directories were archived to `.planning/milestones/v1.0-phases/` and `.planning/milestones/v1.1-phases/` to clear the active phase workspace before Phase 9 planning begins.
+- The roadmap intentionally sequences release-gate verdicts before proof promotion, and proof promotion before publish-flow closure, so release automation never has to invent a second truth source.
 
 ---
 *Roadmap created: 2026-04-23*
-*Last updated: 2026-04-23 after initialization*
+*Last updated: 2026-04-23 after starting v1.2 milestone*

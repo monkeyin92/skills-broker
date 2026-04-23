@@ -3,24 +3,24 @@
 **Defined:** 2026-04-23
 **Core Value:** 用户只需要描述想达成的结果，broker 就能在当前宿主里找到、准备并复用合适的能力，而不用让用户记住工具名、重新发现赢家、或自己判断安装路径。
 
-## v1.1 Requirements
+## v1.2 Requirements
 
-### Host Expansion
+### Release Gates
 
-- [ ] **HOST-01**: OpenCode 用户可以安装 `skills-broker` thin host shell，并继续复用现有 shared broker home，而不需要初始化第二套 broker runtime
-- [ ] **HOST-02**: OpenCode host shell 只暴露 coarse broker-first boundary（`broker_first` / `handle_normally` / `clarify_before_broker`），不在宿主入口层泄露 package、skill 或 MCP 选择
-- [ ] **HOST-03**: OpenCode 用户可以执行与 Claude Code / Codex 对等的 `install`、`update`、`doctor`、`remove` 生命周期命令，并在 `doctor` 中看到同级 proof / reuse truth
+- [ ] **REL-01**: Maintainer can gate ship/publish on the same three trust rails already enforced in CI: `npm run ci:blind-spot`、`npm run test:ci:narrative-parity`、strict repo-scoped `skills-broker doctor`
+- [ ] **REL-02**: Maintainer can read a machine-readable release-gate verdict that identifies the failing rail, the evaluated shipping ref, and whether remote truth was refreshed
+- [ ] **REL-03**: Contributor can keep using `verify:local` as a local preflight, while release automation never treats local-only verification as shipping proof
 
-### Capability Surface
+### Proof Promotion
 
-- [ ] **CAP-01**: 在 `website QA` 与 `web markdown` 之外，至少新增一条有 install -> verify -> cross-host reuse 证据的 default-entry family
-- [ ] **CAP-02**: 除 `idea-to-ship` 之外，至少新增一条 broker-owned workflow 成为正式 shipped path，并保留可重复的 stage / handoff truth
-- [ ] **CAP-03**: MCP discovery source 需要从演示级 seed 提升为带验证元数据的 registry-ready source，使 broker 能解释为什么推荐某个 MCP
+- [ ] **PROOF-01**: Maintainer can run an explicit repo-owned promotion flow that re-evaluates canonical `STATUS.md` proof items against the shipping ref and upgrades eligible truth from `shipped_local` to `shipped_remote`
+- [ ] **PROOF-02**: Promotion flow fail-closes when shipping ref resolution, remote refresh, or canonical proof evaluation is missing or broken, instead of silently upgrading shipped truth
+- [ ] **PROOF-03**: After successful promotion, repo-visible shipped truth stays consistent across `STATUS.md`, doctor/status diagnostics, and release-facing automation output without manual cleanup
 
-### Quality Infrastructure
+### Release Truth
 
-- [ ] **QUAL-01**: CI 必须输出 coverage budget 或 blind-spot report，明确指出高风险 runtime / proof surfaces 是否仍有未覆盖区域
-- [ ] **QUAL-02**: narrative docs parity 检查必须进入 CI，至少覆盖支持矩阵、hero lane / proven family hierarchy 与 lifecycle commands
+- [ ] **SHIP-01**: Published release automation reuses the same status-board and strict-doctor truth contract already exercised in CI, instead of introducing a second release-only evaluator
+- [ ] **SHIP-02**: Operator-facing release wording keeps `shipped_local` / `shipped_remote`, published lifecycle commands, and current proven-family hierarchy aligned across release automation and repo-native docs
 
 ## Future Requirements
 
@@ -33,38 +33,39 @@
 - **CAP-04**: 新 proven families 的接入不应要求重写 routing core，而应继续依赖 metadata-driven、可解释的 broker contract
 - **CAP-05**: MCP registry readiness 需要继续向真实生态集成推进，包括 freshness、health 与 trust scoring
 
-### Quality Infrastructure
+### Release Truth
 
-- **QUAL-03**: milestone shipping 前的 verify / ship 流程应能自动利用 CI 结果，而不是只依赖本地 spot-check 和 phase-level verification
+- **SHIP-03**: 发布完成后应产出可审计的 shipping summary，把 package version、shipping ref 与 promoted proof verdict 绑定成后续 milestone audit 可复用的 repo truth
 
 ## Out of Scope
 
 | Feature | Reason |
 |---------|--------|
-| 在 OpenCode shipping 前继续做 broad semantic contract 美化 | 当前更值钱的是把第三宿主与新 surface 做成可验证产品真相 |
+| 在本 milestone 里重新开启第四宿主或新增 proven family / workflow 扩展 | 当前更值钱的是把现有 shipping truth 收口成默认 release truth |
+| 让 `verify:local` 取代 strict repo-scoped release gate | 本地预检与 repo shipping proof 回答的问题不同 |
+| 为 release 自动化引入第二套 status/proof evaluator | 会制造 CI truth 与 release truth 分叉 |
 | 引入 embeddings、语义搜索或模型分类来替换当前 deterministic / metadata-driven routing | 不符合当前产品方向与 proof-first 可解释性约束 |
 | 把 broker 变成 marketplace 或直接执行下游能力的平台 | 产品定位仍然是运行时能力决策层与 handoff 协调层 |
-| 一次 milestone 同时接多个新宿主 | 风险过高，会让 shared-home / lifecycle / proof-reuse 真相一起失焦 |
 
 ## Traceability
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| HOST-01 | Phase 5 | Pending |
-| HOST-02 | Phase 5 | Pending |
-| HOST-03 | Phase 6 | Pending |
-| CAP-01 | Phase 7 | Pending |
-| CAP-02 | Phase 7 | Pending |
-| CAP-03 | Phase 7 | Pending |
-| QUAL-01 | Phase 8 | Pending |
-| QUAL-02 | Phase 8 | Pending |
+| REL-01 | Phase 9 | Pending |
+| REL-02 | Phase 9 | Pending |
+| REL-03 | Phase 9 | Pending |
+| PROOF-01 | Phase 10 | Pending |
+| PROOF-02 | Phase 10 | Pending |
+| PROOF-03 | Phase 10 | Pending |
+| SHIP-01 | Phase 11 | Pending |
+| SHIP-02 | Phase 11 | Pending |
 
 **Coverage:**
 
-- v1.1 requirements: 8 total
+- v1.2 requirements: 8 total
 - Mapped to phases: 8
 - Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-04-23*
-*Last updated: 2026-04-23 after initial definition*
+*Last updated: 2026-04-23 after starting v1.2 milestone*
