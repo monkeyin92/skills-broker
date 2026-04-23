@@ -1,7 +1,7 @@
 {
   "name": "skills-broker",
   "version": "0.4.2",
-  "description": "Install-once shared broker runtime for routing skills and MCP capabilities across Claude Code and Codex.",
+  "description": "Install-once shared broker runtime for routing skills and MCP capabilities across Claude Code, Codex, and OpenCode.",
   "type": "module",
   "license": "MIT",
   "repository": {
@@ -17,6 +17,7 @@
     "mcp",
     "claude-code",
     "codex",
+    "opencode",
     "agent",
     "router"
   ],
@@ -33,6 +34,10 @@
   "scripts": {
     "build": "node ./node_modules/typescript/bin/tsc -p tsconfig.build.json && node -e \"const fs=require('fs');const file='dist/bin/skills-broker.js';const content=fs.readFileSync(file,'utf8');if(!content.startsWith('#!'))fs.writeFileSync(file,'#!/usr/bin/env node\\n'+content);\"",
     "test": "node ./node_modules/vitest/vitest.mjs",
+    "ci:blind-spot": "node --import ./scripts/register-ts-node.mjs ./scripts/ci-trust-report.mjs",
+    "release:gate": "node --import ./scripts/register-ts-node.mjs ./scripts/release-truth.mjs gate",
+    "release:promote": "node --import ./scripts/register-ts-node.mjs ./scripts/release-truth.mjs promote",
+    "test:ci:narrative-parity": "node ./node_modules/vitest/vitest.mjs --run tests/shared-home/operator-truth-parity.test.ts tests/hosts/host-shell-install.test.ts",
     "verify:local": "node --import ./scripts/register-ts-node.mjs ./scripts/verify-local.mjs",
     "verify:local:check": "node --import ./scripts/register-ts-node.mjs ./scripts/verify-local.mjs --check-only",
     "verify:local:repair": "node --import ./scripts/register-ts-node.mjs ./scripts/verify-local.mjs --repair"

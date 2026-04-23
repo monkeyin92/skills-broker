@@ -126,7 +126,10 @@ async function writeAcquisitionMemoryFixture(
 }
 
 async function writeVerifiedDownstreamManifestFixture(
-  brokerHomeDirectory: string
+  brokerHomeDirectory: string,
+  options: {
+    includeOpencodeWebMarkdown?: boolean;
+  } = {}
 ): Promise<void> {
   const claudeSkillDirectory = join(
     brokerHomeDirectory,
@@ -148,9 +151,22 @@ async function writeVerifiedDownstreamManifestFixture(
     "skills",
     "gstack-qa"
   );
+  const opencodeMarkdownDirectory = join(
+    brokerHomeDirectory,
+    "downstream",
+    "opencode",
+    "skills",
+    "baoyu",
+    ".agents",
+    "skills",
+    "baoyu-url-to-markdown"
+  );
 
   await mkdir(claudeSkillDirectory, { recursive: true });
   await mkdir(codexSkillDirectory, { recursive: true });
+  if (options.includeOpencodeWebMarkdown) {
+    await mkdir(opencodeMarkdownDirectory, { recursive: true });
+  }
   await writeFile(
     join(claudeSkillDirectory, ".skills-broker.json"),
     `${JSON.stringify(
@@ -223,6 +239,44 @@ async function writeVerifiedDownstreamManifestFixture(
     )}\n`,
     "utf8"
   );
+  if (options.includeOpencodeWebMarkdown) {
+    await writeFile(
+      join(opencodeMarkdownDirectory, ".skills-broker.json"),
+      `${JSON.stringify(
+        {
+          schemaVersion: 1,
+          verifiedAt: "2026-04-16T06:30:00.000Z",
+          skillName: "url-to-markdown",
+          verifiedCandidate: {
+            id: "web-content-to-markdown",
+            kind: "skill",
+            label: "Web Content to Markdown",
+            intent: "web_content_to_markdown",
+            package: {
+              packageId: "baoyu",
+              installState: "installed"
+            },
+            leaf: {
+              capabilityId: "baoyu.url-to-markdown",
+              packageId: "baoyu",
+              subskillId: "url-to-markdown"
+            },
+            implementation: {
+              id: "baoyu.url_to_markdown",
+              type: "local_skill",
+              ownerSurface: "broker_owned_downstream"
+            },
+            sourceMetadata: {
+              skillName: "url-to-markdown"
+            }
+          }
+        },
+        null,
+        2
+      )}\n`,
+      "utf8"
+    );
+  }
 }
 
 async function writeWebsiteQaInstallRequiredTraceFixture(
@@ -263,7 +317,13 @@ async function writeWebsiteQaInstallRequiredTraceFixture(
 }
 
 async function writeReusableFamilyProofFixtures(
-  brokerHomeDirectory: string
+  brokerHomeDirectory: string,
+  options: {
+    includeOpencodeWebMarkdown?: boolean;
+    includeSocialMarkdown?: boolean;
+  } = {
+    includeSocialMarkdown: true
+  }
 ): Promise<void> {
   const traceFilePath = routingTraceLogFilePath(brokerHomeDirectory);
   const acquisitionMemoryPath = acquisitionMemoryFilePath(brokerHomeDirectory);
@@ -287,10 +347,36 @@ async function writeReusableFamilyProofFixtures(
     "skills",
     "gstack-qa"
   );
+  const opencodeMarkdownDirectory = join(
+    brokerHomeDirectory,
+    "downstream",
+    "opencode",
+    "skills",
+    "baoyu",
+    ".agents",
+    "skills",
+    "baoyu-url-to-markdown"
+  );
+  const opencodeSocialDirectory = join(
+    brokerHomeDirectory,
+    "downstream",
+    "opencode",
+    "skills",
+    "baoyu",
+    ".agents",
+    "skills",
+    "baoyu-danger-x-to-markdown"
+  );
 
   await mkdir(join(brokerHomeDirectory, "state"), { recursive: true });
   await mkdir(claudeMarkdownDirectory, { recursive: true });
   await mkdir(codexQaDirectory, { recursive: true });
+  if (options.includeOpencodeWebMarkdown) {
+    await mkdir(opencodeMarkdownDirectory, { recursive: true });
+  }
+  if (options.includeSocialMarkdown !== false) {
+    await mkdir(opencodeSocialDirectory, { recursive: true });
+  }
   await writeFile(
     acquisitionMemoryPath,
     `${JSON.stringify(
@@ -316,13 +402,33 @@ async function writeReusableFamilyProofFixtures(
             candidateId: "web-content-to-markdown",
             packageId: "baoyu",
             leafCapabilityId: "baoyu.url-to-markdown",
-            successfulRoutes: 1,
+            successfulRoutes: options.includeOpencodeWebMarkdown ? 2 : 1,
             installedAt: "2026-04-16T06:00:00.000Z",
             verifiedAt: "2026-04-16T06:05:00.000Z",
             firstReuseAt: "2026-04-16T06:30:00.000Z",
-            verifiedHosts: ["claude-code", "codex"],
+            verifiedHosts: options.includeOpencodeWebMarkdown
+              ? ["claude-code", "opencode"]
+              : ["claude-code", "codex"],
             provenance: "package_probe"
-          }
+          },
+          ...(options.includeSocialMarkdown === false
+            ? []
+            : [
+                {
+                  canonicalKey:
+                    "query:v2|output:markdown_only|families:content_acquisition,social_content_conversion|artifacts:markdown|constraints:|targets:url:https://x.com/example/status/1|preferred:",
+                  compatibilityIntent: "social_post_to_markdown",
+                  candidateId: "social-post-to-markdown",
+                  packageId: "baoyu",
+                  leafCapabilityId: "baoyu.x-post-to-markdown",
+                  successfulRoutes: 2,
+                  installedAt: "2026-04-16T07:00:00.000Z",
+                  verifiedAt: "2026-04-16T07:05:00.000Z",
+                  firstReuseAt: "2026-04-16T07:20:00.000Z",
+                  verifiedHosts: ["codex", "opencode"],
+                  provenance: "package_probe"
+                }
+              ])
         ]
       },
       null,
@@ -390,7 +496,40 @@ async function writeReusableFamilyProofFixtures(
         stageId: null,
         reasonCode: null,
         timestamp: "2026-04-16T06:00:00.000Z"
-      }
+      },
+      ...(options.includeSocialMarkdown === false
+        ? []
+        : [
+            {
+              traceVersion: "2026-03-31",
+              requestText: "save this X post as markdown",
+              host: "codex",
+              hostDecision: "broker_first",
+              resultCode: "INSTALL_REQUIRED",
+              routingOutcome: "fallback",
+              missLayer: "retrieval",
+              normalizedBy: "structured_query",
+              requestSurface: "structured_query",
+              requestContract: "query_native",
+              selectionMode: "explicit",
+              hostAction: null,
+              candidateCount: 1,
+              winnerId: "social-post-to-markdown",
+              winnerPackageId: "baoyu",
+              selectedCapabilityId: "baoyu.x-post-to-markdown",
+              selectedLeafCapabilityId: "x-post-to-markdown",
+              selectedImplementationId: "baoyu.x_post_to_markdown",
+              selectedPackageInstallState: "available",
+              semanticMatchReason: "direct_route",
+              semanticMatchCandidateId: "social-post-to-markdown",
+              semanticMatchProofFamily: "social_post_to_markdown",
+              workflowId: null,
+              runId: null,
+              stageId: null,
+              reasonCode: "package_not_installed",
+              timestamp: "2026-04-16T07:00:00.000Z"
+            }
+          ])
     ]
       .map((trace) => JSON.stringify(trace))
       .join("\n")
@@ -469,6 +608,85 @@ async function writeReusableFamilyProofFixtures(
     )}\n`,
     "utf8"
   );
+  if (options.includeSocialMarkdown !== false) {
+    await writeFile(
+      join(opencodeSocialDirectory, ".skills-broker.json"),
+      `${JSON.stringify(
+        {
+          schemaVersion: 1,
+          verifiedAt: "2026-04-16T07:20:00.000Z",
+          skillName: "x-post-to-markdown",
+          verifiedCandidate: {
+            id: "social-post-to-markdown",
+            kind: "skill",
+            label: "Social Post to Markdown",
+            intent: "social_post_to_markdown",
+            package: {
+              packageId: "baoyu",
+              installState: "installed"
+            },
+            leaf: {
+              capabilityId: "baoyu.x-post-to-markdown",
+              packageId: "baoyu",
+              subskillId: "x-post-to-markdown"
+            },
+            implementation: {
+              id: "baoyu.x_post_to_markdown",
+              type: "local_skill",
+              ownerSurface: "broker_owned_downstream"
+            },
+            query: {
+              proofFamily: "social_post_to_markdown"
+            },
+            sourceMetadata: {
+              skillName: "x-post-to-markdown"
+            }
+          }
+        },
+        null,
+        2
+      )}\n`,
+      "utf8"
+    );
+  }
+  if (options.includeOpencodeWebMarkdown) {
+    await writeFile(
+      join(opencodeMarkdownDirectory, ".skills-broker.json"),
+      `${JSON.stringify(
+        {
+          schemaVersion: 1,
+          verifiedAt: "2026-04-16T06:30:00.000Z",
+          skillName: "url-to-markdown",
+          verifiedCandidate: {
+            id: "web-content-to-markdown",
+            kind: "skill",
+            label: "Web Content to Markdown",
+            intent: "web_content_to_markdown",
+            package: {
+              packageId: "baoyu",
+              installState: "installed"
+            },
+            leaf: {
+              capabilityId: "baoyu.url-to-markdown",
+              packageId: "baoyu",
+              subskillId: "url-to-markdown"
+            },
+            implementation: {
+              id: "baoyu.url_to_markdown",
+              type: "local_skill",
+              ownerSurface: "broker_owned_downstream"
+            },
+            sourceMetadata: {
+              skillName: "url-to-markdown"
+            }
+          }
+        },
+        null,
+        2
+      )}\n`,
+      "utf8"
+    );
+  }
 }
 
 describe("doctor shared broker home", () => {
@@ -612,8 +830,66 @@ describe("doctor shared broker home", () => {
           name: "codex",
           status: "not_detected",
           reason: expect.stringContaining("--codex-dir")
+        },
+        {
+          name: "opencode",
+          status: "not_detected",
+          reason: expect.stringContaining("--opencode-dir")
         }
       ]);
+    } finally {
+      await rm(runtimeDirectory, { recursive: true, force: true });
+    }
+  });
+
+  it("detects a managed OpenCode shell without claiming downstream proof parity", async () => {
+    const runtimeDirectory = await mkdtemp(
+      join(tmpdir(), "skills-broker-doctor-opencode-")
+    );
+    const brokerHomeDirectory = join(runtimeDirectory, ".skills-broker");
+    const opencodeRootDirectory = join(runtimeDirectory, ".config", "opencode");
+    const opencodeInstallDirectory = join(
+      opencodeRootDirectory,
+      "skills",
+      "skills-broker"
+    );
+
+    try {
+      await installSharedBrokerHome({
+        brokerHomeDirectory,
+        projectRoot: process.cwd()
+      });
+      await writeFreshGateArtifact(brokerHomeDirectory);
+      await mkdir(opencodeRootDirectory, { recursive: true });
+      await mkdir(opencodeInstallDirectory, { recursive: true });
+      await writeManagedShellManifest(opencodeInstallDirectory, {
+        managedBy: "skills-broker",
+        host: "opencode",
+        version: "test-version",
+        brokerHome: brokerHomeDirectory
+      });
+
+      const result = await doctorSharedBrokerHome({
+        brokerHomeDirectory,
+        homeDirectory: runtimeDirectory,
+        cwd: runtimeDirectory
+      });
+
+      expect(result.hosts).toContainEqual({
+        name: "opencode",
+        status: "detected",
+        reason: "managed by skills-broker"
+      });
+      expect(result.adoptionHealth).toMatchObject({
+        status: "green",
+        managedHosts: ["opencode"]
+      });
+      expect(result.verifiedDownstreamManifests.hosts).toContainEqual({
+        name: "opencode",
+        state: "missing",
+        manifests: 0,
+        qualityAssuranceManifests: 0
+      });
     } finally {
       await rm(runtimeDirectory, { recursive: true, force: true });
     }
@@ -858,11 +1134,17 @@ describe("doctor shared broker home", () => {
             state: "present",
             manifests: 1,
             qualityAssuranceManifests: 1
+          },
+          {
+            name: "opencode",
+            state: "missing",
+            manifests: 0,
+            qualityAssuranceManifests: 0
           }
         ]
       });
       expect(rendered).toContain(
-        "Verified downstream manifests: present, total=2, website_qa=1, claude-code=1, codex=1"
+        "Verified downstream manifests: present, total=2, website_qa=1, claude-code=1, codex=1, opencode=0"
       );
 
       const parsed = JSON.parse(formatLifecycleResult(result, "json")) as typeof result;
@@ -883,6 +1165,12 @@ describe("doctor shared broker home", () => {
             state: "present",
             manifests: 1,
             qualityAssuranceManifests: 1
+          },
+          {
+            name: "opencode",
+            state: "missing",
+            manifests: 0,
+            qualityAssuranceManifests: 0
           }
         ]
       });
@@ -891,7 +1179,63 @@ describe("doctor shared broker home", () => {
     }
   });
 
-  it("emits reusable family proofs for website QA and web markdown", async () => {
+  it("shows OpenCode participation on the shared verified downstream surface", async () => {
+    const runtimeDirectory = await mkdtemp(
+      join(tmpdir(), "skills-broker-doctor-downstream-opencode-")
+    );
+    const brokerHomeDirectory = join(runtimeDirectory, ".skills-broker");
+
+    try {
+      await installSharedBrokerHome({
+        brokerHomeDirectory,
+        projectRoot: process.cwd()
+      });
+      await writeVerifiedDownstreamManifestFixture(brokerHomeDirectory, {
+        includeOpencodeWebMarkdown: true
+      });
+
+      const result = await doctorSharedBrokerHome({
+        brokerHomeDirectory,
+        homeDirectory: runtimeDirectory,
+        cwd: runtimeDirectory
+      });
+      const rendered = formatLifecycleResult(result, "text");
+
+      expect(result.verifiedDownstreamManifests).toEqual({
+        rootPath: join(brokerHomeDirectory, "downstream"),
+        state: "present",
+        manifests: 3,
+        qualityAssuranceManifests: 1,
+        hosts: [
+          {
+            name: "claude-code",
+            state: "present",
+            manifests: 1,
+            qualityAssuranceManifests: 0
+          },
+          {
+            name: "codex",
+            state: "present",
+            manifests: 1,
+            qualityAssuranceManifests: 1
+          },
+          {
+            name: "opencode",
+            state: "present",
+            manifests: 1,
+            qualityAssuranceManifests: 0
+          }
+        ]
+      });
+      expect(rendered).toContain(
+        "Verified downstream manifests: present, total=3, website_qa=1, claude-code=1, codex=1, opencode=1"
+      );
+    } finally {
+      await rm(runtimeDirectory, { recursive: true, force: true });
+    }
+  });
+
+  it("emits reusable family proofs for website QA, web markdown, and social markdown", async () => {
     const runtimeDirectory = await mkdtemp(join(tmpdir(), "skills-broker-doctor-qa-loop-"));
     const brokerHomeDirectory = join(runtimeDirectory, ".skills-broker");
 
@@ -951,6 +1295,27 @@ describe("doctor shared broker home", () => {
         nextAction:
           "Web Markdown loop is proven; keep this request path as the second maintained-family demo."
       });
+      expect(result.familyProofs.social_post_to_markdown).toEqual({
+        label: "Social Markdown",
+        installRequiredTraces: 1,
+        rerunSuccessfulRoutes: 2,
+        reuseRecorded: 1,
+        downstreamReplayManifests: 1,
+        acquisitionMemoryState: "present",
+        verifiedDownstreamState: "present",
+        verdict: "proven",
+        phase: "cross_host_reuse_confirmed",
+        proofs: {
+          installRequiredObserved: true,
+          verifyConfirmed: true,
+          crossHostReuseConfirmed: true,
+          replayReady: true
+        },
+        verifyState: "confirmed",
+        crossHostReuseState: "confirmed",
+        nextAction:
+          "Social Markdown loop is proven; keep this request path as the next maintained-family demo."
+      });
       expect(result.websiteQaLoop).toEqual(result.familyProofs.website_qa);
 
       const parsed = JSON.parse(formatLifecycleResult(result, "json")) as typeof result;
@@ -960,12 +1325,16 @@ describe("doctor shared broker home", () => {
       expect(parsed.familyProofs.web_content_to_markdown.phase).toBe(
         "cross_host_reuse_confirmed"
       );
+      expect(parsed.familyProofs.social_post_to_markdown.verdict).toBe("proven");
+      expect(parsed.familyProofs.social_post_to_markdown.phase).toBe(
+        "cross_host_reuse_confirmed"
+      );
     } finally {
       await rm(runtimeDirectory, { recursive: true, force: true });
     }
   });
 
-  it("renders Website QA and Web Markdown proof loops in text output", async () => {
+  it("renders Website QA, Web Markdown, and Social Markdown proof loops in text output", async () => {
     const runtimeDirectory = await mkdtemp(
       join(tmpdir(), "skills-broker-doctor-family-proof-text-")
     );
@@ -1009,6 +1378,81 @@ describe("doctor shared broker home", () => {
       );
       expect(rendered).toContain(
         "Web Markdown next action: Web Markdown loop is proven; keep this request path as the second maintained-family demo."
+      );
+      expect(rendered).toContain(
+        "Social Markdown loop: install_required=observed (1 install_required trace); verify=confirmed (2 successful routes); reuse=confirmed (1 first reuse event); replay=ready (1 verified downstream manifest)"
+      );
+      expect(rendered).toContain(
+        "Social Markdown verify proof: confirmed (successful verification evidence recorded)"
+      );
+      expect(rendered).toContain(
+        "Social Markdown cross-host reuse proof: confirmed (first reuse across hosts recorded)"
+      );
+      expect(rendered).toContain(
+        "Social Markdown next action: Social Markdown loop is proven; keep this request path as the next maintained-family demo."
+      );
+    } finally {
+      await rm(runtimeDirectory, { recursive: true, force: true });
+    }
+  });
+
+  it("shows OpenCode-backed web markdown reuse on the shared doctor surface", async () => {
+    const runtimeDirectory = await mkdtemp(
+      join(tmpdir(), "skills-broker-doctor-opencode-proof-reuse-")
+    );
+    const brokerHomeDirectory = join(runtimeDirectory, ".skills-broker");
+
+    try {
+      await installSharedBrokerHome({
+        brokerHomeDirectory,
+        projectRoot: process.cwd()
+      });
+      await writeReusableFamilyProofFixtures(brokerHomeDirectory, {
+        includeOpencodeWebMarkdown: true,
+        includeSocialMarkdown: false
+      });
+
+      const result = await doctorSharedBrokerHome({
+        brokerHomeDirectory,
+        homeDirectory: runtimeDirectory,
+        cwd: runtimeDirectory,
+        now: new Date("2026-04-16T08:00:00.000Z")
+      });
+      const rendered = formatLifecycleResult(result, "text");
+
+      expect(result.acquisitionMemory).toEqual(
+        expect.objectContaining({
+          state: "present",
+          successfulRoutes: 3,
+          firstReuseRecorded: 1,
+          crossHostReuse: 1
+        })
+      );
+      expect(result.verifiedDownstreamManifests.hosts).toContainEqual({
+        name: "opencode",
+        state: "present",
+        manifests: 1,
+        qualityAssuranceManifests: 0
+      });
+      expect(result.familyProofs.web_content_to_markdown).toEqual(
+        expect.objectContaining({
+          rerunSuccessfulRoutes: 2,
+          reuseRecorded: 1,
+          downstreamReplayManifests: 2,
+          verifyState: "confirmed",
+          crossHostReuseState: "confirmed",
+          verdict: "proven",
+          phase: "cross_host_reuse_confirmed"
+        })
+      );
+      expect(rendered).toContain(
+        "Verified downstream manifests: present, total=3, website_qa=1, claude-code=1, codex=1, opencode=1"
+      );
+      expect(rendered).toContain(
+        "Web Markdown loop: install_required=observed (1 install_required trace); verify=confirmed (2 successful routes); reuse=confirmed (1 first reuse event); replay=ready (2 verified downstream manifests)"
+      );
+      expect(rendered).toContain(
+        "Web Markdown cross-host reuse proof: confirmed (first reuse across hosts recorded)"
       );
     } finally {
       await rm(runtimeDirectory, { recursive: true, force: true });
@@ -1057,6 +1501,59 @@ describe("doctor shared broker home", () => {
         reasons: []
       });
       expect(formatLifecycleResult(result, "text")).toContain("Adoption health: green");
+    } finally {
+      await rm(runtimeDirectory, { recursive: true, force: true });
+    }
+  }, 30_000);
+
+  it("keeps adoption health green for a managed OpenCode shell when repo truth is clean", async () => {
+    const runtimeDirectory = await mkdtemp(
+      join(tmpdir(), "skills-broker-doctor-opencode-adoption-green-")
+    );
+    const brokerHomeDirectory = join(runtimeDirectory, ".skills-broker");
+    const repoDirectory = join(runtimeDirectory, "repo");
+    const opencodeInstallDirectory = join(
+      runtimeDirectory,
+      ".config",
+      "opencode",
+      "skills",
+      "skills-broker"
+    );
+
+    try {
+      await installSharedBrokerHome({
+        brokerHomeDirectory,
+        projectRoot: process.cwd()
+      });
+      await writeFreshGateArtifact(brokerHomeDirectory);
+      await initGitRepo(repoDirectory);
+      await writeFile(join(repoDirectory, "README.md"), "# repo\n", "utf8");
+      await writeFile(join(repoDirectory, "STATUS.md"), renderStatusBoard("in_progress"), "utf8");
+      await commitAll(repoDirectory, "add clean status board");
+      await mkdir(opencodeInstallDirectory, { recursive: true });
+      await writeManagedShellManifest(opencodeInstallDirectory, {
+        managedBy: "skills-broker",
+        host: "opencode",
+        version: "test-version",
+        brokerHome: brokerHomeDirectory
+      });
+
+      const result = await doctorSharedBrokerHome({
+        brokerHomeDirectory,
+        homeDirectory: runtimeDirectory,
+        repoRootOverride: repoDirectory
+      });
+
+      expect(result.hosts).toContainEqual({
+        name: "opencode",
+        status: "detected",
+        reason: "managed by skills-broker"
+      });
+      expect(result.adoptionHealth).toEqual({
+        status: "green",
+        managedHosts: ["opencode"],
+        reasons: []
+      });
     } finally {
       await rm(runtimeDirectory, { recursive: true, force: true });
     }
@@ -1118,6 +1615,10 @@ describe("doctor shared broker home", () => {
       });
       expect(result.familyProofs.web_content_to_markdown.verdict).toBe("blocked");
       expect(result.familyProofs.web_content_to_markdown.phase).toBe(
+        "proof_unreadable"
+      );
+      expect(result.familyProofs.social_post_to_markdown.verdict).toBe("blocked");
+      expect(result.familyProofs.social_post_to_markdown.phase).toBe(
         "proof_unreadable"
       );
       expect(result.adoptionHealth.reasons).toEqual(

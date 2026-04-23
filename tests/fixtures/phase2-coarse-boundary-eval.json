@@ -52,10 +52,10 @@
       "now": "2026-03-31T10:10:00.000Z",
       "expect": {
         "hostDecision": "broker_first",
-        "resultCode": "HANDOFF_READY",
+        "resultCode": "WORKFLOW_STAGE_READY",
         "normalizedBy": "raw_request_fallback",
         "requestSurface": "raw_envelope",
-        "winnerId": "investigation"
+        "winnerId": "investigation-to-fix"
       }
     },
     {
@@ -67,10 +67,10 @@
       "now": "2026-03-31T10:11:00.000Z",
       "expect": {
         "hostDecision": "broker_first",
-        "resultCode": "HANDOFF_READY",
+        "resultCode": "WORKFLOW_STAGE_READY",
         "normalizedBy": "raw_request_fallback",
         "requestSurface": "raw_envelope",
-        "winnerId": "investigation"
+        "winnerId": "investigation-to-fix"
       }
     },
     {

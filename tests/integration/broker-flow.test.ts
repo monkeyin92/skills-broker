@@ -634,7 +634,14 @@ describe("runBroker", () => {
             server: {
               name: "io.example/url-to-markdown",
               title: "URL to Markdown",
-              description: "Fetch a webpage URL and convert the page into markdown."
+              description: "Fetch a webpage URL and convert the page into markdown.",
+              version: "1.0.0",
+              remotes: [
+                {
+                  type: "streamable-http",
+                  url: "https://example.com/mcp"
+                }
+              ]
             }
           }
         ]
@@ -2188,7 +2195,14 @@ describe("runBroker", () => {
             server: {
               name: "io.example/website-qa",
               title: "Website QA",
-              description: "QA websites, audit quality, and produce a qa report."
+              description: "QA websites, audit quality, and produce a qa report.",
+              version: "1.0.0",
+              remotes: [
+                {
+                  type: "streamable-http",
+                  url: "https://example.com/qa"
+                }
+              ]
             }
           }
         ]
@@ -2203,14 +2217,28 @@ describe("runBroker", () => {
             server: {
               name: "io.example/website-qa",
               title: "Website QA",
-              description: "QA websites, audit quality, and produce a qa report."
+              description: "QA websites, audit quality, and produce a qa report.",
+              version: "1.0.0",
+              remotes: [
+                {
+                  type: "streamable-http",
+                  url: "https://example.com/qa"
+                }
+              ]
             }
           },
           {
             server: {
               name: "io.example/aaa-website-qa",
               title: "AAA Website QA",
-              description: "QA websites, audit quality, and produce a qa report."
+              description: "QA websites, audit quality, and produce a qa report.",
+              version: "1.0.0",
+              remotes: [
+                {
+                  type: "streamable-http",
+                  url: "https://example.com/aaa-qa"
+                }
+              ]
             }
           }
         ]
@@ -2283,9 +2311,27 @@ describe("runBroker", () => {
       expect(verified.outcome.code).toBe("HANDOFF_READY");
       expect(verified.winner.id).toBe("io.example/website-qa");
       expect(verified.handoff.chosenPackage.installState).toBe("installed");
+      expect(verified.winner.sourceMetadata).toMatchObject({
+        registryVersion: "1.0.0",
+        registryTransport: "streamable-http",
+        registryEndpointCount: 1,
+        registryValidation: {
+          status: "validated",
+          usableRemoteCount: 1
+        },
+        registryQueryCoverage: {
+          matchedBy: "structured_query",
+          jobFamilies: ["quality_assurance"],
+          targetTypes: ["website"],
+          artifacts: ["qa_report"]
+        }
+      });
       expect(verified.debug.decision).toContain(
         "cache reuse: no cache hit, successful routing history: 0"
       );
+      expect(verified.debug.decision).toContain("validated MCP");
+      expect(verified.debug.decision).toContain("transport streamable-http");
+      expect(verified.debug.decision).toContain("query coverage");
       expect(verified.trace).toMatchObject({
         host: "claude-code",
         hostDecision: "broker_first",
@@ -2736,6 +2782,305 @@ describe("runBroker", () => {
     }
   });
 
+  it("proves social markdown INSTALL_REQUIRED -> install -> rerun -> cross-host reuse", async () => {
+    const runtime = await createRuntimePaths();
+    const hostCatalogFilePath = join(
+      runtime.directory,
+      "social-markdown-proof-host.json"
+    );
+    const mcpRegistryFilePath = join(
+      runtime.directory,
+      "social-markdown-proof-mcp.json"
+    );
+    const searchRoot = join(runtime.directory, "social-markdown-search-root");
+    const installedSkillDirectory = join(
+      searchRoot,
+      "baoyu-danger-x-to-markdown"
+    );
+    const request = {
+      requestText: "save this X post as markdown",
+      host: "codex" as const,
+      capabilityQuery: {
+        kind: "capability_request" as const,
+        goal: "convert social post to markdown",
+        host: "codex" as const,
+        requestText: "save this X post as markdown",
+        jobFamilies: ["content_acquisition", "social_content_conversion"],
+        targets: [
+          {
+            type: "url" as const,
+            value: "https://x.com/example/status/1"
+          }
+        ],
+        artifacts: ["markdown"]
+      }
+    };
+
+    await mkdir(searchRoot, { recursive: true });
+    await writeFile(
+      hostCatalogFilePath,
+      JSON.stringify({
+        packages: [
+          {
+            packageId: "baoyu",
+            label: "baoyu",
+            installState: "available",
+            acquisition: "published_package",
+            probe: {
+              layouts: ["single_skill_directory"]
+            }
+          }
+        ],
+        skills: [
+          {
+            id: "social-post-to-markdown",
+            kind: "skill",
+            label: "Social Post to Markdown",
+            intent: "social_post_to_markdown",
+            package: {
+              packageId: "baoyu"
+            },
+            leaf: {
+              capabilityId: "baoyu.x-post-to-markdown",
+              packageId: "baoyu",
+              subskillId: "x-post-to-markdown",
+              probe: {
+                manifestNames: ["baoyu-danger-x-to-markdown"],
+                aliases: ["x-post-to-markdown"]
+              }
+            },
+            query: {
+              proofFamily: "social_post_to_markdown",
+              jobFamilies: ["content_acquisition", "social_content_conversion"],
+              targetTypes: ["url", "website"],
+              artifacts: ["markdown"],
+              examples: ["save this X post as markdown"]
+            },
+            implementation: {
+              id: "baoyu.x_post_to_markdown",
+              type: "local_skill",
+              ownerSurface: "broker_owned_downstream"
+            }
+          }
+        ]
+      }),
+      "utf8"
+    );
+    await writeFile(mcpRegistryFilePath, JSON.stringify({ servers: [] }), "utf8");
+
+    try {
+      const installRequired = await runBroker(request, {
+        brokerHomeDirectory: runtime.brokerHomeDirectory,
+        cacheFilePath: join(
+          runtime.directory,
+          "social-markdown-install-required.json"
+        ),
+        hostCatalogFilePath,
+        mcpRegistryFilePath,
+        currentHost: "codex",
+        packageSearchRoots: [searchRoot],
+        now: new Date("2026-04-18T07:00:00.000Z")
+      });
+
+      expect(installRequired.ok).toBe(false);
+      expect(installRequired.outcome.code).toBe("INSTALL_REQUIRED");
+      expect(installRequired.outcome.message).toContain(
+        'Install and verify package "baoyu" before retrying.'
+      );
+      expect(installRequired.acquisition?.installPlan.steps).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            id: "verify",
+            title: "Verify package and leaf"
+          }),
+          expect.objectContaining({
+            id: "retry",
+            instructions: "After verification succeeds, rerun the same broker request."
+          })
+        ])
+      );
+      expect(installRequired.trace).toMatchObject({
+        host: "codex",
+        hostDecision: "broker_first",
+        resultCode: "INSTALL_REQUIRED",
+        reasonCode: "package_not_installed",
+        winnerId: "social-post-to-markdown",
+        winnerPackageId: "baoyu",
+        selectedCapabilityId: "baoyu.x-post-to-markdown",
+        selectedLeafCapabilityId: "x-post-to-markdown"
+      });
+
+      await mkdir(installedSkillDirectory, { recursive: true });
+      await writeFile(
+        join(installedSkillDirectory, "SKILL.md"),
+        "---\nname: baoyu-danger-x-to-markdown\n---\n",
+        "utf8"
+      );
+
+      const verified = await runBroker(request, {
+        brokerHomeDirectory: runtime.brokerHomeDirectory,
+        cacheFilePath: join(runtime.directory, "social-markdown-verified.json"),
+        hostCatalogFilePath,
+        mcpRegistryFilePath,
+        currentHost: "codex",
+        packageSearchRoots: [searchRoot],
+        now: new Date("2026-04-18T07:05:00.000Z")
+      });
+
+      expect(verified.ok).toBe(true);
+      expect(verified.outcome.code).toBe("HANDOFF_READY");
+      expect(verified.winner.id).toBe("social-post-to-markdown");
+      expect(verified.handoff.chosenPackage.installState).toBe("installed");
+      expect(verified.trace).toMatchObject({
+        host: "codex",
+        hostDecision: "broker_first",
+        resultCode: "HANDOFF_READY",
+        reasonCode: "query_native",
+        winnerId: "social-post-to-markdown",
+        winnerPackageId: "baoyu",
+        selectedCapabilityId: "baoyu.x-post-to-markdown",
+        selectedLeafCapabilityId: "x-post-to-markdown"
+      });
+
+      const verifiedAcquisitionMemory = JSON.parse(
+        await readFile(
+          acquisitionMemoryFilePath(runtime.brokerHomeDirectory),
+          "utf8"
+        )
+      ) as {
+        entries: Array<{
+          canonicalKey: string;
+          packageId: string;
+          leafCapabilityId: string;
+          successfulRoutes: number;
+          firstReuseAt?: string;
+          verifiedHosts: string[];
+        }>;
+      };
+
+      expect(verifiedAcquisitionMemory.entries).toHaveLength(1);
+      expect(verifiedAcquisitionMemory.entries[0]).toMatchObject({
+        canonicalKey:
+          "query:v2|output:markdown_only|families:content_acquisition,social_content_conversion|artifacts:markdown|constraints:|targets:url:https://x.com/example/status/1|preferred:",
+        packageId: "baoyu",
+        leafCapabilityId: "baoyu.x-post-to-markdown",
+        successfulRoutes: 1,
+        verifiedHosts: ["codex"]
+      });
+      expect(verifiedAcquisitionMemory.entries[0]).not.toHaveProperty(
+        "firstReuseAt"
+      );
+
+      const reused = await runBroker(
+        {
+          ...request,
+          host: "opencode",
+          capabilityQuery: {
+            ...request.capabilityQuery,
+            host: "opencode"
+          }
+        },
+        {
+          brokerHomeDirectory: runtime.brokerHomeDirectory,
+          cacheFilePath: join(runtime.directory, "social-markdown-reused.json"),
+          hostCatalogFilePath,
+          mcpRegistryFilePath,
+          currentHost: "opencode",
+          packageSearchRoots: [searchRoot],
+          now: new Date("2026-04-18T07:10:00.000Z")
+        }
+      );
+
+      expect(reused.ok).toBe(true);
+      expect(reused.outcome.code).toBe("HANDOFF_READY");
+      expect(reused.winner.id).toBe("social-post-to-markdown");
+      expect(reused.trace).toMatchObject({
+        host: "opencode",
+        hostDecision: "broker_first",
+        resultCode: "HANDOFF_READY",
+        reasonCode: "query_native",
+        winnerId: "social-post-to-markdown",
+        winnerPackageId: "baoyu",
+        selectedCapabilityId: "baoyu.x-post-to-markdown",
+        selectedLeafCapabilityId: "x-post-to-markdown"
+      });
+
+      const reusedAcquisitionMemory = JSON.parse(
+        await readFile(
+          acquisitionMemoryFilePath(runtime.brokerHomeDirectory),
+          "utf8"
+        )
+      ) as {
+        entries: Array<{
+          packageId: string;
+          successfulRoutes: number;
+          firstReuseAt?: string;
+          verifiedHosts: string[];
+        }>;
+      };
+
+      expect(reusedAcquisitionMemory.entries).toHaveLength(1);
+      expect(reusedAcquisitionMemory.entries[0]).toMatchObject({
+        packageId: "baoyu",
+        successfulRoutes: 2,
+        firstReuseAt: "2026-04-18T07:10:00.000Z",
+        verifiedHosts: expect.arrayContaining(["codex", "opencode"])
+      });
+
+      const persistedTraces = (
+        await readFile(
+          routingTraceLogFilePath(runtime.brokerHomeDirectory),
+          "utf8"
+        )
+      )
+        .trim()
+        .split("\n")
+        .map((line) =>
+          JSON.parse(line) as {
+            requestText: string;
+            host: string;
+          resultCode: string;
+          reasonCode: string | null;
+          winnerId: string | null;
+          selectedCapabilityId: string | null;
+          selectedLeafCapabilityId: string | null;
+        }
+      );
+
+      expect(persistedTraces).toEqual([
+        expect.objectContaining({
+          requestText: "save this X post as markdown",
+          host: "codex",
+          resultCode: "INSTALL_REQUIRED",
+          reasonCode: "package_not_installed",
+          winnerId: "social-post-to-markdown",
+          selectedCapabilityId: "baoyu.x-post-to-markdown",
+          selectedLeafCapabilityId: "x-post-to-markdown"
+        }),
+        expect.objectContaining({
+          requestText: "save this X post as markdown",
+          host: "codex",
+          resultCode: "HANDOFF_READY",
+          reasonCode: "query_native",
+          winnerId: "social-post-to-markdown",
+          selectedCapabilityId: "baoyu.x-post-to-markdown",
+          selectedLeafCapabilityId: "x-post-to-markdown"
+        }),
+        expect.objectContaining({
+          requestText: "save this X post as markdown",
+          host: "opencode",
+          resultCode: "HANDOFF_READY",
+          reasonCode: "query_native",
+          winnerId: "social-post-to-markdown",
+          selectedCapabilityId: "baoyu.x-post-to-markdown",
+          selectedLeafCapabilityId: "x-post-to-markdown"
+        })
+      ]);
+    } finally {
+      await rm(runtime.directory, { recursive: true, force: true });
+    }
+  });
+
   it("returns NO_CANDIDATE when local sources cannot match the request", async () => {
     const runtime = await createRuntimePaths();
     const emptyHostCatalogFilePath = join(runtime.directory, "empty-host.json");
@@ -2970,7 +3315,14 @@ describe("runBroker", () => {
             server: {
               name: "gstack",
               title: "Office Hours",
-              description: "Requirements analysis design doc brainstorming assistant."
+              description: "Requirements analysis design doc brainstorming assistant.",
+              version: "1.0.0",
+              remotes: [
+                {
+                  type: "streamable-http",
+                  url: "https://example.com/gstack"
+                }
+              ]
             }
           }
         ]
@@ -3114,7 +3466,14 @@ describe("runBroker", () => {
             server: {
               name: "io.example/url-to-markdown",
               title: "URL to Markdown",
-              description: "Fetch a webpage URL and convert the page into markdown."
+              description: "Fetch a webpage URL and convert the page into markdown.",
+              version: "1.0.0",
+              remotes: [
+                {
+                  type: "streamable-http",
+                  url: "https://example.com/mcp"
+                }
+              ]
             }
           }
         ]
@@ -3173,7 +3532,14 @@ describe("runBroker", () => {
             server: {
               name: "io.example/website-qa",
               title: "Website QA",
-              description: "QA websites, audit quality, and produce a qa report."
+              description: "QA websites, audit quality, and produce a qa report.",
+              version: "1.0.0",
+              remotes: [
+                {
+                  type: "streamable-http",
+                  url: "https://example.com/qa"
+                }
+              ]
             }
           },
           {
@@ -3181,7 +3547,14 @@ describe("runBroker", () => {
               name: "io.example/capability-discovery",
               title: "Capability Discovery",
               description:
-                "Find, discover, and install skills, MCP servers, plugins, and tools for a task."
+                "Find, discover, and install skills, MCP servers, plugins, and tools for a task.",
+              version: "1.0.0",
+              remotes: [
+                {
+                  type: "streamable-http",
+                  url: "https://example.com/discovery"
+                }
+              ]
             }
           }
         ]
@@ -4034,7 +4407,7 @@ describe("runBroker", () => {
     }
   });
 
-  it("routes raw investigation requests to the investigation downstream skill", async () => {
+  it("routes raw investigation requests to the investigation-to-fix workflow", async () => {
     const runtime = await createRuntimePaths();
 
     try {
@@ -4052,21 +4425,39 @@ describe("runBroker", () => {
       );
 
       expect(result.ok).toBe(true);
-      expect(result.outcome.code).toBe("HANDOFF_READY");
-      expect(result.winner.id).toBe("investigation");
-      expect(result.handoff.chosenPackage.packageId).toBe("gstack");
-      expect(result.handoff.chosenLeafCapability.subskillId).toBe("investigate");
-      expect(result.handoff.chosenImplementation.id).toBe("gstack.investigate");
+      expect(result.outcome.code).toBe("WORKFLOW_STAGE_READY");
+      expect(result.winner.id).toBe("investigation-to-fix");
+      expect(result.workflow).toMatchObject({
+        workflowId: "investigation-to-fix",
+        activeStageId: "investigate"
+      });
+      expect(result.stage).toMatchObject({
+        id: "investigate",
+        kind: "capability"
+      });
+      expect(result.stage.handoff?.chosenPackage.packageId).toBe("gstack");
+      expect(result.stage.handoff?.chosenLeafCapability.subskillId).toBe(
+        "investigate"
+      );
+      expect(result.stage.handoff?.chosenImplementation.id).toBe(
+        "gstack.investigate"
+      );
       expect(result.trace).toMatchObject({
         host: "codex",
-        resultCode: "HANDOFF_READY",
+        resultCode: "WORKFLOW_STAGE_READY",
         missLayer: null,
         normalizedBy: "raw_request_fallback",
         requestSurface: "raw_envelope",
-        winnerId: "investigation",
-        winnerPackageId: "gstack"
+        winnerId: "investigation-to-fix",
+        winnerPackageId: "skills_broker",
+        selectedCapabilityId: "gstack.investigate",
+        selectedLeafCapabilityId: "investigate",
+        selectedImplementationId: "gstack.investigate",
+        workflowId: "investigation-to-fix",
+        runId: result.workflow.runId,
+        stageId: "investigate"
       });
-      expect(result.handoff.request.capabilityQuery).toMatchObject({
+      expect(result.stage.handoff?.request.capabilityQuery).toMatchObject({
         goal: "investigate a site failure and identify root cause",
         jobFamilies: ["investigation"],
         targets: [

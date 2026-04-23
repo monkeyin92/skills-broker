@@ -7,6 +7,7 @@ import { describe, expect, it } from "vitest";
 import { createSyntheticHostSkippedBrokerTrace } from "../../src/broker/trace";
 import { runClaudeCodeAdapter } from "../../src/hosts/claude-code/adapter";
 import { runCodexAdapter } from "../../src/hosts/codex/adapter";
+import { runOpenCodeAdapter } from "../../src/hosts/opencode/adapter";
 import { loadMaintainedBrokerFirstContract } from "../../src/core/maintained-broker-first";
 
 const execFileAsync = promisify(execFile);
@@ -36,6 +37,13 @@ describe("installed host-shell routing smoke", () => {
       const brokerHomeDirectory = join(runtimeDirectory, ".skills-broker");
       const claudeShellDirectory = join(runtimeDirectory, ".claude", "skills", "skills-broker");
       const codexShellDirectory = join(runtimeDirectory, ".agents", "skills", "skills-broker");
+      const opencodeShellDirectory = join(
+        runtimeDirectory,
+        ".config",
+        "opencode",
+        "skills",
+        "skills-broker"
+      );
       const buildScriptPath = join(process.cwd(), "dist", "bin", "skills-broker.js");
 
       try {
@@ -48,7 +56,9 @@ describe("installed host-shell routing smoke", () => {
           "--claude-dir",
           claudeShellDirectory,
           "--codex-dir",
-          codexShellDirectory
+          codexShellDirectory,
+          "--opencode-dir",
+          opencodeShellDirectory
         ], {
           cwd: runtimeDirectory
         });
@@ -62,7 +72,9 @@ describe("installed host-shell routing smoke", () => {
         "--claude-dir",
         claudeShellDirectory,
         "--codex-dir",
-        codexShellDirectory
+        codexShellDirectory,
+        "--opencode-dir",
+        opencodeShellDirectory
       ], {
         cwd: runtimeDirectory
       });
@@ -75,7 +87,7 @@ describe("installed host-shell routing smoke", () => {
 
       expect(doctorResult.adoptionHealth).toMatchObject({
         status: "green",
-        managedHosts: ["claude-code", "codex"]
+        managedHosts: ["claude-code", "codex", "opencode"]
       });
 
       const requirementsAnalysisRequest = maintainedExamples.find((example) =>
@@ -110,6 +122,18 @@ describe("installed host-shell routing smoke", () => {
         {
           installDirectory: codexShellDirectory,
           now: new Date("2026-03-30T02:00:00.000Z")
+        }
+      );
+      const opencodeMarkdownResult = await runOpenCodeAdapter(
+        {
+          requestText: "turn this webpage into markdown: https://example.com/opencode",
+          host: "opencode",
+          invocationMode: "explicit",
+          urls: ["https://example.com/opencode"]
+        },
+        {
+          installDirectory: opencodeShellDirectory,
+          now: new Date("2026-03-30T02:15:00.000Z")
         }
       );
 
@@ -162,6 +186,17 @@ describe("installed host-shell routing smoke", () => {
           now: new Date("2026-03-30T03:00:00.000Z")
         }
       );
+      const opencodeUnsupportedResult = await runOpenCodeAdapter(
+        {
+          requestText: "explain this codebase layout",
+          host: "opencode",
+          invocationMode: "explicit"
+        },
+        {
+          installDirectory: opencodeShellDirectory,
+          now: new Date("2026-03-30T03:30:00.000Z")
+        }
+      );
 
       const ambiguousResult = await runCodexAdapter(
         {
@@ -197,6 +232,20 @@ describe("installed host-shell routing smoke", () => {
         }
       });
       expectQueryNativeRequest(discoveryResult.handoff.request);
+
+      expect(opencodeMarkdownResult).toMatchObject({
+        ok: true,
+        outcome: {
+          code: "HANDOFF_READY"
+        },
+        handoff: {
+          context: {
+            currentHost: "opencode"
+          },
+          request: {}
+        }
+      });
+      expectQueryNativeRequest(opencodeMarkdownResult.handoff.request);
 
       expect(requirementsResult).toMatchObject({
         ok: true,
@@ -266,37 +315,54 @@ describe("installed host-shell routing smoke", () => {
       expect(investigationResult).toMatchObject({
         ok: true,
         outcome: {
-          code: "HANDOFF_READY"
+          code: "WORKFLOW_STAGE_READY"
         },
-        handoff: {
-          chosenPackage: {
-            packageId: "gstack"
-          },
-          chosenLeafCapability: {
-            subskillId: "investigate"
-          },
-          chosenImplementation: {
-            id: "gstack.investigate"
-          },
-          request: {
-            capabilityQuery: {
-              goal: "investigate a site failure and identify root cause",
-              requestText: "investigate this site failure with a reusable workflow",
-              jobFamilies: ["investigation"],
-              targets: [
-                {
-                  type: "website",
-                  value: "https://example.com"
-                }
-              ],
-              artifacts: ["analysis", "recommendation"]
+        winner: {
+          id: "investigation-to-fix"
+        },
+        workflow: {
+          workflowId: "investigation-to-fix",
+          activeStageId: "investigate"
+        },
+        stage: {
+          id: "investigate",
+          handoff: {
+            chosenPackage: {
+              packageId: "gstack"
+            },
+            chosenLeafCapability: {
+              subskillId: "investigate"
+            },
+            chosenImplementation: {
+              id: "gstack.investigate"
+            },
+            request: {
+              capabilityQuery: {
+                goal: "investigate a site failure and identify root cause",
+                requestText: "investigate this site failure with a reusable workflow",
+                jobFamilies: ["investigation"],
+                targets: [
+                  {
+                    type: "website",
+                    value: "https://example.com"
+                  }
+                ],
+                artifacts: ["analysis", "recommendation"]
+              }
             }
           }
         }
       });
-      expectQueryNativeRequest(investigationResult.handoff.request);
+      expectQueryNativeRequest(investigationResult.stage.handoff!.request);
 
       expect(unsupportedResult).toMatchObject({
+        ok: false,
+        outcome: {
+          code: "UNSUPPORTED_REQUEST",
+          hostAction: "continue_normally"
+        }
+      });
+      expect(opencodeUnsupportedResult).toMatchObject({
         ok: false,
         outcome: {
           code: "UNSUPPORTED_REQUEST",
@@ -317,7 +383,9 @@ describe("installed host-shell routing smoke", () => {
       expect(qaResult.handoff.request.capabilityQuery?.requestText).toBe(
         qualityAssuranceRequest
       );
-      expect(investigationResult.handoff.request.capabilityQuery?.requestText).toBe(
+      expect(
+        investigationResult.stage.handoff?.request.capabilityQuery?.requestText
+      ).toBe(
         investigationRequest
       );
       expect(
@@ -326,6 +394,7 @@ describe("installed host-shell routing smoke", () => {
       expect(socialResult).not.toHaveProperty("trace");
       expect(qaResult).not.toHaveProperty("trace");
       expect(investigationResult).not.toHaveProperty("trace");
+      expect(opencodeMarkdownResult).not.toHaveProperty("trace");
       } finally {
         await rm(runtimeDirectory, { recursive: true, force: true });
       }

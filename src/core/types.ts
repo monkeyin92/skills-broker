@@ -1,6 +1,7 @@
 export const BROKER_HOSTS = [
   "claude-code",
-  "codex"
+  "codex",
+  "opencode"
 ] as const;
 
 export type BrokerHost = (typeof BROKER_HOSTS)[number];
@@ -22,6 +23,18 @@ export const BROKER_HOST_SUPPORT = {
     defaultRootDirectorySegments: [".codex"],
     defaultInstallDirectorySegments: [".agents", "skills", "skills-broker"],
     overrideFlag: "--codex-dir",
+    knownShellEntries: ["SKILL.md", "bin", ".skills-broker.json"]
+  },
+  opencode: {
+    host: "opencode",
+    defaultRootDirectorySegments: [".config", "opencode"],
+    defaultInstallDirectorySegments: [
+      ".config",
+      "opencode",
+      "skills",
+      "skills-broker"
+    ],
+    overrideFlag: "--opencode-dir",
     knownShellEntries: ["SKILL.md", "bin", ".skills-broker.json"]
   }
 } as const satisfies Record<

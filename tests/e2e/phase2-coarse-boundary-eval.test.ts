@@ -226,7 +226,11 @@ describe("Phase 2 coarse-boundary eval harness", () => {
         );
 
         expect(maintainedBrokerFirstWinnerIds(contract)).toEqual(
-          expect.arrayContaining(["requirements-analysis", "website-qa", "investigation"])
+          expect.arrayContaining([
+            "requirements-analysis",
+            "website-qa",
+            "investigation-to-fix"
+          ])
         );
         expect(maintainedBrokerFirstFamilies(contract)).toEqual(
           expect.arrayContaining([

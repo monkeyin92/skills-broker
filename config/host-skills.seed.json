@@ -89,6 +89,7 @@
         }
       },
       "query": {
+        "proofFamily": "social_post_to_markdown",
         "jobFamilies": ["content_acquisition", "social_content_conversion"],
         "targetTypes": ["url", "website"],
         "artifacts": ["markdown"],
@@ -233,7 +234,7 @@
       "query": {
         "jobFamilies": ["investigation"],
         "targetTypes": ["website", "url", "codebase", "problem_statement", "text"],
-        "artifacts": ["analysis", "recommendation"],
+        "artifacts": ["analysis"],
         "examples": [
           "investigate this site failure with a reusable workflow",
           "帮我排查这个网站为什么报错"
@@ -398,6 +399,117 @@
           "instructions": "Ship only after review and QA are complete.",
           "requiresArtifacts": ["review_approved", "qa_report"],
           "requiredCompletedStageIds": ["review", "qa"],
+          "requiresConfirmation": true,
+          "nextStageId": null
+        }
+      ]
+    },
+    {
+      "id": "investigation-to-fix",
+      "kind": "skill",
+      "label": "Investigation to Fix",
+      "intent": "capability_discovery_or_install",
+      "package": {
+        "packageId": "skills_broker"
+      },
+      "leaf": {
+        "capabilityId": "skills_broker.investigation-to-fix",
+        "packageId": "skills_broker",
+        "subskillId": "investigation-to-fix",
+        "probe": {
+          "manifestNames": ["skills-broker"],
+          "aliases": ["investigation-to-fix"]
+        }
+      },
+      "query": {
+        "jobFamilies": ["investigation"],
+        "targetTypes": ["website", "url", "codebase", "problem_statement", "text"],
+        "artifacts": ["analysis", "recommendation"],
+        "examples": [
+          "investigate this site failure with a reusable workflow",
+          "帮我定位这个网站为什么一直报错"
+        ]
+      },
+      "implementation": {
+        "id": "skills_broker.investigation_to_fix",
+        "type": "broker_workflow",
+        "ownerSurface": "broker_owned_downstream"
+      },
+      "startStageId": "investigate",
+      "stages": [
+        {
+          "id": "investigate",
+          "label": "Investigate the issue",
+          "kind": "capability",
+          "capability": {
+            "packageId": "gstack",
+            "capabilityId": "gstack.investigate",
+            "subskillId": "investigate",
+            "implementationId": "gstack.investigate",
+            "probe": {
+              "manifestNames": ["investigate"],
+              "aliases": ["gstack-investigate"]
+            }
+          },
+          "producesArtifacts": ["analysis", "recommendation"],
+          "nextStageId": "implement-fix",
+          "requiresConfirmation": true
+        },
+        {
+          "id": "implement-fix",
+          "label": "Implement the fix",
+          "kind": "host_native",
+          "instructions": "Implement the approved fix in the current workspace.",
+          "requiresArtifacts": ["analysis", "recommendation"],
+          "producesArtifacts": ["code_change"],
+          "nextStageId": "review-fix",
+          "requiresConfirmation": true
+        },
+        {
+          "id": "review-fix",
+          "label": "Review the fix",
+          "kind": "capability",
+          "capability": {
+            "packageId": "gstack",
+            "capabilityId": "gstack.review",
+            "subskillId": "review",
+            "implementationId": "gstack.review",
+            "probe": {
+              "manifestNames": ["review"],
+              "aliases": ["gstack-review"]
+            }
+          },
+          "requiresArtifacts": ["code_change"],
+          "producesArtifacts": ["review_approved"],
+          "nextStageId": "qa-fix",
+          "requiresConfirmation": true
+        },
+        {
+          "id": "qa-fix",
+          "label": "QA the fix",
+          "kind": "capability",
+          "capability": {
+            "packageId": "gstack",
+            "capabilityId": "gstack.qa",
+            "subskillId": "qa",
+            "implementationId": "gstack.qa",
+            "probe": {
+              "manifestNames": ["qa"],
+              "aliases": ["gstack-qa"]
+            }
+          },
+          "requiresArtifacts": ["code_change"],
+          "producesArtifacts": ["qa_report"],
+          "nextStageId": "ship-fix",
+          "requiresConfirmation": true
+        },
+        {
+          "id": "ship-fix",
+          "label": "Ship the fix",
+          "kind": "host_native",
+          "instructions": "Ship only after investigation, review, and QA are complete.",
+          "requiresArtifacts": ["review_approved", "qa_report"],
+          "requiredCompletedStageIds": ["review-fix", "qa-fix"],
           "requiresConfirmation": true,
           "nextStageId": null
         }

@@ -13,6 +13,10 @@ import {
   installCodexHostShell,
   type InstallCodexHostShellResult
 } from "../hosts/codex/install.js";
+import {
+  installOpenCodeHostShell,
+  type InstallOpenCodeHostShellResult
+} from "../hosts/opencode/install.js";
 import { readManagedShellManifest } from "./ownership.js";
 import {
   buildPeerSkillRemediation,
@@ -104,6 +108,7 @@ export type UpdateSharedBrokerHomeOptions = InstallSharedBrokerHomeOptions & {
   homeDirectory?: string;
   claudeCodeInstallDirectory?: string;
   codexInstallDirectory?: string;
+  opencodeInstallDirectory?: string;
   dryRun?: boolean;
   repairHostSurface?: boolean;
   clearManualRecovery?: boolean;
@@ -224,9 +229,21 @@ async function installHostShell(
   installDirectory: string,
   brokerHomeDirectory: string,
   projectRoot: string | undefined
-): Promise<InstallClaudeCodePluginResult | InstallCodexHostShellResult> {
+): Promise<
+  | InstallClaudeCodePluginResult
+  | InstallCodexHostShellResult
+  | InstallOpenCodeHostShellResult
+> {
   if (name === "claude-code") {
     return installClaudeCodeHostShell({
+      installDirectory,
+      brokerHomeDirectory,
+      projectRoot
+    });
+  }
+
+  if (name === "opencode") {
+    return installOpenCodeHostShell({
       installDirectory,
       brokerHomeDirectory,
       projectRoot
@@ -1049,7 +1066,8 @@ export async function updateSharedBrokerHome(
     homeDirectory: options.homeDirectory,
     brokerHomeOverride: options.brokerHomeDirectory,
     claudeDirOverride: options.claudeCodeInstallDirectory,
-    codexDirOverride: options.codexInstallDirectory
+    codexDirOverride: options.codexInstallDirectory,
+    opencodeDirOverride: options.opencodeInstallDirectory
   });
   const sharedHomeLayout = resolveSharedBrokerHomeLayout(options.brokerHomeDirectory);
   const sharedHomeExists = await pathExists(sharedHomeLayout.packageJsonPath);

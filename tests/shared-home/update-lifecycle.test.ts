@@ -9,7 +9,10 @@ import {
 } from "../../src/shared-home/broker-first-gate";
 import { detectWritableDirectory } from "../../src/shared-home/detect";
 import { installSharedBrokerHome } from "../../src/shared-home/install";
-import { resolveLifecyclePaths } from "../../src/shared-home/paths";
+import {
+  detectLifecycleHostTargets,
+  resolveLifecyclePaths
+} from "../../src/shared-home/paths";
 import { readManagedShellManifest } from "../../src/shared-home/ownership";
 import {
   appendPeerSurfaceLedgerEvent,
@@ -93,12 +96,81 @@ describe("shared-home lifecycle paths", () => {
       brokerHomeOverride: undefined,
       claudeDirOverride: undefined,
       codexDirOverride: undefined,
+      opencodeDirOverride: undefined,
       homeDirectory: "/tmp/home"
     });
 
     expect(paths.brokerHomeDirectory).toBe("/tmp/home/.skills-broker");
     expect(paths.claudeCodeInstallDirectory).toBe("/tmp/home/.claude/skills/skills-broker");
     expect(paths.codexInstallDirectory).toBe("/tmp/home/.agents/skills/skills-broker");
+    expect(paths.opencodeInstallDirectory).toBe(
+      "/tmp/home/.config/opencode/skills/skills-broker"
+    );
+  });
+
+  it("resolves an explicit OpenCode install directory override", () => {
+    const paths = resolveLifecyclePaths({
+      homeDirectory: "/tmp/home",
+      opencodeDirOverride: "/tmp/custom/opencode-shell"
+    });
+
+    expect(paths.opencodeInstallDirectory).toBe("/tmp/custom/opencode-shell");
+  });
+
+  it("detects OpenCode roots in both ~/.config/opencode and ~/.opencode", async () => {
+    const xdgRuntimeDirectory = await mkdtemp(
+      join(tmpdir(), "skills-broker-opencode-xdg-")
+    );
+    const legacyRuntimeDirectory = await mkdtemp(
+      join(tmpdir(), "skills-broker-opencode-legacy-")
+    );
+
+    try {
+      await mkdir(join(xdgRuntimeDirectory, ".config", "opencode"), {
+        recursive: true
+      });
+      await mkdir(join(legacyRuntimeDirectory, ".opencode"), {
+        recursive: true
+      });
+
+      const xdgTargets = await detectLifecycleHostTargets({
+        homeDirectory: xdgRuntimeDirectory
+      });
+      const legacyTargets = await detectLifecycleHostTargets({
+        homeDirectory: legacyRuntimeDirectory
+      });
+
+      expect(xdgTargets.opencode).toEqual({
+        installDirectory: join(
+          xdgRuntimeDirectory,
+          ".config",
+          "opencode",
+          "skills",
+          "skills-broker"
+        )
+      });
+      expect(legacyTargets.opencode).toEqual({
+        installDirectory: join(
+          legacyRuntimeDirectory,
+          ".opencode",
+          "skills",
+          "skills-broker"
+        )
+      });
+    } finally {
+      await rm(xdgRuntimeDirectory, { recursive: true, force: true });
+      await rm(legacyRuntimeDirectory, { recursive: true, force: true });
+    }
+  });
+
+  it("reports an OpenCode missing-root hint that points to --opencode-dir", async () => {
+    const targets = await detectLifecycleHostTargets({
+      homeDirectory: "/tmp/missing-opencode-home"
+    });
+
+    expect(targets.opencode).toEqual({
+      reason: expect.stringContaining("--opencode-dir")
+    });
   });
 
   it("treats a missing target directory with a writable parent as creatable", async () => {
@@ -291,6 +363,11 @@ describe("shared-home lifecycle paths", () => {
         status: "skipped_not_detected",
         reason: expect.stringContaining("--claude-dir")
       });
+      expect(result.hosts).toContainEqual({
+        name: "opencode",
+        status: "skipped_not_detected",
+        reason: expect.stringContaining("--opencode-dir")
+      });
       await expect(access(join(codexInstallDirectory, "SKILL.md"))).rejects.toThrow();
       await expect(access(join(brokerHomeDirectory, "package.json"))).rejects.toThrow();
     } finally {
@@ -315,10 +392,72 @@ describe("shared-home lifecycle paths", () => {
       });
 
       expect(result.status).toBe("success");
-      expect(result.hosts).toEqual([
-        { name: "claude-code", status: "planned_install" },
-        { name: "codex", status: "planned_install" }
-      ]);
+      expect(result.hosts).toContainEqual({
+        name: "claude-code",
+        status: "planned_install"
+      });
+      expect(result.hosts).toContainEqual({
+        name: "codex",
+        status: "planned_install"
+      });
+      expect(result.hosts).toContainEqual({
+        name: "opencode",
+        status: "skipped_not_detected",
+        reason: expect.stringContaining("--opencode-dir")
+      });
+    } finally {
+      await rm(runtimeDirectory, { recursive: true, force: true });
+    }
+  });
+
+  it("installs an OpenCode shell through the shared update path", async () => {
+    const runtimeDirectory = await mkdtemp(
+      join(tmpdir(), "skills-broker-update-opencode-")
+    );
+    const brokerHomeDirectory = join(runtimeDirectory, ".skills-broker");
+    const opencodeInstallDirectory = join(
+      runtimeDirectory,
+      "custom-opencode",
+      "skills-broker"
+    );
+
+    try {
+      const result = await updateSharedBrokerHome({
+        brokerHomeDirectory,
+        opencodeInstallDirectory,
+        homeDirectory: runtimeDirectory
+      });
+
+      expect(result.status).toBe("success");
+      expect(result.adoptionHealth).toMatchObject({
+        status: "green",
+        managedHosts: ["opencode"]
+      });
+      expect(result.hosts).toContainEqual({
+        name: "opencode",
+        status: "installed"
+      });
+
+      const manifest = await readManagedShellManifest(opencodeInstallDirectory);
+
+      expect(manifest.status).toBe("managed");
+      if (manifest.status === "managed") {
+        expect(manifest.manifest).toMatchObject({
+          host: "opencode",
+          brokerHome: brokerHomeDirectory
+        });
+      }
+
+      await expect(access(join(opencodeInstallDirectory, "SKILL.md"))).resolves.toBeUndefined();
+      await expect(
+        access(join(opencodeInstallDirectory, "bin", "run-broker"))
+      ).resolves.toBeUndefined();
+      await expect(
+        readFile(join(opencodeInstallDirectory, "SKILL.md"), "utf8")
+      ).resolves.toContain('"host":"opencode"');
+      await expect(
+        readFile(join(opencodeInstallDirectory, "SKILL.md"), "utf8")
+      ).resolves.toContain('"invocationMode":"explicit"');
     } finally {
       await rm(runtimeDirectory, { recursive: true, force: true });
     }

@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { acquisitionMemoryFilePath } from "../../src/broker/acquisition-memory";
 import { installCodexHostShell } from "../../src/hosts/codex/install";
+import { installOpenCodeHostShell } from "../../src/hosts/opencode/install";
 import { installSharedBrokerHome } from "../../src/shared-home/install";
 import { removeSharedBrokerHome } from "../../src/shared-home/remove";
 
@@ -79,6 +80,50 @@ describe("remove shared broker home", () => {
         status: "skipped_conflict",
         reason: "foreign ownership manifest"
       });
+    } finally {
+      await rm(runtimeDirectory, { recursive: true, force: true });
+    }
+  });
+
+  it("removes a managed OpenCode shell discovered from the default root", async () => {
+    const runtimeDirectory = await mkdtemp(join(tmpdir(), "skills-broker-remove-opencode-"));
+    const brokerHomeDirectory = join(runtimeDirectory, ".skills-broker");
+    const opencodeInstallDirectory = join(
+      runtimeDirectory,
+      ".config",
+      "opencode",
+      "skills",
+      "skills-broker"
+    );
+
+    try {
+      await installSharedBrokerHome({
+        brokerHomeDirectory,
+        projectRoot: process.cwd()
+      });
+      await installOpenCodeHostShell({
+        installDirectory: opencodeInstallDirectory,
+        brokerHomeDirectory,
+        projectRoot: process.cwd()
+      });
+
+      const result = await removeSharedBrokerHome({
+        brokerHomeDirectory,
+        homeDirectory: runtimeDirectory
+      });
+
+      expect(result.command).toBe("remove");
+      expect(result.sharedHome).toEqual({
+        path: brokerHomeDirectory,
+        status: "preserved",
+        acquisitionMemory: "preserved"
+      });
+      expect(result.hosts).toContainEqual({
+        name: "opencode",
+        status: "removed"
+      });
+      await expect(access(join(opencodeInstallDirectory, "SKILL.md"))).rejects.toThrow();
+      await expect(access(brokerHomeDirectory)).resolves.toBeUndefined();
     } finally {
       await rm(runtimeDirectory, { recursive: true, force: true });
     }
@@ -170,6 +215,94 @@ describe("remove shared broker home", () => {
       await expect(access(memoryPath)).rejects.toThrow();
       await expect(access(join(codexInstallDirectory, "SKILL.md"))).resolves.toBeUndefined();
       await expect(access(brokerHomeDirectory)).resolves.toBeUndefined();
+    } finally {
+      await rm(runtimeDirectory, { recursive: true, force: true });
+    }
+  });
+
+  it("clears acquisition memory while preserving a managed OpenCode shell", async () => {
+    const runtimeDirectory = await mkdtemp(
+      join(tmpdir(), "skills-broker-remove-opencode-memory-")
+    );
+    const brokerHomeDirectory = join(runtimeDirectory, ".skills-broker");
+    const opencodeInstallDirectory = join(
+      runtimeDirectory,
+      ".config",
+      "opencode",
+      "skills",
+      "skills-broker"
+    );
+    const memoryPath = acquisitionMemoryFilePath(brokerHomeDirectory);
+
+    try {
+      await installSharedBrokerHome({
+        brokerHomeDirectory,
+        projectRoot: process.cwd()
+      });
+      await installOpenCodeHostShell({
+        installDirectory: opencodeInstallDirectory,
+        brokerHomeDirectory,
+        projectRoot: process.cwd()
+      });
+      await writeFile(
+        memoryPath,
+        JSON.stringify({
+          version: "2026-04-16",
+          entries: []
+        }),
+        "utf8"
+      );
+
+      const result = await removeSharedBrokerHome({
+        brokerHomeDirectory,
+        homeDirectory: runtimeDirectory,
+        resetAcquisitionMemory: true
+      });
+
+      expect(result.sharedHome).toEqual({
+        path: brokerHomeDirectory,
+        status: "preserved",
+        acquisitionMemory: "cleared"
+      });
+      expect(result.hosts).toContainEqual({
+        name: "opencode",
+        status: "preserved"
+      });
+      await expect(access(memoryPath)).rejects.toThrow();
+      await expect(access(join(opencodeInstallDirectory, "SKILL.md"))).resolves.toBeUndefined();
+      await expect(access(brokerHomeDirectory)).resolves.toBeUndefined();
+    } finally {
+      await rm(runtimeDirectory, { recursive: true, force: true });
+    }
+  });
+
+  it("skips conflicting OpenCode directories discovered from the default root", async () => {
+    const runtimeDirectory = await mkdtemp(
+      join(tmpdir(), "skills-broker-remove-opencode-conflict-")
+    );
+    const brokerHomeDirectory = join(runtimeDirectory, ".skills-broker");
+    const opencodeInstallDirectory = join(
+      runtimeDirectory,
+      ".config",
+      "opencode",
+      "skills",
+      "skills-broker"
+    );
+
+    try {
+      await mkdir(opencodeInstallDirectory, { recursive: true });
+      await writeFile(join(opencodeInstallDirectory, ".skills-broker.json"), "{}", "utf8");
+
+      const result = await removeSharedBrokerHome({
+        brokerHomeDirectory,
+        homeDirectory: runtimeDirectory
+      });
+
+      expect(result.hosts).toContainEqual({
+        name: "opencode",
+        status: "skipped_conflict",
+        reason: "foreign ownership manifest"
+      });
     } finally {
       await rm(runtimeDirectory, { recursive: true, force: true });
     }

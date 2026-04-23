@@ -35,6 +35,15 @@ const FAMILY_FORMAT_CONFIG: Record<
     verifyPendingLabel: "successful web markdown verification",
     verifyProofSuccessLabel: "successful verification",
     verifyProofPendingLabel: "successful verification"
+  },
+  social_post_to_markdown: {
+    label: "Social Markdown",
+    requestLabel: "social markdown",
+    verifySegmentLabel: "verify",
+    verifySuccessLabel: "successful route",
+    verifyPendingLabel: "successful social markdown verification",
+    verifyProofSuccessLabel: "successful verification",
+    verifyProofPendingLabel: "successful verification"
   }
 };
 
@@ -233,7 +242,8 @@ export function formatLifecycleResult(
     );
     for (const family of [
       "website_qa",
-      "web_content_to_markdown"
+      "web_content_to_markdown",
+      "social_post_to_markdown"
     ] as const satisfies DoctorProofFamily[]) {
       const proof = result.familyProofs[family];
       lines.push(formatFamilyLoopLine(family, proof));

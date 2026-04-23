@@ -14,16 +14,52 @@ type McpSearchRequest = {
   capabilityQuery?: CapabilityQuery;
 };
 
+type McpRegistryRemote = {
+  type?: string;
+  url?: string;
+  command?: string;
+};
+
 type McpRegistryServer = {
   name?: string;
   title?: string;
   description?: string;
+  version?: string;
+  remotes?: McpRegistryRemote[];
 };
 
 type McpRegistrySearchResponse = {
   servers?: Array<{
     server?: McpRegistryServer;
   }>;
+};
+
+type ValidatedMcpRegistryRemote = {
+  type: string;
+  endpoint: string;
+  endpointKind: "url" | "command";
+};
+
+type ValidatedMcpRegistryServer = {
+  name: string;
+  title?: string;
+  description?: string;
+  version: string;
+  remotes: ValidatedMcpRegistryRemote[];
+  transportTypes: string[];
+  primaryTransport: string;
+  endpointCount: number;
+};
+
+type RegistryQueryCoverage = {
+  matchedBy:
+    | "intent_match"
+    | "structured_query"
+    | "preferred_capability"
+    | "discovery_fallback";
+  jobFamilies: string[];
+  targetTypes: CapabilityQueryTargetType[];
+  artifacts: string[];
 };
 
 export async function searchMcpRegistry(
@@ -34,7 +70,8 @@ export async function searchMcpRegistry(
   const response = await readRecordedSearchResponse(responseFilePath);
 
   return (response.servers ?? [])
-    .map((entry) => toCapabilityCandidate(entry.server, request))
+    .map((entry) => validateRegistryServer(entry.server))
+    .map((server) => toCapabilityCandidate(server, request))
     .filter((candidate): candidate is CapabilityCandidate => candidate !== null);
 }
 
@@ -64,7 +101,83 @@ function normalizeIdentifier(value: string): string {
   return normalized.length > 0 ? normalized : "default";
 }
 
-function deriveLeafSubskillId(server: McpRegistryServer): string {
+function nonEmptyString(value: string | undefined): string | undefined {
+  if (typeof value !== "string") {
+    return undefined;
+  }
+
+  const trimmed = value.trim();
+
+  return trimmed.length > 0 ? trimmed : undefined;
+}
+
+function validateRegistryRemote(
+  remote: McpRegistryRemote | undefined
+): ValidatedMcpRegistryRemote | null {
+  const type = nonEmptyString(remote?.type);
+  const url = nonEmptyString(remote?.url);
+  const command = nonEmptyString(remote?.command);
+
+  if (type === undefined) {
+    return null;
+  }
+
+  if (url !== undefined) {
+    return {
+      type,
+      endpoint: url,
+      endpointKind: "url"
+    };
+  }
+
+  if (command !== undefined) {
+    return {
+      type,
+      endpoint: command,
+      endpointKind: "command"
+    };
+  }
+
+  return null;
+}
+
+function validateRegistryServer(
+  server: McpRegistryServer | undefined
+): ValidatedMcpRegistryServer | null {
+  const name = nonEmptyString(server?.name);
+  const version = nonEmptyString(server?.version);
+
+  if (name === undefined || version === undefined) {
+    return null;
+  }
+
+  const remotes = Array.isArray(server?.remotes)
+    ? server.remotes
+        .map((remote) => validateRegistryRemote(remote))
+        .filter(
+          (remote): remote is ValidatedMcpRegistryRemote => remote !== null
+        )
+    : [];
+
+  if (remotes.length === 0) {
+    return null;
+  }
+
+  return {
+    name,
+    title: nonEmptyString(server?.title),
+    description: nonEmptyString(server?.description),
+    version,
+    remotes,
+    transportTypes: uniqueStrings(remotes.map((remote) => remote.type)),
+    primaryTransport: remotes[0].type,
+    endpointCount: remotes.length
+  };
+}
+
+function deriveLeafSubskillId(
+  server: Pick<McpRegistryServer, "name" | "title">
+): string {
   const rawSegment =
     server.name?.split("/").pop() ??
     server.title ??
@@ -74,7 +187,9 @@ function deriveLeafSubskillId(server: McpRegistryServer): string {
   return normalizeIdentifier(rawSegment);
 }
 
-function searchableText(server: McpRegistryServer): string {
+function searchableText(
+  server: Pick<McpRegistryServer, "name" | "title" | "description">
+): string {
   return [server.name, server.title, server.description]
     .filter((value): value is string => value !== undefined)
     .join(" ")
@@ -86,7 +201,7 @@ function uniqueStrings<T extends string>(values: T[]): T[] {
 }
 
 function deriveQueryMetadata(
-  server: McpRegistryServer
+  server: Pick<McpRegistryServer, "name" | "title" | "description">
 ): CapabilityQueryMetadata | undefined {
   const text = searchableText(server);
   const jobFamilies: string[] = [];
@@ -172,18 +287,21 @@ function queryTargetTypes(query: CapabilityQuery): CapabilityQueryTargetType[] {
   return uniqueStrings(query.targets.map((target) => target.type));
 }
 
-function overlaps(left: string[] | undefined, right: string[] | undefined): boolean {
+function overlapValues<T extends string>(
+  left: T[] | undefined,
+  right: T[] | undefined
+): T[] {
   if (left === undefined || right === undefined || left.length === 0 || right.length === 0) {
-    return false;
+    return [];
   }
 
   const rightSet = new Set(right);
 
-  return left.some((value) => rightSet.has(value));
+  return left.filter((value) => rightSet.has(value));
 }
 
 function preferredCapabilityMatches(
-  server: McpRegistryServer,
+  server: Pick<McpRegistryServer, "name" | "title">,
   preferredCapability: string | null | undefined
 ): boolean {
   if (preferredCapability === undefined || preferredCapability === null) {
@@ -203,56 +321,94 @@ function preferredCapabilityMatches(
     candidateNames.includes(normalizedPreferred);
 }
 
-function matchesCapabilityQuery(
-  server: McpRegistryServer,
+function emptyQueryMetadata(
+  server: Pick<McpRegistryServer, "name" | "title" | "description">
+): CapabilityQueryMetadata {
+  return {
+    jobFamilies: [],
+    targetTypes: [],
+    artifacts: [],
+    examples: [server.description ?? server.title ?? server.name ?? "mcp capability"]
+  };
+}
+
+function structuredQueryCoverage(
+  server: Pick<McpRegistryServer, "name" | "title">,
   metadata: CapabilityQueryMetadata | undefined,
   query: CapabilityQuery
-): boolean {
+): RegistryQueryCoverage | null {
   if (preferredCapabilityMatches(server, query.preferredCapability)) {
-    return true;
+    return {
+      matchedBy: "preferred_capability",
+      jobFamilies: [],
+      targetTypes: [],
+      artifacts: []
+    };
   }
 
   if (metadata === undefined) {
-    return false;
+    return null;
   }
+
+  const jobFamilies = overlapValues(metadata.jobFamilies, query.jobFamilies);
+  const targetTypes = overlapValues(metadata.targetTypes, queryTargetTypes(query));
+  const artifacts = overlapValues(metadata.artifacts, query.artifacts);
 
   if (metadata.jobFamilies.includes("capability_acquisition")) {
-    return true;
+    return {
+      matchedBy: "discovery_fallback",
+      jobFamilies,
+      targetTypes,
+      artifacts
+    };
   }
 
-  return (
-    overlaps(metadata.jobFamilies, query.jobFamilies) ||
-    overlaps(metadata.targetTypes, queryTargetTypes(query)) ||
-    overlaps(metadata.artifacts, query.artifacts)
-  );
+  if (jobFamilies.length === 0 && targetTypes.length === 0 && artifacts.length === 0) {
+    return null;
+  }
+
+  return {
+    matchedBy: "structured_query",
+    jobFamilies,
+    targetTypes,
+    artifacts
+  };
 }
 
 function toCapabilityCandidate(
-  server: McpRegistryServer | undefined,
+  server: ValidatedMcpRegistryServer | null,
   request: McpSearchRequest
 ): CapabilityCandidate | null {
-  if (server?.name === undefined) {
+  if (server === null) {
     return null;
   }
 
   const metadata = deriveQueryMetadata(server);
+  const coverage =
+    request.capabilityQuery === undefined
+      ? matchesIntent(server, request.intent)
+        ? {
+            matchedBy: "intent_match" as const,
+            jobFamilies: metadata?.jobFamilies ?? [],
+            targetTypes: metadata?.targetTypes ?? [],
+            artifacts: metadata?.artifacts ?? []
+          }
+        : null
+      : structuredQueryCoverage(server, metadata, request.capabilityQuery);
 
-  if (
-    (request.capabilityQuery === undefined && !matchesIntent(server, request.intent)) ||
-    (request.capabilityQuery !== undefined &&
-      !matchesCapabilityQuery(server, metadata, request.capabilityQuery))
-  ) {
+  if (coverage === null) {
     return null;
   }
 
   const leafSubskillId = deriveLeafSubskillId(server);
+  const manifestNames = uniqueStrings([server.name, server.title ?? server.name]);
 
   return {
     id: server.name,
     kind: "mcp",
     label: server.title ?? server.name,
     intent: request.intent,
-    query: metadata,
+    query: metadata ?? emptyQueryMetadata(server),
     package: {
       packageId: server.name,
       label: server.title ?? server.name,
@@ -260,7 +416,7 @@ function toCapabilityCandidate(
       acquisition: "mcp_bundle",
       probe: {
         layouts: ["single_skill_directory"],
-        manifestNames: [server.name, server.title ?? server.name]
+        manifestNames
       }
     },
     leaf: {
@@ -268,7 +424,7 @@ function toCapabilityCandidate(
       packageId: server.name,
       subskillId: leafSubskillId,
       probe: {
-        manifestNames: [server.name, server.title ?? server.name],
+        manifestNames,
         aliases: [leafSubskillId]
       }
     },
@@ -279,41 +435,44 @@ function toCapabilityCandidate(
     },
     sourceMetadata: {
       registryName: server.name,
-      registryTitle: server.title
+      registryTitle: server.title,
+      registryVersion: server.version,
+      registryTransport: server.primaryTransport,
+      registryTransportTypes: server.transportTypes,
+      registryEndpointCount: server.endpointCount,
+      registryValidation: {
+        status: "validated",
+        usableRemoteCount: server.endpointCount
+      },
+      registryQueryCoverage: coverage
     }
   };
 }
 
-function matchesIntent(server: McpRegistryServer, intent: BrokerIntent): boolean {
-  const searchableText = [
-    server.name,
-    server.title,
-    server.description
-  ]
-    .filter(Boolean)
-    .join(" ")
-    .toLowerCase();
+function matchesIntent(
+  server: Pick<McpRegistryServer, "name" | "title" | "description">,
+  intent: BrokerIntent
+): boolean {
+  const searchable = searchableText(server);
 
   switch (intent) {
     case "web_content_to_markdown":
       return (
-        /markdown/.test(searchableText) &&
-        /(url|webpage|web page|web|page|crawl|scrape|fetch)/.test(searchableText) &&
+        /markdown/.test(searchable) &&
+        /(url|webpage|web page|web|page|crawl|scrape|fetch)/.test(searchable) &&
         !/(tweet|twitter|x post|x\.com|thread|bluesky|social post)/.test(
-          searchableText
+          searchable
         )
       );
     case "social_post_to_markdown":
       return (
-        /markdown/.test(searchableText) &&
+        /markdown/.test(searchable) &&
         /(tweet|twitter|x post|x\.com|thread|bluesky|social|post)/.test(
-          searchableText
+          searchable
         )
       );
     case "capability_discovery_or_install":
-      return /(skill|mcp|plugin|tool|discover|find|install)/.test(
-        searchableText
-      );
+      return /(skill|mcp|plugin|tool|discover|find|install)/.test(searchable);
     default:
       return false;
   }

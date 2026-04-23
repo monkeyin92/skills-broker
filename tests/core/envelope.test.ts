@@ -58,7 +58,7 @@ describe("parseBrokerEnvelope", () => {
   it("accepts a workflow resume payload", () => {
     const envelope = parseBrokerEnvelope({
       requestText: "继续这个 workflow",
-      host: "codex",
+      host: "opencode",
       workflowResume: {
         runId: "run-123",
         stageId: "office-hours",
@@ -73,6 +73,29 @@ describe("parseBrokerEnvelope", () => {
       decision: "confirm",
       artifacts: ["design_doc"]
     });
+  });
+
+  it("accepts opencode as a canonical envelope host", () => {
+    const envelope = parseBrokerEnvelope({
+      requestText: "把这个页面转成 markdown https://example.com/article",
+      host: "opencode",
+      invocationMode: "explicit",
+      urls: ["https://example.com/article"]
+    });
+
+    expect(envelope.host).toBe("opencode");
+  });
+
+  it("rejects non-canonical OpenCode aliases", () => {
+    expect(() =>
+      parseBrokerEnvelope({
+        requestText: "把这个页面转成 markdown https://example.com/article",
+        host: "open-code" as never,
+        urls: ["https://example.com/article"]
+      })
+    ).toThrow(
+      /Expected broker envelope\.host to be one of claude-code, codex, opencode\./
+    );
   });
 
   it("accepts downstream execution failures for broker reranking", () => {
