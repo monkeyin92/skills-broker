@@ -9,6 +9,7 @@ import { runCodexAdapter } from "../../src/hosts/codex/adapter";
 import { runOpenCodeAdapter } from "../../src/hosts/opencode/adapter";
 import { loadMaintainedBrokerFirstContract } from "../../src/core/maintained-broker-first";
 import {
+  formatCoarseBoundaryLine,
   formatFullLifecycleParityLine,
   formatPublishedLifecycleCommandsLine,
   formatSupportedHostsLine,
@@ -65,6 +66,7 @@ function expectCodexSkillLayout(skill: string): void {
     "# Skills Broker",
     "Use this skill only at the coarse broker boundary.",
     "The host decides only one of these boundary outcomes:",
+    formatCoarseBoundaryLine(),
     "## Supported Host Truth",
     formatSupportedHostsLine(),
     formatFullLifecycleParityLine(),

@@ -124,6 +124,17 @@ describe("installed host-shell routing smoke", () => {
           now: new Date("2026-03-30T02:00:00.000Z")
         }
       );
+      const qaDiscoveryResult = await runOpenCodeAdapter(
+        {
+          requestText: "有没有现成 skill 能做这个网站 QA",
+          host: "opencode",
+          invocationMode: "explicit"
+        },
+        {
+          installDirectory: opencodeShellDirectory,
+          now: new Date("2026-03-30T02:10:00.000Z")
+        }
+      );
       const opencodeMarkdownResult = await runOpenCodeAdapter(
         {
           requestText: "turn this webpage into markdown: https://example.com/opencode",
@@ -210,6 +221,18 @@ describe("installed host-shell routing smoke", () => {
           now: new Date("2026-03-30T04:00:00.000Z")
         }
       );
+      const pageInspectionResult = await runOpenCodeAdapter(
+        {
+          requestText: "test this page",
+          host: "opencode",
+          invocationMode: "explicit",
+          urls: ["https://example.com/article"]
+        },
+        {
+          installDirectory: opencodeShellDirectory,
+          now: new Date("2026-03-30T04:10:00.000Z")
+        }
+      );
 
       expect(socialResult).toMatchObject({
         ok: true,
@@ -232,6 +255,33 @@ describe("installed host-shell routing smoke", () => {
         }
       });
       expectQueryNativeRequest(discoveryResult.handoff.request);
+
+      expect(qaDiscoveryResult).toMatchObject({
+        ok: true,
+        outcome: {
+          code: "HANDOFF_READY"
+        },
+        winner: {
+          id: "capability-discovery"
+        },
+        handoff: {
+          request: {
+            capabilityQuery: {
+              goal: "discover or install a capability to qa a website",
+              requestText: "有没有现成 skill 能做这个网站 QA",
+              jobFamilies: ["capability_acquisition", "quality_assurance"],
+              targets: [
+                {
+                  type: "problem_statement",
+                  value: "有没有现成 skill 能做这个网站 QA"
+                }
+              ],
+              artifacts: ["recommendation", "installation_plan", "qa_report"]
+            }
+          }
+        }
+      });
+      expectQueryNativeRequest(qaDiscoveryResult.handoff.request);
 
       expect(opencodeMarkdownResult).toMatchObject({
         ok: true,
@@ -377,6 +427,13 @@ describe("installed host-shell routing smoke", () => {
           hostAction: "ask_clarifying_question"
         }
       });
+      expect(pageInspectionResult).toMatchObject({
+        ok: false,
+        outcome: {
+          code: "AMBIGUOUS_REQUEST",
+          hostAction: "ask_clarifying_question"
+        }
+      });
       expect(requirementsResult.handoff.request.capabilityQuery?.requestText).toBe(
         requirementsAnalysisRequest
       );
@@ -392,9 +449,11 @@ describe("installed host-shell routing smoke", () => {
         ["requirements_analysis", "quality_assurance", "investigation"].sort()
       ).toEqual([...maintainedFamilies].sort());
       expect(socialResult).not.toHaveProperty("trace");
+      expect(qaDiscoveryResult).not.toHaveProperty("trace");
       expect(qaResult).not.toHaveProperty("trace");
       expect(investigationResult).not.toHaveProperty("trace");
       expect(opencodeMarkdownResult).not.toHaveProperty("trace");
+      expect(pageInspectionResult).not.toHaveProperty("trace");
       } finally {
         await rm(runtimeDirectory, { recursive: true, force: true });
       }

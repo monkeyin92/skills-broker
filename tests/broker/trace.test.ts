@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   BROKER_TRACE_VERSION,
   createBrokerRoutingTrace,
+  createSyntheticHostSkippedBrokerTrace,
   summarizeBrokerRoutingTraces,
   type BrokerRoutingTrace
 } from "../../src/broker/trace";
@@ -29,6 +30,7 @@ function createTrace(
     selectedLeafCapabilityId: "winner",
     selectedImplementationId: "pkg.winner",
     selectedPackageInstallState: "installed",
+    requestedProofFamily: null,
     semanticMatchReason: null,
     semanticMatchCandidateId: null,
     semanticMatchProofFamily: null,
@@ -123,6 +125,7 @@ describe("summarizeBrokerRoutingTraces", () => {
     });
 
     expect(directTrace).toMatchObject({
+      requestedProofFamily: "web_content_to_markdown",
       semanticMatchReason: "direct_route",
       semanticMatchCandidateId: "web-content-to-markdown",
       semanticMatchProofFamily: "web_content_to_markdown"
@@ -132,6 +135,41 @@ describe("summarizeBrokerRoutingTraces", () => {
       semanticMatchCandidateId: "web-content-to-markdown",
       semanticMatchProofFamily: "web_content_to_markdown"
     });
+  });
+
+  it("tracks the requested proof family for QA install-help and synthetic host skips", () => {
+    const qaDiscoveryTrace = createBrokerRoutingTrace({
+      input: {
+        requestText: "有没有现成 skill 能做这个网站 QA",
+        host: "codex"
+      },
+      currentHost: "codex",
+      resultCode: "HANDOFF_READY",
+      now: new Date("2026-04-18T10:02:00.000Z"),
+      hostAction: null,
+      candidateCount: 1,
+      winner: {
+        id: "capability-discovery",
+        package: {
+          packageId: "skills_broker"
+        },
+        leaf: {
+          capabilityId: "skills_broker.capability-discovery",
+          subskillId: "capability-discovery"
+        },
+        implementation: {
+          id: "skills_broker.capability_discovery"
+        }
+      }
+    });
+    const skippedTrace = createSyntheticHostSkippedBrokerTrace({
+      requestText: "测下这个网站的质量：https://example.com",
+      host: "codex",
+      now: new Date("2026-04-18T10:03:00.000Z")
+    });
+
+    expect(qaDiscoveryTrace.requestedProofFamily).toBe("website_qa");
+    expect(skippedTrace.requestedProofFamily).toBe("website_qa");
   });
 
   it("groups routing hit, misroute, and fallback rates by request surface", () => {

@@ -10,6 +10,8 @@ import { runClaudeCodeAdapter } from "../../src/hosts/claude-code/adapter";
 import { installClaudeCodeHostShell } from "../../src/hosts/claude-code/install";
 import { runCodexAdapter } from "../../src/hosts/codex/adapter";
 import { installCodexHostShell } from "../../src/hosts/codex/install";
+import { runOpenCodeAdapter } from "../../src/hosts/opencode/adapter";
+import { installOpenCodeHostShell } from "../../src/hosts/opencode/install";
 import {
   loadMaintainedBrokerFirstContract,
   type MaintainedBrokerFirstContract
@@ -22,7 +24,7 @@ const PHASE2_BOUNDARY_DECISIONS = [
   "clarify_before_broker"
 ] as const;
 
-type EvalHost = "claude-code" | "codex";
+type EvalHost = "claude-code" | "codex" | "opencode";
 
 type EvalExpectation = Pick<
   BrokerRoutingTrace,
@@ -61,6 +63,7 @@ type EvalFixture = {
 type InstalledHostShells = {
   "claude-code": string;
   codex: string;
+  opencode: string;
 };
 
 async function loadEvalFixture(): Promise<EvalCase[]> {
@@ -105,11 +108,17 @@ async function runHostRunnerEvalCase(
           includeTrace: true,
           now: new Date(testCase.now)
         })
-      : await runCodexAdapter(input, {
-          installDirectory: shellDirectories.codex,
-          includeTrace: true,
-          now: new Date(testCase.now)
-        });
+      : host === "codex"
+        ? await runCodexAdapter(input, {
+            installDirectory: shellDirectories.codex,
+            includeTrace: true,
+            now: new Date(testCase.now)
+          })
+        : await runOpenCodeAdapter(input, {
+            installDirectory: shellDirectories.opencode,
+            includeTrace: true,
+            now: new Date(testCase.now)
+          });
 
   expect(result.trace).toBeDefined();
 
@@ -146,6 +155,13 @@ describe("Phase 2 coarse-boundary eval harness", () => {
         "skills",
         "skills-broker"
       );
+      const opencodeShellDirectory = join(
+        runtimeDirectory,
+        ".config",
+        "opencode",
+        "skills",
+        "skills-broker"
+      );
 
       try {
         await installSharedBrokerHome({
@@ -159,6 +175,10 @@ describe("Phase 2 coarse-boundary eval harness", () => {
         });
         await installCodexHostShell({
           installDirectory: codexShellDirectory,
+          brokerHomeDirectory
+        });
+        await installOpenCodeHostShell({
+          installDirectory: opencodeShellDirectory,
           brokerHomeDirectory
         });
 
@@ -187,7 +207,8 @@ describe("Phase 2 coarse-boundary eval harness", () => {
                   })
                 : await runHostRunnerEvalCase(testCase, host, {
                     "claude-code": claudeShellDirectory,
-                    codex: codexShellDirectory
+                    codex: codexShellDirectory,
+                    opencode: opencodeShellDirectory
                   });
 
             expect(trace).toMatchObject({
@@ -247,6 +268,7 @@ describe("Phase 2 coarse-boundary eval harness", () => {
           expect(hosts?.size).toBeGreaterThan(0);
           expect(hosts?.has("claude-code")).toBe(true);
           expect(hosts?.has("codex")).toBe(true);
+          expect(hosts?.has("opencode")).toBe(true);
         }
       } finally {
         await rm(runtimeDirectory, { recursive: true, force: true });

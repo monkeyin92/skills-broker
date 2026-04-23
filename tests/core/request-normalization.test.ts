@@ -202,6 +202,26 @@ describe("normalizeRequest", () => {
     );
   });
 
+  it("rejects page-level inspection requests as ambiguous instead of misrouting them into website QA", () => {
+    expectRejected(
+      {
+        requestText: "test this page",
+        host: "codex",
+        urls: ["https://example.com/page"]
+      },
+      "AMBIGUOUS_REQUEST"
+    );
+
+    expectRejected(
+      {
+        requestText: "检查这个页面有没有明显问题",
+        host: "claude-code",
+        urls: ["https://example.com/page"]
+      },
+      "AMBIGUOUS_REQUEST"
+    );
+  });
+
   it("rejects save this page as ambiguous when markdown is not explicit", () => {
     expectRejected(
       {
@@ -266,25 +286,25 @@ describe("normalizeRequest", () => {
     );
   });
 
-  it("rejects check this page as unsupported instead of misrouting it to website QA", () => {
+  it("rejects check this page as ambiguous instead of misrouting it to website QA", () => {
     expectRejected(
       {
         requestText: "check this page",
         host: "codex",
         urls: ["https://example.com/page"]
       },
-      "UNSUPPORTED_REQUEST"
+      "AMBIGUOUS_REQUEST"
     );
   });
 
-  it("rejects check this url as unsupported instead of misrouting it to website QA", () => {
+  it("rejects check this url as ambiguous instead of misrouting it to website QA", () => {
     expectRejected(
       {
         requestText: "check this url",
         host: "codex",
         urls: ["https://example.com/page"]
       },
-      "UNSUPPORTED_REQUEST"
+      "AMBIGUOUS_REQUEST"
     );
   });
 
@@ -416,6 +436,27 @@ describe("normalizeRequest", () => {
         }
       ],
       artifacts: ["qa_report"]
+    });
+  });
+
+  it("normalizes raw website QA install-help requests into the discovery lane", () => {
+    const normalized = normalizeRequest({
+      requestText: "有没有现成 skill 能做这个网站 QA",
+      host: "codex"
+    });
+
+    expectQueryNativeRequest(normalized);
+    expect(normalized.capabilityQuery).toMatchObject({
+      goal: "discover or install a capability to qa a website",
+      requestText: "有没有现成 skill 能做这个网站 QA",
+      jobFamilies: ["capability_acquisition", "quality_assurance"],
+      targets: [
+        {
+          type: "problem_statement",
+          value: "有没有现成 skill 能做这个网站 QA"
+        }
+      ],
+      artifacts: ["recommendation", "installation_plan", "qa_report"]
     });
   });
 

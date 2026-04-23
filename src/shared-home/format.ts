@@ -155,6 +155,23 @@ function formatFamilyCrossHostReuseProofLine(
   return `${label} cross-host reuse proof: pending (first reuse across hosts not recorded yet)`;
 }
 
+function formatFamilyRepeatUsageProofLine(
+  family: DoctorProofFamily,
+  proof: DoctorFamilyProofSummary
+): string {
+  const label = FAMILY_FORMAT_CONFIG[family].label;
+
+  if (proof.repeatUsageState === "unknown") {
+    return `${label} repeat-usage proof: unknown (acquisition memory unreadable)`;
+  }
+
+  if (proof.repeatUsageState === "confirmed") {
+    return `${label} repeat-usage proof: confirmed (at least one repeated successful route recorded)`;
+  }
+
+  return `${label} repeat-usage proof: pending (no repeated successful route recorded yet)`;
+}
+
 function formatAdoptionHealthProofLine(
   result: DoctorLifecycleResult
 ): string | undefined {
@@ -172,7 +189,7 @@ function formatAdoptionHealthProofLine(
     return undefined;
   }
 
-  return `Adoption health proof: website QA verify=${websiteQaProof.verifyState}; cross-host reuse=${websiteQaProof.crossHostReuseState}`;
+  return `Adoption health proof: website QA verify=${websiteQaProof.verifyState}; repeat-usage=${websiteQaProof.repeatUsageState}; cross-host reuse=${websiteQaProof.crossHostReuseState}`;
 }
 
 function formatWebsiteQaVerdictLine(result: DoctorLifecycleResult): string {
@@ -181,6 +198,31 @@ function formatWebsiteQaVerdictLine(result: DoctorLifecycleResult): string {
 
 function formatWebsiteQaNextActionLine(result: DoctorLifecycleResult): string {
   return `Website QA next action: ${result.websiteQaLoop.nextAction}`;
+}
+
+function formatWebsiteQaRoutingLine(result: DoctorLifecycleResult): string {
+  const summary = result.websiteQaRouting;
+
+  if (summary.observed === 0 && summary.syntheticHostSkips === 0) {
+    return `Website QA routing (last ${summary.windowDays}d): no website QA traces recorded yet`;
+  }
+
+  return `Website QA routing (last ${summary.windowDays}d): observed=${summary.observed}, host_skips=${summary.syntheticHostSkips}, hit=${summary.hitRate.toFixed(2)}, misroute=${summary.misrouteRate.toFixed(2)}, fallback=${summary.fallbackRate.toFixed(2)}`;
+}
+
+function formatWebsiteQaRoutingHostLines(
+  result: DoctorLifecycleResult
+): string[] {
+  return result.websiteQaRouting.hosts.map(
+    (host) =>
+      `Website QA routing host ${host.name}: observed=${host.observed}, host_skips=${host.syntheticHostSkips}, hit=${host.hitRate.toFixed(2)}, misroute=${host.misrouteRate.toFixed(2)}, fallback=${host.fallbackRate.toFixed(2)}`
+  );
+}
+
+function formatWebsiteQaRoutingNextActionLine(
+  result: DoctorLifecycleResult
+): string {
+  return `Website QA routing next action: ${result.websiteQaRouting.nextAction}`;
 }
 
 export function formatLifecycleResult(
@@ -208,7 +250,10 @@ export function formatLifecycleResult(
     lines.push(formatWebsiteQaVerdictLine(result));
     lines.push(formatWebsiteQaNextActionLine(result));
 
-    if (result.routingMetrics.observed === 0) {
+    if (
+      result.routingMetrics.observed === 0 &&
+      result.routingMetrics.syntheticHostSkips === 0
+    ) {
       lines.push(
         `Routing metrics (last ${result.routingMetrics.windowDays}d): no traces recorded yet`
       );
@@ -231,9 +276,16 @@ export function formatLifecycleResult(
           `Routing ${surface.requestSurface}: observed=${surface.observed}, hit=${surface.hitRate.toFixed(2)}, misroute=${surface.misrouteRate.toFixed(2)}, fallback=${surface.fallbackRate.toFixed(2)}`
         );
       }
+
+      lines.push(formatWebsiteQaRoutingLine(result));
+      lines.push(...formatWebsiteQaRoutingHostLines(result));
+      lines.push(formatWebsiteQaRoutingNextActionLine(result));
     }
     lines.push(
-      `Acquisition memory: ${result.acquisitionMemory.state}, entries=${result.acquisitionMemory.entries}, successful_routes=${result.acquisitionMemory.successfulRoutes}, first_reuse_after_install=${result.acquisitionMemory.firstReuseRecorded}, cross_host_reuse=${result.acquisitionMemory.crossHostReuse}, website_qa_successful_reruns=${result.acquisitionMemory.qualityAssuranceSuccessfulRoutes}, website_qa_first_reuse=${result.acquisitionMemory.qualityAssuranceFirstReuseRecorded}`
+      `Acquisition memory: ${result.acquisitionMemory.state}, entries=${result.acquisitionMemory.entries}, successful_routes=${result.acquisitionMemory.successfulRoutes}, first_reuse_after_install=${result.acquisitionMemory.firstReuseRecorded}, cross_host_reuse=${result.acquisitionMemory.crossHostReuse}, website_qa_successful_reruns=${result.acquisitionMemory.qualityAssuranceSuccessfulRoutes}, website_qa_repeat_usage=${result.acquisitionMemory.qualityAssuranceFirstReuseRecorded}`
+    );
+    lines.push(
+      `Website QA acquisition proof: repeat_usage=${result.acquisitionMemory.qualityAssuranceFirstReuseRecorded}, cross_host_reuse=${result.acquisitionMemory.qualityAssuranceCrossHostReuse}`
     );
     lines.push(
       `Verified downstream manifests: ${result.verifiedDownstreamManifests.state}, total=${result.verifiedDownstreamManifests.manifests}, website_qa=${result.verifiedDownstreamManifests.qualityAssuranceManifests}, ${result.verifiedDownstreamManifests.hosts
@@ -248,6 +300,7 @@ export function formatLifecycleResult(
       const proof = result.familyProofs[family];
       lines.push(formatFamilyLoopLine(family, proof));
       lines.push(formatFamilyVerifyProofLine(family, proof));
+      lines.push(formatFamilyRepeatUsageProofLine(family, proof));
       lines.push(formatFamilyCrossHostReuseProofLine(family, proof));
       lines.push(formatFamilyNextActionLine(family, proof));
     }

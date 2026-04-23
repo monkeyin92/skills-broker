@@ -18,6 +18,10 @@ This file is the repo-native execution board for `skills-broker`.
 - The Phase 9 canonical release gate packet is now shipped locally on `HEAD`: `npm run release:gate` collapses the blind-spot report, focused narrative parity suite, and strict repo-scoped doctor gate into one repo-local release verdict with failing rail, shipping ref, and remote freshness, while `verify:local` stays local-only.
 - The Phase 10 repo-owned proof promotion packet is now shipped locally on `HEAD`: `npm run release:promote` re-evaluates canonical `STATUS.md` truth against the shipping ref, upgrades only eligible `shipped_local` items to `shipped_remote`, and fails closed on ship-ref, refresh, proof, or mismatch blockers.
 - The Phase 11 publish-flow closure packet is now shipped locally on `HEAD`: `.github/workflows/publish-npm.yml` now runs `release:gate` before publish, `release:promote` after publish, pushes promoted `STATUS.md` truth back to the default branch, and closes out on the same canonical release gate.
+- The Phase 12 website-QA routing-confidence packet is now shipped locally on `HEAD`: clear website QA asks cross the coarse broker-first boundary more reliably, nearby page-level phrasing stays fail-closed, and `doctor` now surfaces website QA routing evidence directly.
+- The Phase 13 website-QA repeat-usage packet is now shipped locally on `HEAD`: the website QA loop now proves repeat usage and cross-host reuse on the three-host shared-home surface, and `doctor` now distinguishes the two states.
+- Hosts choose only `broker_first`, `handle_normally`, or `clarify_before_broker`; the broker still chooses the concrete QA winner.
+- `doctor` now exposes website QA routing evidence plus separate repeat-usage and cross-host reuse proof states.
 - Compatibility-intent routing metrics are shipped on `origin/main`.
 - The query-native request migration tail is now shipped on the active shipping ref: top-level public requests stay `capabilityQuery`-native, and legacy cache/session records migrate forward without hiding compatibility-assisted routing.
 - The package-vs-leaf identity migration tail is now shipped on the active shipping ref: discovery, workflow stages, managed host seeds, and legacy workflow sessions all keep package-plus-leaf identity explicit and treat `implementation.id` as execution metadata only.
@@ -513,6 +517,72 @@ This file is the repo-native execution board for `skills-broker`.
           "type": "commit",
           "ref": "61d642d",
           "label": "feat: tighten coarse broker-first host boundary"
+        }
+      ]
+    },
+    {
+      "id": "phase12-website-qa-routing-confidence",
+      "title": "Phase 12 website QA routing confidence packet",
+      "summary": "Clear website QA asks now cross the coarse broker-first boundary more reliably, nearby page-level phrasing stays fail-closed, and doctor surfaces website QA routing evidence directly.",
+      "status": "shipped_local",
+      "proofs": [
+        {
+          "type": "file",
+          "path": "src/broker/query-compiler.ts",
+          "label": "website QA normalization and QA discovery/install-help routing"
+        },
+        {
+          "type": "file",
+          "path": "src/shared-home/doctor.ts",
+          "label": "website QA routing summary"
+        },
+        {
+          "type": "test",
+          "path": "tests/e2e/phase2-coarse-boundary-eval.test.ts",
+          "label": "three-host coarse-boundary parity coverage"
+        },
+        {
+          "type": "test",
+          "path": "tests/e2e/host-auto-routing-smoke.test.ts",
+          "label": "installed-shell website QA routing smoke"
+        },
+        {
+          "type": "test",
+          "path": "tests/shared-home/doctor.test.ts",
+          "label": "doctor website QA routing evidence coverage"
+        }
+      ]
+    },
+    {
+      "id": "phase13-website-qa-repeat-usage-loop",
+      "title": "Phase 13 website QA repeat-usage loop",
+      "summary": "The website QA proof loop now reaches repeat-usage and cross-host reuse on the three-host shared-home surface, and doctor surfaces those proof states separately.",
+      "status": "shipped_local",
+      "proofs": [
+        {
+          "type": "file",
+          "path": "src/shared-home/doctor.ts",
+          "label": "repeat-usage versus cross-host reuse proof states"
+        },
+        {
+          "type": "file",
+          "path": "src/shared-home/format.ts",
+          "label": "operator-facing doctor wording for repeat usage and cross-host reuse"
+        },
+        {
+          "type": "test",
+          "path": "tests/integration/broker-flow.test.ts",
+          "label": "website QA install -> verify -> repeat-usage -> cross-host proof"
+        },
+        {
+          "type": "test",
+          "path": "tests/shared-home/doctor.test.ts",
+          "label": "doctor repeat-usage and cross-host reuse coverage"
+        },
+        {
+          "type": "test",
+          "path": "tests/cli/lifecycle-cli.test.ts",
+          "label": "CLI doctor proof-shape coverage"
         }
       ]
     },

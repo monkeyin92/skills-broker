@@ -122,6 +122,49 @@ describe("broker query compiler contract", () => {
         artifacts: ["analysis", "recommendation"]
       }
     });
+
+    const qaDiscovery = compileEnvelopeRequest({
+      requestText: "有没有现成 skill 能做这个网站 QA",
+      host: "codex"
+    });
+
+    expect(qaDiscovery).toMatchObject({
+      kind: "compiled",
+      capabilityQuery: {
+        goal: "discover or install a capability to qa a website",
+        requestText: "有没有现成 skill 能做这个网站 QA",
+        jobFamilies: ["capability_acquisition", "quality_assurance"],
+        targets: [
+          {
+            type: "problem_statement",
+            value: "有没有现成 skill 能做这个网站 QA"
+          }
+        ],
+        artifacts: ["recommendation", "installation_plan", "qa_report"]
+      }
+    });
+
+    const qaParaphrase = compileEnvelopeRequest({
+      requestText: "test this website for obvious issues",
+      host: "claude-code",
+      urls: ["https://example.com"]
+    });
+
+    expect(qaParaphrase).toMatchObject({
+      kind: "compiled",
+      capabilityQuery: {
+        goal: "qa a website",
+        requestText: "test this website for obvious issues",
+        jobFamilies: ["quality_assurance"],
+        targets: [
+          {
+            type: "website",
+            value: "https://example.com"
+          }
+        ],
+        artifacts: ["qa_report"]
+      }
+    });
   });
 
   it("marks unsupported raw envelope requests as unsupported", () => {
@@ -154,6 +197,22 @@ describe("broker query compiler contract", () => {
       compileEnvelopeRequest({
         requestText: "我有个想法",
         host: "claude-code"
+      })
+    ).toEqual({ kind: "ambiguous" });
+
+    expect(
+      compileEnvelopeRequest({
+        requestText: "test this page",
+        host: "codex",
+        urls: ["https://example.com/page"]
+      })
+    ).toEqual({ kind: "ambiguous" });
+
+    expect(
+      compileEnvelopeRequest({
+        requestText: "检查这个页面有没有明显问题",
+        host: "claude-code",
+        urls: ["https://example.com/page"]
       })
     ).toEqual({ kind: "ambiguous" });
   });

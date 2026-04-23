@@ -3,7 +3,7 @@
     {
       "id": "broker-first-website-qa",
       "mode": "host_runner",
-      "hosts": ["claude-code", "codex"],
+      "hosts": ["claude-code", "codex", "opencode"],
       "requestText": "测下这个网站的质量：https://www.baidu.com",
       "urls": ["https://www.baidu.com"],
       "now": "2026-03-31T10:00:00.000Z",
@@ -18,7 +18,7 @@
     {
       "id": "broker-first-requirements-analysis",
       "mode": "host_runner",
-      "hosts": ["claude-code", "codex"],
+      "hosts": ["claude-code", "codex", "opencode"],
       "requestText": "帮我做需求分析并产出设计文档",
       "now": "2026-03-31T10:05:00.000Z",
       "expect": {
@@ -32,7 +32,7 @@
     {
       "id": "broker-first-requirements-analysis-paraphrase",
       "mode": "host_runner",
-      "hosts": ["claude-code", "codex"],
+      "hosts": ["claude-code", "codex", "opencode"],
       "requestText": "帮我分析一下这个 PRD 还有哪些风险和缺口",
       "now": "2026-03-31T10:07:00.000Z",
       "expect": {
@@ -46,7 +46,7 @@
     {
       "id": "broker-first-investigation",
       "mode": "host_runner",
-      "hosts": ["claude-code", "codex"],
+      "hosts": ["claude-code", "codex", "opencode"],
       "requestText": "investigate this site failure with a reusable workflow",
       "urls": ["https://example.com"],
       "now": "2026-03-31T10:10:00.000Z",
@@ -61,7 +61,7 @@
     {
       "id": "broker-first-investigation-paraphrase",
       "mode": "host_runner",
-      "hosts": ["claude-code", "codex"],
+      "hosts": ["claude-code", "codex", "opencode"],
       "requestText": "帮我定位这个网站为什么一直报错",
       "urls": ["https://example.com"],
       "now": "2026-03-31T10:11:00.000Z",
@@ -76,7 +76,7 @@
     {
       "id": "broker-first-freeform-idea-workflow",
       "mode": "host_runner",
-      "hosts": ["claude-code", "codex"],
+      "hosts": ["claude-code", "codex", "opencode"],
       "requestText": "如果在mac的摄像头遮挡处，弄一个codex或者claude code的进度提示，就像iPhone的胶囊岛一样的，这样就不用傻傻盯着cli了",
       "now": "2026-03-31T10:12:00.000Z",
       "expect": {
@@ -90,7 +90,7 @@
     {
       "id": "broker-first-capability-discovery",
       "mode": "host_runner",
-      "hosts": ["claude-code", "codex"],
+      "hosts": ["claude-code", "codex", "opencode"],
       "requestText": "find a skill or MCP for website QA",
       "now": "2026-03-31T10:13:00.000Z",
       "expect": {
@@ -102,9 +102,23 @@
       }
     },
     {
+      "id": "broker-first-capability-discovery-zh-mixed",
+      "mode": "host_runner",
+      "hosts": ["claude-code", "codex", "opencode"],
+      "requestText": "有没有现成 skill 能做这个网站 QA",
+      "now": "2026-03-31T10:13:15.000Z",
+      "expect": {
+        "hostDecision": "broker_first",
+        "resultCode": "HANDOFF_READY",
+        "normalizedBy": "raw_request_fallback",
+        "requestSurface": "raw_envelope",
+        "winnerId": "capability-discovery"
+      }
+    },
+    {
       "id": "broker-first-website-qa-paraphrase",
       "mode": "host_runner",
-      "hosts": ["claude-code", "codex"],
+      "hosts": ["claude-code", "codex", "opencode"],
       "requestText": "audit this site for obvious issues",
       "urls": ["https://example.com"],
       "now": "2026-03-31T10:13:30.000Z",
@@ -119,7 +133,7 @@
     {
       "id": "handle-normally-page-summary",
       "mode": "synthetic_host_skip",
-      "hosts": ["claude-code", "codex"],
+      "hosts": ["claude-code", "codex", "opencode"],
       "requestText": "what is on this page",
       "now": "2026-03-31T10:15:00.000Z",
       "expect": {
@@ -131,7 +145,7 @@
     {
       "id": "handle-normally-code-help",
       "mode": "synthetic_host_skip",
-      "hosts": ["claude-code", "codex"],
+      "hosts": ["claude-code", "codex", "opencode"],
       "requestText": "Explain this TypeScript error",
       "now": "2026-03-31T10:20:00.000Z",
       "expect": {
@@ -141,9 +155,24 @@
       }
     },
     {
+      "id": "broker-near-miss-page-inspection",
+      "mode": "host_runner",
+      "hosts": ["claude-code", "codex", "opencode"],
+      "requestText": "test this page",
+      "urls": ["https://example.com/page"],
+      "now": "2026-03-31T10:22:00.000Z",
+      "expect": {
+        "hostDecision": "broker_first",
+        "resultCode": "AMBIGUOUS_REQUEST",
+        "hostAction": "ask_clarifying_question",
+        "normalizedBy": "raw_request_fallback",
+        "requestSurface": "raw_envelope"
+      }
+    },
+    {
       "id": "clarify-before-broker-check-page",
       "mode": "synthetic_host_skip",
-      "hosts": ["claude-code", "codex"],
+      "hosts": ["claude-code", "codex", "opencode"],
       "requestText": "check this page",
       "now": "2026-03-31T10:25:00.000Z",
       "expect": {
@@ -155,7 +184,7 @@
     {
       "id": "clarify-before-broker-check-page-zh",
       "mode": "synthetic_host_skip",
-      "hosts": ["claude-code", "codex"],
+      "hosts": ["claude-code", "codex", "opencode"],
       "requestText": "看下这个页面",
       "now": "2026-03-31T10:27:00.000Z",
       "expect": {
@@ -167,7 +196,7 @@
     {
       "id": "clarify-before-broker-analyze",
       "mode": "synthetic_host_skip",
-      "hosts": ["claude-code", "codex"],
+      "hosts": ["claude-code", "codex", "opencode"],
       "requestText": "帮我分析一下",
       "now": "2026-03-31T10:30:00.000Z",
       "expect": {

@@ -1,6 +1,8 @@
 import { access, readFile } from "node:fs/promises";
 import { join } from "node:path";
 import {
+  formatCoarseBoundaryLine,
+  formatCoarseBoundaryZhLine,
   OPERATOR_TRUTH_CONTRACT,
   formatFullLifecycleParityLine,
   formatFullLifecycleParityZhLine,
@@ -8,6 +10,8 @@ import {
   formatPublishedLifecycleCommandsZhLine,
   formatSupportedHostsLine,
   formatSupportedHostsZhLine,
+  formatWebsiteQaProofSurfaceLine,
+  formatWebsiteQaProofSurfaceZhLine,
   formatThirdHostReadinessLine,
   formatThirdHostReadinessZhLine
 } from "../core/operator-truth.js";
@@ -242,6 +246,8 @@ export function buildCiTrustSurfaceSpecs(
     formatFullLifecycleParityLine(),
     formatPublishedLifecycleCommandsLine(),
     formatThirdHostReadinessLine(),
+    formatCoarseBoundaryLine(),
+    formatWebsiteQaProofSurfaceLine(),
     OPERATOR_TRUTH_CONTRACT.heroLane,
     OPERATOR_TRUTH_CONTRACT.secondProvenFamily,
     OPERATOR_TRUTH_CONTRACT.thirdProvenFamily,
@@ -252,6 +258,8 @@ export function buildCiTrustSurfaceSpecs(
     formatFullLifecycleParityZhLine(),
     formatPublishedLifecycleCommandsZhLine(),
     formatThirdHostReadinessZhLine(),
+    formatCoarseBoundaryZhLine(),
+    formatWebsiteQaProofSurfaceZhLine(),
     OPERATOR_TRUTH_CONTRACT.heroLane,
     OPERATOR_TRUTH_CONTRACT.secondProvenFamily,
     OPERATOR_TRUTH_CONTRACT.thirdProvenFamily,

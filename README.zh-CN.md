@@ -151,6 +151,8 @@ v0 的目标是证明：在一个具体任务上，broker 可以比人手动翻 
 
 **当前产品阶段：**在保持 adoption health 绿色的前提下，把 discovery/install 做成更强的复用飞轮，继续扩展有证据支撑的 capability surface，并用显式的 CI trust guardrails 保护现在已经 full-parity 的 Claude Code / Codex / OpenCode 运行面。这个 packet 最想先说清楚的默认入口，仍然是 website QA。
 
+宿主只选择 `broker_first` / `handle_normally` / `clarify_before_broker`；具体 QA winner 仍由 broker 决定。
+
 **迁移说明：**`capabilityQuery` 现在是唯一应该让调用方依赖的公开请求契约。`intent` 还在，但现在只作为内部兼容层标签保留给 supplier adapter、显式的晚期 tie-break、maintained-family proof rail，以及 legacy workflow/session 连续性。
 
 **这个 packet 的 DX bar：**把支持矩阵说清楚，把 first routed success 压到 5 分钟内，并让 operator-facing 错误至少说清“出了什么问题、原因是什么、下一步看哪里”。
@@ -227,6 +229,8 @@ npx skills-broker update
 
 这个 packet 把 website QA 当成 QA default-entry loop，也是 operator 最快看到 doctor truth 的路径。其他 maintained lanes 继续支持，但不该先试。
 
+宿主只选择 `broker_first` / `handle_normally` / `clarify_before_broker`；具体 QA winner 仍由 broker 决定。
+
 ### 1. 初始化或刷新共享 broker home
 
 ```bash
@@ -277,14 +281,17 @@ web markdown 仍然是下一条已经被证明的 lane，但前提是 QA default
 }
 ```
 
-在第一次验证后的复用发生后，`doctor` 里应该能看到类似：
+在第一次跨宿主的重复使用发生后，`doctor` 里应该能看到类似：
 
 ```text
-Acquisition memory: present, entries=2, successful_routes=3, first_reuse_after_install=1, cross_host_reuse=1
-Verified downstream manifests: total=2, claude-code=1, codex=1
+Website QA acquisition proof: repeat_usage=1, cross_host_reuse=1
+Website QA repeat-usage proof: confirmed (at least one repeated successful route recorded)
+Website QA cross-host reuse proof: confirmed (first reuse across hosts recorded)
 ```
 
 如果你之后把 acquisition memory 清掉，另一个 host 仍然应该能靠这份 verified downstream manifest 恢复出 `INSTALL_REQUIRED`，而不是一路退化回 `NO_CANDIDATE`。
+
+`doctor` 现在会直接输出 website QA routing evidence，并把 repeat usage 与 cross-host reuse proof state 分开呈现。
 
 如果你只想把这份 advisory memory 清掉，再从头重跑这个闭环，可以用：
 
@@ -302,6 +309,8 @@ npx skills-broker doctor --strict
 
 - 你能用一条命令看出 adoption health 是 `green`、`blocked` 还是 `inactive`
 - 支持矩阵已经翻到 Claude Code、Codex、OpenCode，而且 full lifecycle / proof parity 的 truth 在 operator-facing 文案里保持一致
+- 宿主仍然只解释 coarse broker-first boundary，而不是先替 broker 选具体 QA winner
+- `doctor` 会同时显示 website QA routing evidence，以及下一步缺的是 repeat usage 还是 cross-host reuse proof
 - operator-facing 失败能指出先去检查哪里
 
 ### 4. 用显式目录试跑共享 home
@@ -325,10 +334,10 @@ npx skills-broker update \
 如果你要接到自动化或 CI，所有 lifecycle 命令也都支持 `--json`。对于已经发货的 family-proof loops，推荐把默认入口 lane 读成 `familyProofs.website_qa.verdict`，把第二条已证明 lane 读成 `familyProofs.web_content_to_markdown.verdict`：
 
 - `blocked`：proof rail 不可读，或者这条闭环当前还不可信
-- `in_progress`：闭环已经开始，但 install -> verify -> cross-host reuse 还没有完整证明
+- `in_progress`：闭环已经开始，但 install -> verify -> repeat usage -> cross-host reuse 还没有完整证明
 - `proven`：已经拿到 cross-host reuse 级别的闭环证明
 
-如果调用方还想看细节，可以继续读 `familyProofs.<family>.phase` 和 `familyProofs.<family>.proofs`；但不应该再去解析 `doctor` 的自然语言文本。
+如果调用方还想看细节，可以继续读 `familyProofs.<family>.phase` 和 `familyProofs.<family>.proofs`。其中 `repeat_usage_pending` 表示下一步缺的是“同一个请求再成功跑一次”，`cross_host_reuse_pending` 表示下一步缺的是“换一个支持宿主再成功跑一次”。
 
 ### 5. 为本地开发克隆仓库并安装依赖
 
