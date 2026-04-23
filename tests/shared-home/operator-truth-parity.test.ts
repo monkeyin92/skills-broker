@@ -248,7 +248,7 @@ describe("operator truth parity", () => {
     expect(phase5Item).toBeDefined();
     expect(phase5Item).toMatchObject({
       id: "phase5-opencode-thin-host-shell",
-      status: "shipped_local"
+      status: "shipped_remote"
     });
     expect(phase5Item!.summary).toContain(formatSupportedHostsLine());
     expect(phase5Item!.summary).toContain(formatFullLifecycleParityLine());
@@ -288,7 +288,7 @@ describe("operator truth parity", () => {
     expect(phase12Item).toBeDefined();
     expect(phase12Item).toMatchObject({
       id: "phase12-website-qa-routing-confidence",
-      status: "shipped_local"
+      status: "shipped_remote"
     });
     expect(phase12Item!.summary).toContain("website QA");
     expect(phase12Item!.summary).toContain("routing evidence");
@@ -316,7 +316,7 @@ describe("operator truth parity", () => {
     expect(phase13Item).toBeDefined();
     expect(phase13Item).toMatchObject({
       id: "phase13-website-qa-repeat-usage-loop",
-      status: "shipped_local"
+      status: "shipped_remote"
     });
     expect(phase13Item!.summary).toContain("repeat-usage");
     expect(phase13Item!.summary).toContain("cross-host reuse");
