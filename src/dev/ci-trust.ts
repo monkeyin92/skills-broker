@@ -327,8 +327,18 @@ export function buildCiTrustSurfaceSpecs(
       kind: "repo-proof",
       label: "Repo Status And Strict Doctor Gate",
       risk: "critical",
-      requiredLayers: ["status", "strict-doctor", "e2e", "ci"],
+      requiredLayers: ["status", "strict-doctor", "doctor", "e2e", "ci"],
       proofs: [
+        proof({
+          layer: "status",
+          path: "STATUS.md",
+          label: "STATUS adoption-packet truth",
+          containsAll: [
+            "phase15-website-qa-adoption-signals",
+            "phase16-website-qa-freshness-health",
+            "phase17-adoption-signal-audit-truth"
+          ]
+        }),
         proof({
           layer: "status",
           path: "tests/shared-home/status.test.ts",
@@ -340,6 +350,16 @@ export function buildCiTrustSurfaceSpecs(
           path: "tests/cli/lifecycle-cli.test.ts",
           label: "strict doctor lifecycle CLI tests",
           containsAll: ["doctor --strict", "strict status issue"]
+        }),
+        proof({
+          layer: "doctor",
+          path: "tests/shared-home/doctor.test.ts",
+          label: "doctor adoption-packet coverage",
+          containsAll: [
+            "websiteQaAdoption",
+            "WEBSITE_QA_SIGNAL_STALE",
+            "stale-to-fresh website QA adoption health transitions"
+          ]
         }),
         proof({
           layer: "e2e",

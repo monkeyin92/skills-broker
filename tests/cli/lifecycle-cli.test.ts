@@ -17,6 +17,7 @@ import {
   peerSurfaceManualRecoveryMarkerPath,
   writePeerSurfaceManualRecoveryMarker
 } from "../../src/shared-home/peer-surface-audit";
+import { writeFreshWebsiteQaAdoptionFixtures } from "../helpers/website-qa-adoption";
 import { commitAll, initGitRepo } from "../helpers/git";
 
 const execFileAsync = promisify(execFile);
@@ -665,6 +666,12 @@ describe("lifecycle cli", () => {
         brokerHomeDirectory,
         projectRoot: process.cwd()
       });
+      await writeFreshWebsiteQaAdoptionFixtures(brokerHomeDirectory, {
+        installRequiredAt: "2026-04-23T04:55:00.000Z",
+        codexHitAt: "2026-04-23T05:00:00.000Z",
+        claudeHitAt: "2026-04-23T05:05:00.000Z",
+        opencodeHitAt: "2026-04-23T05:10:00.000Z"
+      });
       await mkdir(codexInstallDirectory, { recursive: true });
       await writeFile(
         resolve(codexInstallDirectory, ".skills-broker.json"),
@@ -1108,6 +1115,12 @@ describe("lifecycle cli", () => {
       await installSharedBrokerHome({
         brokerHomeDirectory,
         projectRoot: process.cwd()
+      });
+      await writeFreshWebsiteQaAdoptionFixtures(brokerHomeDirectory, {
+        installRequiredAt: "2026-04-23T04:55:00.000Z",
+        codexHitAt: "2026-04-23T05:00:00.000Z",
+        claudeHitAt: "2026-04-23T05:05:00.000Z",
+        opencodeHitAt: "2026-04-23T05:10:00.000Z"
       });
       await mkdir(codexInstallDirectory, { recursive: true });
       await writeManagedShellManifest(codexInstallDirectory, {

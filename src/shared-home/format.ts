@@ -70,6 +70,16 @@ function formatAdoptionHealthLine(
   return `Adoption health: blocked (${blockerCodes}${overflow})`;
 }
 
+function formatAdoptionHealthNextActionLine(
+  adoptionHealth: DoctorLifecycleResult["adoptionHealth"] | UpdateLifecycleResult["adoptionHealth"]
+): string | undefined {
+  if (adoptionHealth.nextAction === undefined) {
+    return undefined;
+  }
+
+  return `Adoption health next action: ${adoptionHealth.nextAction}`;
+}
+
 function formatSharedHomeExistsLine(result: DoctorLifecycleResult): string {
   if (result.sharedHome.exists) {
     return "Shared home exists: yes";
@@ -200,6 +210,63 @@ function formatWebsiteQaNextActionLine(result: DoctorLifecycleResult): string {
   return `Website QA next action: ${result.websiteQaLoop.nextAction}`;
 }
 
+function formatWebsiteQaAdoptionLine(result: DoctorLifecycleResult): string {
+  const signal = result.websiteQaAdoption;
+
+  return `Website QA adoption (last ${signal.windowDays}d): ${signal.status}, observed=${signal.recent.observed}, hit=${signal.recent.hits}, misroute=${signal.recent.misroutes}, fallback=${signal.recent.fallbacks}, host_skips=${signal.recent.hostSkips}, hosts=${signal.recent.hostsCovered}/${signal.recent.supportedHosts}, verify=${signal.proofs.verifyState}, repeat_usage=${signal.proofs.repeatUsageState}, cross_host_reuse=${signal.proofs.crossHostReuseState}`;
+}
+
+function formatWebsiteQaAdoptionLatestLine(
+  result: DoctorLifecycleResult
+): string {
+  const latest = result.websiteQaAdoption.latest;
+
+  if (latest.activityAt === undefined) {
+    return "Website QA adoption latest: no adoption activity recorded yet";
+  }
+
+  const details = [
+    `activity=${latest.activityAt}`,
+    latest.traceAt === undefined ? undefined : `trace=${latest.traceAt}`,
+    latest.verifiedAt === undefined ? undefined : `verify=${latest.verifiedAt}`,
+    latest.firstReuseAt === undefined
+      ? undefined
+      : `first_reuse=${latest.firstReuseAt}`,
+    latest.verifiedManifestAt === undefined
+      ? undefined
+      : `replay=${latest.verifiedManifestAt}`
+  ].filter((entry) => entry !== undefined);
+
+  return `Website QA adoption latest: ${details.join(", ")}`;
+}
+
+function formatWebsiteQaAdoptionHostLines(
+  result: DoctorLifecycleResult
+): string[] {
+  return result.websiteQaAdoption.hosts.map((host) => {
+    const details = [
+      `observed=${host.observed}`,
+      `hit=${host.hits}`,
+      `misroute=${host.misroutes}`,
+      `fallback=${host.fallbacks}`,
+      `host_skips=${host.hostSkips}`,
+      `historical_verified=${host.historicalVerified ? "yes" : "no"}`,
+      host.lastTraceAt === undefined ? undefined : `last_trace=${host.lastTraceAt}`,
+      host.lastVerifiedManifestAt === undefined
+        ? undefined
+        : `last_replay=${host.lastVerifiedManifestAt}`
+    ].filter((entry) => entry !== undefined);
+
+    return `Website QA adoption host ${host.name}: ${host.status}, ${details.join(", ")}`;
+  });
+}
+
+function formatWebsiteQaAdoptionNextActionLine(
+  result: DoctorLifecycleResult
+): string {
+  return `Website QA adoption next action: ${result.websiteQaAdoption.nextAction}`;
+}
+
 function formatWebsiteQaRoutingLine(result: DoctorLifecycleResult): string {
   const summary = result.websiteQaRouting;
 
@@ -242,11 +309,21 @@ export function formatLifecycleResult(
       formatAdoptionHealthLine(result.adoptionHealth)
     ];
     const adoptionHealthProofLine = formatAdoptionHealthProofLine(result);
+    const adoptionHealthNextActionLine = formatAdoptionHealthNextActionLine(
+      result.adoptionHealth
+    );
 
     if (adoptionHealthProofLine !== undefined) {
       lines.push(adoptionHealthProofLine);
     }
+    if (adoptionHealthNextActionLine !== undefined) {
+      lines.push(adoptionHealthNextActionLine);
+    }
 
+    lines.push(formatWebsiteQaAdoptionLine(result));
+    lines.push(formatWebsiteQaAdoptionLatestLine(result));
+    lines.push(...formatWebsiteQaAdoptionHostLines(result));
+    lines.push(formatWebsiteQaAdoptionNextActionLine(result));
     lines.push(formatWebsiteQaVerdictLine(result));
     lines.push(formatWebsiteQaNextActionLine(result));
 
@@ -458,6 +535,13 @@ export function formatLifecycleResult(
     `Shared home status: ${result.sharedHome.status}`,
     formatAdoptionHealthLine(result.adoptionHealth)
   ];
+  const adoptionHealthNextActionLine = formatAdoptionHealthNextActionLine(
+    result.adoptionHealth
+  );
+
+  if (adoptionHealthNextActionLine !== undefined) {
+    lines.push(adoptionHealthNextActionLine);
+  }
 
   if (result.sharedHome.reason) {
     lines.push(`Shared home reason: ${result.sharedHome.reason}`);

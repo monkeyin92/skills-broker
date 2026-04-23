@@ -291,7 +291,7 @@ Website QA cross-host reuse proof: confirmed (first reuse across hosts recorded)
 
 如果你之后把 acquisition memory 清掉，另一个 host 仍然应该能靠这份 verified downstream manifest 恢复出 `INSTALL_REQUIRED`，而不是一路退化回 `NO_CANDIDATE`。
 
-`doctor` 现在会直接输出 website QA routing evidence，并把 repeat usage 与 cross-host reuse proof state 分开呈现。
+`doctor` 现在会直接输出一份 website QA adoption packet：近期 routing evidence、freshness，以及拆开的 repeat usage / cross-host reuse proof state。
 
 如果你只想把这份 advisory memory 清掉，再从头重跑这个闭环，可以用：
 
@@ -310,7 +310,7 @@ npx skills-broker doctor --strict
 - 你能用一条命令看出 adoption health 是 `green`、`blocked` 还是 `inactive`
 - 支持矩阵已经翻到 Claude Code、Codex、OpenCode，而且 full lifecycle / proof parity 的 truth 在 operator-facing 文案里保持一致
 - 宿主仍然只解释 coarse broker-first boundary，而不是先替 broker 选具体 QA winner
-- `doctor` 会同时显示 website QA routing evidence，以及下一步缺的是 repeat usage 还是 cross-host reuse proof
+- `doctor` 会直接显示 website QA adoption packet，包括 freshness，以及下一步缺的是 repeat usage 还是 cross-host reuse proof
 - operator-facing 失败能指出先去检查哪里
 
 ### 4. 用显式目录试跑共享 home

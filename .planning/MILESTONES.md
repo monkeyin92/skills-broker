@@ -1,5 +1,19 @@
 # Project Milestones: skills-broker
 
+## v1.3 Website QA Default-Entry Confidence (Shipped: 2026-04-23)
+
+**Delivered:** `skills-broker` 现在已经把 `website QA` 默认入口的 route confidence、repeat-usage proof 与 operator truth 都 shipped 到 `main`，并把这条 QA-first story 收成 repo-owned、可审计、可 fail-close 的 default-entry packet。
+
+**Phases completed:** 12-14 (6 plans total)
+
+**Key accomplishments:**
+
+- 把明显的 `website QA` 请求与 QA install-help phrasing 更稳定地收进 coarse broker-first boundary，并把 hit / misroute / fallback / host-skip evidence 直接 surfaced 到 `doctor`。
+- 把 `INSTALL_REQUIRED -> install -> rerun -> cross-host reuse -> repeat usage` 收成 canonical website QA proof loop，且 `doctor` 已能明确区分 repeat usage 与 cross-host reuse。
+- 让 README、README.zh-CN、generated host shell、`STATUS.md`、`TODOS.md`、parity suite 与 CI trust rail 继续讲同一份 QA-first operator truth，并坚持 coarse broker-first boundary。
+
+**What's next:** 用 `$gsd-new-milestone` 定义下一轮 requirements，优先把 QA-first proof 升级成 adoption signal，让 maintainer 能看见这条默认入口最近是否仍然活着、是否 stale，以及该如何刷新；不要在这之前提前转向 capability breadth 或重开 release truth 主题。
+
 ## v1.2 Release Truth And Shipping Closure (Shipped: 2026-04-23)
 
 **Delivered:** `skills-broker` 现在已经把 CI trust rails 收口成 canonical release truth，具备显式 shipped-proof promotion flow，并且 publish automation 会直接闭环到同一份 `STATUS.md` truth。

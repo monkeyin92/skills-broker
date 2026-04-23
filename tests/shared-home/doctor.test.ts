@@ -699,6 +699,267 @@ async function writeReusableFamilyProofFixtures(
   }
 }
 
+async function writeFreshWebsiteQaAdoptionFixtures(
+  brokerHomeDirectory: string,
+  options: {
+    installRequiredAt?: string;
+    codexHitAt?: string;
+    claudeHitAt?: string;
+    opencodeHitAt?: string;
+  } = {}
+): Promise<void> {
+  const installRequiredAt =
+    options.installRequiredAt ?? "2026-04-16T04:55:00.000Z";
+  const codexHitAt = options.codexHitAt ?? "2026-04-16T05:00:00.000Z";
+  const claudeHitAt = options.claudeHitAt ?? "2026-04-16T05:05:00.000Z";
+  const opencodeHitAt = options.opencodeHitAt ?? "2026-04-16T05:10:00.000Z";
+  const traceFilePath = routingTraceLogFilePath(brokerHomeDirectory);
+  const acquisitionMemoryPath = acquisitionMemoryFilePath(brokerHomeDirectory);
+  const qaManifestDirectories = [
+    join(
+      brokerHomeDirectory,
+      "downstream",
+      "claude-code",
+      "skills",
+      "gstack",
+      ".agents",
+      "skills",
+      "gstack-qa"
+    ),
+    join(
+      brokerHomeDirectory,
+      "downstream",
+      "codex",
+      "skills",
+      "gstack",
+      ".agents",
+      "skills",
+      "gstack-qa"
+    ),
+    join(
+      brokerHomeDirectory,
+      "downstream",
+      "opencode",
+      "skills",
+      "gstack",
+      ".agents",
+      "skills",
+      "gstack-qa"
+    )
+  ];
+
+  await mkdir(join(brokerHomeDirectory, "state"), { recursive: true });
+  for (const directory of qaManifestDirectories) {
+    await mkdir(directory, { recursive: true });
+  }
+
+  await writeFile(
+    acquisitionMemoryPath,
+    `${JSON.stringify(
+      {
+        version: "2026-04-16",
+        entries: [
+          {
+            canonicalKey: "query:v2|families:quality_assurance",
+            compatibilityIntent: "capability_discovery_or_install",
+            candidateId: "gstack.qa",
+            packageId: "gstack",
+            leafCapabilityId: "gstack.qa",
+            successfulRoutes: 3,
+            installedAt: installRequiredAt,
+            verifiedAt: opencodeHitAt,
+            firstReuseAt: claudeHitAt,
+            verifiedHosts: ["codex", "claude-code", "opencode"],
+            provenance: "package_probe"
+          }
+        ]
+      },
+      null,
+      2
+    )}\n`,
+    "utf8"
+  );
+  await writeFile(
+    traceFilePath,
+    [
+      {
+        traceVersion: "2026-03-31",
+        requestText: "QA this website https://example.com",
+        host: "codex",
+        hostDecision: "broker_first",
+        resultCode: "INSTALL_REQUIRED",
+        routingOutcome: "fallback",
+        missLayer: "retrieval",
+        normalizedBy: "structured_query",
+        requestSurface: "structured_query",
+        requestContract: "query_native",
+        selectionMode: "explicit",
+        hostAction: "offer_package_install",
+        candidateCount: 1,
+        winnerId: "website-qa",
+        winnerPackageId: "gstack",
+        selectedCapabilityId: "gstack.qa",
+        selectedLeafCapabilityId: "qa",
+        selectedImplementationId: "gstack.qa",
+        selectedPackageInstallState: "available",
+        semanticMatchReason: "direct_route",
+        semanticMatchCandidateId: "website-qa",
+        semanticMatchProofFamily: "website_qa",
+        workflowId: null,
+        runId: null,
+        stageId: null,
+        reasonCode: "package_not_installed",
+        timestamp: installRequiredAt
+      },
+      {
+        traceVersion: "2026-03-31",
+        requestText: "QA this website https://example.com",
+        host: "codex",
+        hostDecision: "broker_first",
+        resultCode: "HANDOFF_READY",
+        routingOutcome: "hit",
+        missLayer: null,
+        normalizedBy: "structured_query",
+        requestSurface: "structured_query",
+        requestContract: "query_native",
+        selectionMode: "explicit",
+        hostAction: null,
+        candidateCount: 1,
+        winnerId: "website-qa",
+        winnerPackageId: "gstack",
+        selectedCapabilityId: "gstack.qa",
+        selectedLeafCapabilityId: "qa",
+        selectedImplementationId: "gstack.qa",
+        selectedPackageInstallState: "installed",
+        semanticMatchReason: "direct_route",
+        semanticMatchCandidateId: "website-qa",
+        semanticMatchProofFamily: "website_qa",
+        workflowId: null,
+        runId: null,
+        stageId: null,
+        reasonCode: null,
+        timestamp: codexHitAt
+      },
+      {
+        traceVersion: "2026-03-31",
+        requestText: "QA this website https://example.com",
+        host: "claude-code",
+        hostDecision: "broker_first",
+        resultCode: "HANDOFF_READY",
+        routingOutcome: "hit",
+        missLayer: null,
+        normalizedBy: "structured_query",
+        requestSurface: "structured_query",
+        requestContract: "query_native",
+        selectionMode: "explicit",
+        hostAction: null,
+        candidateCount: 1,
+        winnerId: "website-qa",
+        winnerPackageId: "gstack",
+        selectedCapabilityId: "gstack.qa",
+        selectedLeafCapabilityId: "qa",
+        selectedImplementationId: "gstack.qa",
+        selectedPackageInstallState: "installed",
+        semanticMatchReason: "direct_route",
+        semanticMatchCandidateId: "website-qa",
+        semanticMatchProofFamily: "website_qa",
+        workflowId: null,
+        runId: null,
+        stageId: null,
+        reasonCode: null,
+        timestamp: claudeHitAt
+      },
+      {
+        traceVersion: "2026-03-31",
+        requestText: "QA this website https://example.com",
+        host: "opencode",
+        hostDecision: "broker_first",
+        resultCode: "HANDOFF_READY",
+        routingOutcome: "hit",
+        missLayer: null,
+        normalizedBy: "structured_query",
+        requestSurface: "structured_query",
+        requestContract: "query_native",
+        selectionMode: "explicit",
+        hostAction: null,
+        candidateCount: 1,
+        winnerId: "website-qa",
+        winnerPackageId: "gstack",
+        selectedCapabilityId: "gstack.qa",
+        selectedLeafCapabilityId: "qa",
+        selectedImplementationId: "gstack.qa",
+        selectedPackageInstallState: "installed",
+        semanticMatchReason: "direct_route",
+        semanticMatchCandidateId: "website-qa",
+        semanticMatchProofFamily: "website_qa",
+        workflowId: null,
+        runId: null,
+        stageId: null,
+        reasonCode: null,
+        timestamp: opencodeHitAt
+      }
+    ]
+      .map((trace) => JSON.stringify(trace))
+      .join("\n")
+      .concat("\n"),
+    "utf8"
+  );
+
+  const manifestFixtures = [
+    {
+      directory: qaManifestDirectories[0],
+      verifiedAt: claudeHitAt
+    },
+    {
+      directory: qaManifestDirectories[1],
+      verifiedAt: codexHitAt
+    },
+    {
+      directory: qaManifestDirectories[2],
+      verifiedAt: opencodeHitAt
+    }
+  ];
+
+  for (const fixture of manifestFixtures) {
+    await writeFile(
+      join(fixture.directory, ".skills-broker.json"),
+      `${JSON.stringify(
+        {
+          schemaVersion: 1,
+          verifiedAt: fixture.verifiedAt,
+          skillName: "qa",
+          verifiedCandidate: {
+            id: "website-qa",
+            kind: "skill",
+            label: "Website QA",
+            intent: "capability_discovery_or_install",
+            package: {
+              packageId: "gstack",
+              installState: "installed"
+            },
+            leaf: {
+              capabilityId: "gstack.qa",
+              packageId: "gstack",
+              subskillId: "qa"
+            },
+            implementation: {
+              id: "gstack.qa",
+              type: "local_skill",
+              ownerSurface: "broker_owned_downstream"
+            },
+            sourceMetadata: {
+              skillName: "qa"
+            }
+          }
+        },
+        null,
+        2
+      )}\n`,
+      "utf8"
+    );
+  }
+}
+
 describe("doctor shared broker home", () => {
   it("explains why codex was not detected", async () => {
     const runtimeDirectory = await mkdtemp(join(tmpdir(), "skills-broker-doctor-missing-"));
@@ -891,9 +1152,17 @@ describe("doctor shared broker home", () => {
         reason: "managed by skills-broker"
       });
       expect(result.adoptionHealth).toMatchObject({
-        status: "green",
-        managedHosts: ["opencode"]
+        status: "blocked",
+        managedHosts: ["opencode"],
+        nextAction: expect.stringContaining("Trigger one clear website QA request")
       });
+      expect(result.adoptionHealth.reasons).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            code: "WEBSITE_QA_SIGNAL_MISSING"
+          })
+        ])
+      );
       expect(result.verifiedDownstreamManifests.hosts).toContainEqual({
         name: "opencode",
         state: "missing",
@@ -950,7 +1219,7 @@ describe("doctor shared broker home", () => {
             message:
               expect.stringContaining(
                 "shared-home: managed host shells exist but the shared broker home is missing"
-              )
+            )
           }
         ]
       });
@@ -1367,9 +1636,75 @@ describe("doctor shared broker home", () => {
         nextAction:
           "Resolve the remaining website QA fallbacks so clear requests reach a stable handoff."
       });
+      expect(result.websiteQaAdoption).toEqual({
+        windowDays: 7,
+        status: "active",
+        recent: {
+          observed: 1,
+          hits: 0,
+          misroutes: 0,
+          fallbacks: 1,
+          hostSkips: 0,
+          hostsCovered: 1,
+          supportedHosts: 3
+        },
+        proofs: {
+          verifyState: "confirmed",
+          repeatUsageState: "pending",
+          crossHostReuseState: "pending"
+        },
+        latest: {
+          traceAt: "2026-04-16T05:00:00.000Z",
+          verifiedAt: "2026-04-16T05:00:00.000Z",
+          firstReuseAt: undefined,
+          verifiedManifestAt: "2026-04-16T05:00:00.000Z",
+          activityAt: "2026-04-16T05:00:00.000Z"
+        },
+        hosts: [
+          {
+            name: "claude-code",
+            status: "missing",
+            observed: 0,
+            hits: 0,
+            misroutes: 0,
+            fallbacks: 0,
+            hostSkips: 0,
+            lastTraceAt: undefined,
+            lastVerifiedManifestAt: undefined,
+            historicalVerified: false
+          },
+          {
+            name: "codex",
+            status: "active",
+            observed: 1,
+            hits: 0,
+            misroutes: 0,
+            fallbacks: 1,
+            hostSkips: 0,
+            lastTraceAt: "2026-04-16T05:00:00.000Z",
+            lastVerifiedManifestAt: "2026-04-16T05:00:00.000Z",
+            historicalVerified: true
+          },
+          {
+            name: "opencode",
+            status: "missing",
+            observed: 0,
+            hits: 0,
+            misroutes: 0,
+            fallbacks: 0,
+            hostSkips: 0,
+            lastTraceAt: undefined,
+            lastVerifiedManifestAt: undefined,
+            historicalVerified: false
+          }
+        ],
+        nextAction:
+          "Repeat the same website QA request once more to prove repeat usage beyond the first verified handoff."
+      });
 
       const parsed = JSON.parse(formatLifecycleResult(result, "json")) as typeof result;
       expect(parsed.websiteQaLoop).toEqual(parsed.familyProofs.website_qa);
+      expect(parsed.websiteQaAdoption).toEqual(result.websiteQaAdoption);
       expect(parsed.websiteQaRouting).toEqual(result.websiteQaRouting);
       expect(parsed.familyProofs.website_qa.phase).toBe("repeat_usage_pending");
       expect(parsed.familyProofs.web_content_to_markdown.verdict).toBe("proven");
@@ -1407,7 +1742,22 @@ describe("doctor shared broker home", () => {
       const rendered = formatLifecycleResult(result, "text");
 
       expect(rendered).toContain(
+        "Website QA adoption (last 7d): active, observed=1, hit=0, misroute=0, fallback=1, host_skips=0, hosts=1/3, verify=confirmed, repeat_usage=pending, cross_host_reuse=pending"
+      );
+      expect(rendered).toContain(
+        "Website QA adoption latest: activity=2026-04-16T05:00:00.000Z, trace=2026-04-16T05:00:00.000Z, verify=2026-04-16T05:00:00.000Z, replay=2026-04-16T05:00:00.000Z"
+      );
+      expect(rendered).toContain(
+        "Website QA adoption host codex: active, observed=1, hit=0, misroute=0, fallback=1, host_skips=0, historical_verified=yes, last_trace=2026-04-16T05:00:00.000Z, last_replay=2026-04-16T05:00:00.000Z"
+      );
+      expect(rendered).toContain(
+        "Website QA adoption next action: Repeat the same website QA request once more to prove repeat usage beyond the first verified handoff."
+      );
+      expect(rendered).toContain(
         "Website QA verdict: in_progress (phase=repeat_usage_pending)"
+      );
+      expect(rendered.indexOf("Website QA adoption (last 7d): active")).toBeLessThan(
+        rendered.indexOf("Website QA verdict: in_progress")
       );
       expect(rendered.indexOf("Website QA verdict: in_progress")).toBeLessThan(
         rendered.indexOf("Routing metrics")
@@ -1464,6 +1814,249 @@ describe("doctor shared broker home", () => {
       await rm(runtimeDirectory, { recursive: true, force: true });
     }
   });
+
+  it("distinguishes stale website QA adoption from currently active signal", async () => {
+    const runtimeDirectory = await mkdtemp(
+      join(tmpdir(), "skills-broker-doctor-qa-adoption-stale-")
+    );
+    const brokerHomeDirectory = join(runtimeDirectory, ".skills-broker");
+
+    try {
+      await installSharedBrokerHome({
+        brokerHomeDirectory,
+        projectRoot: process.cwd()
+      });
+      await writeReusableFamilyProofFixtures(brokerHomeDirectory, {
+        includeSocialMarkdown: false,
+        includeWebsiteQaRepeatUsageWithoutCrossHost: true
+      });
+
+      const result = await doctorSharedBrokerHome({
+        brokerHomeDirectory,
+        homeDirectory: runtimeDirectory,
+        cwd: runtimeDirectory,
+        now: new Date("2026-04-25T08:00:00.000Z")
+      });
+      const rendered = formatLifecycleResult(result, "text");
+
+      expect(result.websiteQaAdoption).toEqual({
+        windowDays: 7,
+        status: "stale",
+        recent: {
+          observed: 0,
+          hits: 0,
+          misroutes: 0,
+          fallbacks: 0,
+          hostSkips: 0,
+          hostsCovered: 0,
+          supportedHosts: 3
+        },
+        proofs: {
+          verifyState: "confirmed",
+          repeatUsageState: "confirmed",
+          crossHostReuseState: "pending"
+        },
+        latest: {
+          traceAt: "2026-04-16T05:00:00.000Z",
+          verifiedAt: "2026-04-16T05:10:00.000Z",
+          firstReuseAt: "2026-04-16T05:10:00.000Z",
+          verifiedManifestAt: "2026-04-16T05:00:00.000Z",
+          activityAt: "2026-04-16T05:10:00.000Z"
+        },
+        hosts: [
+          {
+            name: "claude-code",
+            status: "missing",
+            observed: 0,
+            hits: 0,
+            misroutes: 0,
+            fallbacks: 0,
+            hostSkips: 0,
+            lastTraceAt: undefined,
+            lastVerifiedManifestAt: undefined,
+            historicalVerified: false
+          },
+          {
+            name: "codex",
+            status: "stale",
+            observed: 0,
+            hits: 0,
+            misroutes: 0,
+            fallbacks: 0,
+            hostSkips: 0,
+            lastTraceAt: "2026-04-16T05:00:00.000Z",
+            lastVerifiedManifestAt: "2026-04-16T05:00:00.000Z",
+            historicalVerified: true
+          },
+          {
+            name: "opencode",
+            status: "missing",
+            observed: 0,
+            hits: 0,
+            misroutes: 0,
+            fallbacks: 0,
+            hostSkips: 0,
+            lastTraceAt: undefined,
+            lastVerifiedManifestAt: undefined,
+            historicalVerified: false
+          }
+        ],
+        nextAction:
+          "Refresh the website QA signal from another supported host so the shared-home surface records fresh cross-host reuse."
+      });
+      expect(rendered).toContain(
+        "Website QA adoption (last 7d): stale, observed=0, hit=0, misroute=0, fallback=0, host_skips=0, hosts=0/3, verify=confirmed, repeat_usage=confirmed, cross_host_reuse=pending"
+      );
+      expect(rendered).toContain(
+        "Website QA adoption host codex: stale, observed=0, hit=0, misroute=0, fallback=0, host_skips=0, historical_verified=yes, last_trace=2026-04-16T05:00:00.000Z, last_replay=2026-04-16T05:00:00.000Z"
+      );
+      expect(rendered).toContain(
+        "Website QA adoption next action: Refresh the website QA signal from another supported host so the shared-home surface records fresh cross-host reuse."
+      );
+      expect(rendered).toContain(
+        "Routing metrics (last 7d): no traces recorded yet"
+      );
+    } finally {
+      await rm(runtimeDirectory, { recursive: true, force: true });
+    }
+  });
+
+  it("proves stale-to-fresh website QA adoption health transitions on the three-host surface", async () => {
+    const runtimeDirectory = await mkdtemp(
+      join(tmpdir(), "skills-broker-doctor-qa-refresh-transition-")
+    );
+    const brokerHomeDirectory = join(runtimeDirectory, ".skills-broker");
+    const repoDirectory = join(runtimeDirectory, "repo");
+    const claudeCodeInstallDirectory = join(
+      runtimeDirectory,
+      ".claude",
+      "skills",
+      "skills-broker"
+    );
+    const codexInstallDirectory = join(
+      runtimeDirectory,
+      ".agents",
+      "skills",
+      "skills-broker"
+    );
+    const opencodeInstallDirectory = join(
+      runtimeDirectory,
+      ".config",
+      "opencode",
+      "skills",
+      "skills-broker"
+    );
+
+    try {
+      await installSharedBrokerHome({
+        brokerHomeDirectory,
+        projectRoot: process.cwd()
+      });
+      await writeFreshGateArtifact(
+        brokerHomeDirectory,
+        "2026-04-25T07:59:00.000Z"
+      );
+      await initGitRepo(repoDirectory);
+      await writeFile(join(repoDirectory, "README.md"), "# repo\n", "utf8");
+      await writeFile(join(repoDirectory, "STATUS.md"), renderStatusBoard("in_progress"), "utf8");
+      await commitAll(repoDirectory, "add clean status board");
+      await mkdir(claudeCodeInstallDirectory, { recursive: true });
+      await mkdir(codexInstallDirectory, { recursive: true });
+      await mkdir(opencodeInstallDirectory, { recursive: true });
+      await writeManagedShellManifest(claudeCodeInstallDirectory, {
+        managedBy: "skills-broker",
+        host: "claude-code",
+        version: "test-version",
+        brokerHome: brokerHomeDirectory
+      });
+      await writeManagedShellManifest(codexInstallDirectory, {
+        managedBy: "skills-broker",
+        host: "codex",
+        version: "test-version",
+        brokerHome: brokerHomeDirectory
+      });
+      await writeManagedShellManifest(opencodeInstallDirectory, {
+        managedBy: "skills-broker",
+        host: "opencode",
+        version: "test-version",
+        brokerHome: brokerHomeDirectory
+      });
+
+      await writeFreshWebsiteQaAdoptionFixtures(brokerHomeDirectory, {
+        installRequiredAt: "2026-04-01T04:55:00.000Z",
+        codexHitAt: "2026-04-01T05:00:00.000Z",
+        claudeHitAt: "2026-04-01T05:05:00.000Z",
+        opencodeHitAt: "2026-04-01T05:10:00.000Z"
+      });
+
+      const staleResult = await doctorSharedBrokerHome({
+        brokerHomeDirectory,
+        homeDirectory: runtimeDirectory,
+        repoRootOverride: repoDirectory,
+        claudeCodeInstallDirectory,
+        codexInstallDirectory,
+        opencodeInstallDirectory,
+        now: new Date("2026-04-25T08:00:00.000Z")
+      });
+
+      expect(staleResult.websiteQaAdoption.status).toBe("stale");
+      expect(staleResult.adoptionHealth).toMatchObject({
+        status: "blocked",
+        managedHosts: ["claude-code", "codex", "opencode"],
+        nextAction: expect.stringContaining("current QA-first signal")
+      });
+      expect(staleResult.adoptionHealth.reasons).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            code: "WEBSITE_QA_SIGNAL_STALE"
+          })
+        ])
+      );
+
+      await writeFreshWebsiteQaAdoptionFixtures(brokerHomeDirectory, {
+        installRequiredAt: "2026-04-25T04:55:00.000Z",
+        codexHitAt: "2026-04-25T05:00:00.000Z",
+        claudeHitAt: "2026-04-25T05:05:00.000Z",
+        opencodeHitAt: "2026-04-25T05:10:00.000Z"
+      });
+
+      const freshResult = await doctorSharedBrokerHome({
+        brokerHomeDirectory,
+        homeDirectory: runtimeDirectory,
+        repoRootOverride: repoDirectory,
+        claudeCodeInstallDirectory,
+        codexInstallDirectory,
+        opencodeInstallDirectory,
+        now: new Date("2026-04-25T08:00:00.000Z")
+      });
+
+      expect(freshResult.websiteQaAdoption.status).toBe("active");
+      expect(freshResult.websiteQaAdoption.recent.hostsCovered).toBe(3);
+      expect(freshResult.websiteQaAdoption.hosts).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            name: "claude-code",
+            status: "active"
+          }),
+          expect.objectContaining({
+            name: "codex",
+            status: "active"
+          }),
+          expect.objectContaining({
+            name: "opencode",
+            status: "active"
+          })
+        ])
+      );
+      expect(freshResult.adoptionHealth).toEqual({
+        status: "green",
+        managedHosts: ["claude-code", "codex", "opencode"],
+        reasons: []
+      });
+    } finally {
+      await rm(runtimeDirectory, { recursive: true, force: true });
+    }
+  }, 30_000);
 
   it("shows OpenCode-backed web markdown reuse on the shared doctor surface", async () => {
     const runtimeDirectory = await mkdtemp(
@@ -1609,6 +2202,7 @@ describe("doctor shared broker home", () => {
       await writeFile(join(repoDirectory, "README.md"), "# repo\n", "utf8");
       await writeFile(join(repoDirectory, "STATUS.md"), renderStatusBoard("in_progress"), "utf8");
       await commitAll(repoDirectory, "add clean status board");
+      await writeFreshWebsiteQaAdoptionFixtures(brokerHomeDirectory);
       await mkdir(codexInstallDirectory, { recursive: true });
       await writeManagedShellManifest(codexInstallDirectory, {
         managedBy: "skills-broker",
@@ -1621,7 +2215,8 @@ describe("doctor shared broker home", () => {
         brokerHomeDirectory,
         homeDirectory: runtimeDirectory,
         repoRootOverride: repoDirectory,
-        codexInstallDirectory
+        codexInstallDirectory,
+        now: new Date("2026-04-16T08:00:00.000Z")
       });
 
       expect(result.adoptionHealth).toEqual({
@@ -1630,6 +2225,7 @@ describe("doctor shared broker home", () => {
         reasons: []
       });
       expect(formatLifecycleResult(result, "text")).toContain("Adoption health: green");
+      expect(result.websiteQaAdoption.status).toBe("active");
     } finally {
       await rm(runtimeDirectory, { recursive: true, force: true });
     }
@@ -1659,6 +2255,7 @@ describe("doctor shared broker home", () => {
       await writeFile(join(repoDirectory, "README.md"), "# repo\n", "utf8");
       await writeFile(join(repoDirectory, "STATUS.md"), renderStatusBoard("in_progress"), "utf8");
       await commitAll(repoDirectory, "add clean status board");
+      await writeFreshWebsiteQaAdoptionFixtures(brokerHomeDirectory);
       await mkdir(opencodeInstallDirectory, { recursive: true });
       await writeManagedShellManifest(opencodeInstallDirectory, {
         managedBy: "skills-broker",
@@ -1670,7 +2267,8 @@ describe("doctor shared broker home", () => {
       const result = await doctorSharedBrokerHome({
         brokerHomeDirectory,
         homeDirectory: runtimeDirectory,
-        repoRootOverride: repoDirectory
+        repoRootOverride: repoDirectory,
+        now: new Date("2026-04-16T08:00:00.000Z")
       });
 
       expect(result.hosts).toContainEqual({
@@ -1683,6 +2281,7 @@ describe("doctor shared broker home", () => {
         managedHosts: ["opencode"],
         reasons: []
       });
+      expect(result.websiteQaAdoption.status).toBe("active");
     } finally {
       await rm(runtimeDirectory, { recursive: true, force: true });
     }
