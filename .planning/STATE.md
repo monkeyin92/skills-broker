@@ -8,28 +8,28 @@
 See: `.planning/PROJECT.md` (updated 2026-04-23)
 
 **Core value:** 用户只需要描述想达成的结果，broker 就能在当前宿主里找到、准备并复用合适的能力，而不用让用户记住工具名、重新发现赢家、或自己判断安装路径。
-**Current focus:** Milestone v1.2 active — close release truth and shipped-proof promotion on top of the current three-host runtime
+**Current focus:** Milestone v1.3 active — harden `website QA` default-entry confidence before reopening broader surface expansion
 
 ## Current Milestone
 
-- **Milestone:** v1.2 Release Truth And Shipping Closure
+- **Milestone:** v1.3 Website QA Default-Entry Confidence
 - **Status:** active
 - **Started:** 2026-04-23
-- **Previous archive:** `.planning/milestones/v1.1-ROADMAP.md`
+- **Previous archive:** `.planning/milestones/v1.2-ROADMAP.md`
 
 ## Current Position
 
-- **Phase:** —
+- **Phase:** 12
 - **Plan:** —
-- **Status:** Requirements and roadmap drafted; awaiting roadmap approval
-- **Last activity:** 2026-04-23 — Milestone v1.2 started and phases 9-11 were drafted
+- **Status:** Requirements and roadmap drafted; ready to plan Phase 12
+- **Last activity:** 2026-04-23 — Milestone v1.3 initialized and phases 12-14 were drafted
 
 ## Current Phase
 
-- **Phase:** —
-- **Goal:** —
-- **Status:** milestone initialization
-- **Primary requirements:** `REL-*`, `PROOF-*`, `SHIP-*`
+- **Phase:** 12
+- **Goal:** Harden broker-first hit rate and routing confidence for `website QA` without breaking the coarse host boundary
+- **Status:** ready_to_plan
+- **Primary requirements:** `ROUTE-01`, `ROUTE-02`, `ROUTE-03`
 - **Plan count:** —
 - **Wave count:** —
 
@@ -37,19 +37,22 @@ See: `.planning/PROJECT.md` (updated 2026-04-23)
 
 | Phase | Name | Status | Notes |
 |-------|------|--------|-------|
-| 9 | Lock Release Gate Verdicts | Pending | Roadmap drafted; plan files not created yet |
-| 10 | Ship Repo-Owned Proof Promotion | Pending | Roadmap drafted; plan files not created yet |
-| 11 | Close Publish Flow On Canonical Release Truth | Pending | Roadmap drafted; plan files not created yet |
+| 12 | Harden Website QA Broker-First Hit Rate | Pending | Roadmap drafted; plan files not created yet |
+| 13 | Prove Website QA Repeat Usage Loop | Pending | Roadmap drafted; plan files not created yet |
+| 14 | Lock QA-First Operator Truth | Pending | Roadmap drafted; plan files not created yet |
 
 ## Known Context
 
 - Repo 已完成 brownfield 代码地图，见 `.planning/codebase/`
-- `website QA` 已被锁成默认入口 hero lane，`web markdown` 是第二条 proven family，`social markdown` 是下一条 proven family
-- `idea-to-ship` 与 `investigation-to-fix` 已经是 shipped broker-owned workflows
-- Claude Code、Codex、OpenCode 现在共享同一套 shared broker home、thin host shell、proof/reuse state 与 published lifecycle contract
-- blind-spot reporting、focused narrative parity 与 strict repo proof gate 已经进入 CI；`verify:local` 仍然只承担本地预检角色
-- canonical `STATUS.md` 已经支持 `shipped_local` / `shipped_remote` 区分，strict doctor 也能按 shipping ref 做 repo-scoped evaluation，但 repo 还没有正式的 shipped-proof promotion flow
-- 上一轮 phase 目录已从活动区清空并归档到 `.planning/milestones/v1.0-phases/` 与 `.planning/milestones/v1.1-phases/`，后续 Phase 9 可以在干净的 `.planning/phases/` 下开始
+- `website QA` 仍然是默认入口 hero lane，`web markdown` 是第二条 proven family，`social markdown` 是下一条 proven family
+- `idea-to-ship` 与 `investigation-to-fix` 仍然是 shipped broker-owned workflows
+- Claude Code、Codex、OpenCode 继续共享同一套 shared broker home、thin host shell、proof/reuse state 与 published lifecycle contract
+- CI trust rails 已经通过 `release:gate` 收口成 canonical repo-owned release verdict
+- canonical `STATUS.md` 现在有显式 `release:promote` shipped-proof promotion flow；publish workflow 也直接复用同一套 truth
+- 当前 bottleneck 已从 release truth 闭环转向 `website QA` 的真实命中率、repeat-usage evidence 与 QA-first operator truth drift 防护
+- host shell 仍然只能判断 `broker_first` / `handle_normally` / `clarify_before_broker`，不能在入口处选择具体 QA winner
+- routing traces、acquisition memory、verified downstream manifests、familyProofs 与 bilingual/operator truth surfaces 都是 v1.3 可复用的现成 proof rail
+- v1.2 phase artifacts 已归档到 `.planning/milestones/v1.2-phases/`
 
 ## Session History
 
@@ -58,7 +61,8 @@ See: `.planning/PROJECT.md` (updated 2026-04-23)
 - 2026-04-23: Milestone v1.0 archived — see `.planning/milestones/v1.0-ROADMAP.md` and `.planning/milestones/v1.0-REQUIREMENTS.md`
 - 2026-04-23: Phases 5-8 executed and verified — see `.planning/milestones/v1.1-phases/`
 - 2026-04-23: Milestone v1.1 audited — see `.planning/milestones/v1.1-MILESTONE-AUDIT.md`
-- 2026-04-23: Milestone v1.2 started — requirements and roadmap drafted for phases 9-11
+- 2026-04-23: Milestone v1.2 executed, audited, and archived — see `.planning/milestones/v1.2-MILESTONE-AUDIT.md`
+- 2026-04-23: Milestone v1.3 started — requirements and roadmap drafted for phases 12-14
 
 ## Workflow Settings
 
@@ -73,15 +77,15 @@ See: `.planning/PROJECT.md` (updated 2026-04-23)
 
 ## Next Up
 
-Review the proposed roadmap for phases 9-11, then run:
+Plan the first phase of the new milestone:
 
-`$gsd-plan-phase 9`
+`$gsd-plan-phase 12`
 
 Also available:
 - `cat .planning/PROJECT.md`
 - `cat .planning/REQUIREMENTS.md`
 - `cat .planning/ROADMAP.md`
-- `cat .planning/milestones/v1.1-MILESTONE-AUDIT.md`
+- `cat .planning/milestones/v1.2-MILESTONE-AUDIT.md`
 
 ---
 *State initialized: 2026-04-22*

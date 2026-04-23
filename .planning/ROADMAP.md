@@ -1,52 +1,27 @@
 # Roadmap: skills-broker
 
 **Created:** 2026-04-23
-**Source Requirements:** 8 v1.2 requirements from `.planning/REQUIREMENTS.md`
+**Source Requirements:** 9 v1.3 requirements from `.planning/REQUIREMENTS.md`
 **Granularity:** coarse
 **Project Type:** brownfield
 
 ## Roadmap Summary
 
-**3 phases** | **8 requirements mapped** | All v1.2 requirements covered ✓
+**3 phases** | **9 requirements mapped** | All v1.3 requirements covered ✓
 
 | # | Phase | Goal | Requirements | Success Criteria | UI Hint |
 |---|-------|------|--------------|------------------|---------|
-| 9 | Lock Release Gate Verdicts | 把现有 CI trust rails 收口成 ship/release 可直接消费的 canonical gate | REL-01, REL-02, REL-03 | 4 | no |
-| 10 | Ship Repo-Owned Proof Promotion | 为 canonical `STATUS.md` truth 提供显式、fail-closed 的 shipped-proof promotion flow | PROOF-01, PROOF-02, PROOF-03 | 4 | no |
-| 11 | Close Publish Flow On Canonical Release Truth | 让 publish/release automation 直接复用 canonical status/doctor truth，并锁住 operator wording | SHIP-01, SHIP-02 | 4 | no |
+| 12 | Harden Website QA Broker-First Hit Rate | 让明显的 `website QA` 请求在真实宿主里更稳定地跨过 coarse broker-first boundary，同时减少误路由与无意义 fallback | ROUTE-01, ROUTE-02, ROUTE-03 | 4 | no |
+| 13 | Prove Website QA Repeat Usage Loop | 把 `INSTALL_REQUIRED -> install -> rerun -> cross-host reuse -> repeat usage` 收成更强的默认入口 proof loop | REUSE-01, REUSE-02, REUSE-03 | 4 | no |
+| 14 | Lock QA-First Operator Truth | 锁住 QA-first hero lane、coarse boundary 解释与多表面 proof/wording drift guardrails | TRUTH-01, TRUTH-02, TRUTH-03 | 4 | no |
 
 ## Phase Details
 
-### Phase 9: Lock Release Gate Verdicts
+### Phase 12: Harden Website QA Broker-First Hit Rate
 
-**Goal:** 把 `ci:blind-spot`、`test:ci:narrative-parity` 与 strict repo-scoped `doctor` 收口成 ship/release 可直接消费的 canonical gate，而不是三条彼此分离的 CI rail。
+**Goal:** 让明显的 `website QA` 请求在 Claude Code、Codex、OpenCode 这些支持宿主里更稳定地进入 `broker_first`，并让 broker 对相邻非 QA 表达的拒绝/回退继续保持可预测。
 
-**Requirements:** `REL-01`, `REL-02`, `REL-03`
-
-**Status:** pending
-
-**Verification:** —
-
-**UI hint**: no
-
-Plans:
-
-- [ ] `09-01-PLAN.md` — Gate ship/release on the existing CI trust rails instead of ad hoc manual checks
-- [ ] `09-02-PLAN.md` — Emit a machine-readable release verdict with failing rail, shipping ref, and remote freshness diagnostics
-
-**Success criteria:**
-1. ship/release automation 可以把 `ci:blind-spot`、`test:ci:narrative-parity` 与 strict `doctor` 当成同一条 release gate，而不是继续拆成多条人工判断
-2. gate 输出能明确指出失败 rail、评估使用的 shipping ref，以及 remote truth 是否被刷新，maintainer 不必回看原始 workflow log 才知道哪里出错
-3. `verify:local` 继续保持 contributor 机器预检职责，不会被 release automation 误当成 shipping proof
-4. 任何缺失或损坏的 release-gate 输入都会在 publish 之前 fail closed
-
-**Depends on:** Phase 8 having already shipped CI blind-spot, narrative parity, and strict repo proof rails
-
-### Phase 10: Ship Repo-Owned Proof Promotion
-
-**Goal:** 为 canonical `STATUS.md` truth 增加显式、repo-owned、fail-closed 的 shipped-proof promotion flow，结束 milestone 末尾人工补 `shipped_remote` 的做法。
-
-**Requirements:** `PROOF-01`, `PROOF-02`, `PROOF-03`
+**Requirements:** `ROUTE-01`, `ROUTE-02`, `ROUTE-03`
 
 **Status:** pending
 
@@ -56,23 +31,22 @@ Plans:
 
 Plans:
 
-- [ ] `10-01-PLAN.md` — Add an explicit promotion flow that reevaluates canonical status-board proofs against the shipping ref
-- [ ] `10-02-PLAN.md` — Fail close on broken ship-ref resolution, remote refresh, or canonical proof evaluation states
-- [ ] `10-03-PLAN.md` — Keep `STATUS.md`, doctor/status diagnostics, and promotion output aligned after successful upgrades
+- [ ] `12-01-PLAN.md` — Tighten coarse host decision examples and request normalization so obvious website QA asks cross the broker-first boundary more consistently
+- [ ] `12-02-PLAN.md` — Reduce website QA misroutes/fallbacks and expose repo-owned hit / misroute / fallback evidence for the maintained hero lane
 
 **Success criteria:**
-1. maintainer 可以运行明确的 promotion flow，把 eligible `shipped_local` canonical proofs 按 shipping ref 重新评估并升级成 `shipped_remote`
-2. shipping ref 解析失败、remote refresh 失败、canonical proof evaluation 失败都会阻止 promotion，而不是静默升级 shipped truth
-3. promotion 成功后，`STATUS.md`、doctor/status diagnostics 与 automation output 继续讲同一份 shipped truth，不需要手工补文案或状态
-4. promotion flow 的输入、输出与失败模式都是可审计、可重复执行的 repo-owned contract
+1. 明显的 `website QA` 请求在支持宿主里更常被判断为 `broker_first`，而宿主仍然只做 coarse boundary 决策
+2. 临近但并非 QA 的表达不会被粗暴吞进 hero lane，而是继续落到 clean reject、clarify、或正常处理
+3. repo 有可重复的 hit / misroute / fallback 证据面，不需要靠一次性的手工会话截图解释“是不是更稳了”
+4. 对 coarse boundary、QA hit rate 或 refusal/fallback contract 的回归会在测试、eval、或 proof rail 中 fail closed
 
-**Depends on:** Phase 9 defining the canonical release gate verdict and shipping-ref diagnostics
+**Depends on:** v1.2 已经把 canonical release truth 闭环完成，当前三宿主 thin-shell / shared-home parity 继续成立
 
-### Phase 11: Close Publish Flow On Canonical Release Truth
+### Phase 13: Prove Website QA Repeat Usage Loop
 
-**Goal:** 让 publish/release automation 直接复用 canonical status/doctor truth，并把 `shipped_local` / `shipped_remote` 与 lifecycle wording 锁成单一 operator story。
+**Goal:** 把 `website QA` 的 `INSTALL_REQUIRED -> install -> rerun -> cross-host reuse -> repeat usage` 收成更强的 repo-owned proof loop，避免默认入口只剩“一次 demo 成功”。
 
-**Requirements:** `SHIP-01`, `SHIP-02`
+**Requirements:** `REUSE-01`, `REUSE-02`, `REUSE-03`
 
 **Status:** pending
 
@@ -82,30 +56,55 @@ Plans:
 
 Plans:
 
-- [ ] `11-01-PLAN.md` — Reuse the existing strict-doctor/status evaluator inside publish automation instead of adding release-only logic
-- [ ] `11-02-PLAN.md` — Lock release-facing wording and docs to the canonical shipped-local/shipped-remote contract
+- [ ] `13-01-PLAN.md` — Strengthen the canonical website QA install / verify / cross-host reuse proof on the three-host surface
+- [ ] `13-02-PLAN.md` — Add repeat-usage evidence beyond the first reuse and keep doctor/advisory proof surfaces aligned on what is still missing
 
 **Success criteria:**
-1. published release automation 直接复用 CI 已验证过的 status-board / strict-doctor evaluator，而不是再分叉出 release-only evaluator
-2. canonical repo truth 变红、shipping ref 不可解析、或 remote truth 无法刷新时，publish 不会继续执行
-3. automation logs、README / README.zh-CN / STATUS / TODOS 与 published lifecycle wording 会继续对齐 `shipped_local` / `shipped_remote` 与 proven-family hierarchy
-4. maintainer 可以把一次成功发布追溯回同一份 canonical release truth，而不是在 CI、publish 与 docs 之间来回拼接证据
+1. repo 可以证明 `website QA` 的 `INSTALL_REQUIRED -> install -> rerun -> cross-host reuse` 闭环在当前三宿主表面上可靠成立
+2. proof loop 继续往前推进到 repeat usage，而不是只停在第一次 install 完成后的单次 handoff
+3. `doctor`、acquisition memory 与 verified downstream manifests 会对齐同一份 QA verify/reuse truth，并在不完整时指出下一个缺口
+4. maintainer 能判断“这条默认入口是持续可复用的”，而不是从零拼接一次 smoke log
 
-**Depends on:** Phase 10 shipping the explicit proof-promotion flow on top of Phase 9 release-gate verdicts
+**Depends on:** Phase 12 已经先把 QA-first entry 命中率与 refusal/fallback contract 收得更稳
+
+### Phase 14: Lock QA-First Operator Truth
+
+**Goal:** 让 README、README.zh-CN、generated host shell、`STATUS.md`、`TODOS.md` 与 repo-native guardrails 继续讲同一份 QA-first truth，同时明确 coarse broker-first boundary 不被破坏。
+
+**Requirements:** `TRUTH-01`, `TRUTH-02`, `TRUTH-03`
+
+**Status:** pending
+
+**Verification:** —
+
+**UI hint**: no
+
+Plans:
+
+- [ ] `14-01-PLAN.md` — Align QA-first hero-lane wording across README, README.zh-CN, generated host shell, STATUS, and TODOS
+- [ ] `14-02-PLAN.md` — Add parity and drift guardrails so QA-first wording and coarse-boundary truth fail closed instead of relying on manual review
+
+**Success criteria:**
+1. QA-first hero lane、second proven family、next proven family 的层级在英文、中文、host shell 与 repo truth surfaces 上保持一致
+2. operator-facing 文案会明确解释“宿主只决定边界，具体 QA winner 仍由 broker 选”，不会偷偷退回细粒度 host logic
+3. bilingual/operator truth 漂移会被 repo-native guardrails 抓到，而不是只能靠人工巡检
+4. 默认入口 story 会建立在 Phase 12-13 的 runtime evidence 之上，而不是重新变成单纯的文案调整
+
+**Depends on:** Phase 13 先把 QA repeat-usage proof 做实，再锁 operator wording 与 drift guardrails
 
 ## Milestone View
 
-### Milestone 3: Release Truth And Shipping Closure
+### Milestone 4: Website QA Default-Entry Confidence
 
-Deliver Phases 9-11 to turn the shipped CI trust rails into the default release gate, add an explicit shipped-proof promotion flow, and close the publish loop on one canonical release truth.
+Deliver Phases 12-14 to make `website QA` a more credible default-entry lane: better real-host hit rate first, stronger repeat-usage proof second, and tighter QA-first operator truth last.
 
 ## Notes
 
-- This roadmap continues numbering from milestone v1.1; no phase renumber reset was used.
+- This roadmap continues numbering from milestone v1.2; no phase renumber reset was used.
 - Research was skipped for this milestone because `workflow.research` is currently disabled and repo-native product truth is already specific enough to scope the work.
-- Previous milestone phase directories were archived to `.planning/milestones/v1.0-phases/` and `.planning/milestones/v1.1-phases/` to clear the active phase workspace before Phase 9 planning begins.
-- The roadmap intentionally sequences release-gate verdicts before proof promotion, and proof promotion before publish-flow closure, so release automation never has to invent a second truth source.
+- Previous milestone artifacts are already archived under `.planning/milestones/v1.2-phases/`, so the active planning workspace is clean before Phase 12.
+- The roadmap intentionally sequences hit-rate hardening before repeat-usage proof, and repeat-usage proof before operator-truth lock, so the QA-first story follows runtime evidence instead of outrunning it.
 
 ---
 *Roadmap created: 2026-04-23*
-*Last updated: 2026-04-23 after starting v1.2 milestone*
+*Last updated: 2026-04-23 after creating the v1.3 roadmap*
