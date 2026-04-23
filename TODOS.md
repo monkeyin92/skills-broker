@@ -2,23 +2,49 @@
 
 ## Current Focus
 
-### Milestone v1.2 shipped; next milestone not yet defined
+### Milestone v1.3 active; Phase 14 operator-truth lock remains
 
-**What:** Keep the new repo-owned release truth surface stable: `release:gate` stays the canonical pre-publish verdict, `release:promote` stays the only shipped-proof promotion path, and publish automation continues to close out on the same truth.
+**What:** Lock README / README.zh-CN / generated host shell / STATUS / TODOS onto the same QA-first operator story, then fail-close that wording in the existing parity and CI trust rails.
 
-**Why:** v1.2 has already closed the old manual release bookkeeping gap. The next leverage point is choosing what to expand next, not reopening ship/proof drift.
+**Why:** Phase 12 and Phase 13 already landed the runtime truth that matters: clear website QA asks now cross the coarse broker-first boundary more reliably, and the website QA proof loop now reaches repeat usage plus cross-host reuse on the three-host shared-home surface. The remaining risk is operator-truth drift.
 
-**Context:** Supported now: Claude Code, Codex, OpenCode. Claude Code, Codex, and OpenCode now share full published lifecycle and proof/reuse parity. Published lifecycle commands: npx skills-broker update / npx skills-broker doctor / npx skills-broker remove. Repo-local release truth now uses `npm run release:gate` plus `npm run release:promote`, while publish automation reuses those same commands to keep canonical `STATUS.md` aligned with shipped-local versus shipped-remote truth.
+**Context:** Supported now: Claude Code, Codex, OpenCode. Claude Code, Codex, and OpenCode now share full published lifecycle and proof/reuse parity. Published lifecycle commands: npx skills-broker update / npx skills-broker doctor / npx skills-broker remove. website QA remains the hero lane. web markdown remains the second proven family. social markdown remains the next proven family. Hosts choose only `broker_first`, `handle_normally`, or `clarify_before_broker`; the broker still chooses the concrete QA winner. `doctor` now exposes website QA routing evidence plus separate repeat-usage and cross-host reuse proof states.
 
 **Readiness contract:** `docs/superpowers/specs/2026-04-22-third-host-thin-shell-readiness.md`
 
-**Readiness gate:** All supported hosts now share the same shared broker home, thin host shell, proof/reuse state, and published lifecycle contract. Canonical release truth now closes on that same shared surface.
+**Readiness gate:** All supported hosts now share the same shared broker home, thin host shell, proof/reuse state, and published lifecycle contract. The next green bar is that README / README.zh-CN / STATUS / TODOS / generated host shell all tell that same QA-first story without drift.
 
 **Effort:** S
-**Priority:** P2
-**Depends on:** the current host shell contract staying thin and stable
+**Priority:** P1
+**Depends on:** Phase 12 route-confidence truth and Phase 13 repeat-usage proof staying green
 
 ## Completed
+
+### Harden website QA broker-first hit rate
+
+**What:** Make clear website QA requests and QA install-help phrasing cross the coarse broker-first boundary more reliably, while keeping nearby page-level asks fail-closed.
+
+**Why:** The default-entry story was still too fragile if obvious QA asks or mixed-language install-help wording missed the broker or got swallowed into the wrong lane.
+
+**Shipped locally:** query normalization now handles mixed-language website-QA discovery/install-help asks, page-level near misses stay ambiguous instead of being misrouted into QA, and `doctor` now exposes repo-owned website QA routing evidence directly.
+
+**Effort:** M
+**Priority:** P1
+**Depends on:** the coarse host boundary staying thin
+**Completed:** shipped_local (2026-04-23)
+
+### Prove the website QA repeat-usage loop
+
+**What:** Turn the website QA install / verify path into a stronger repo-owned proof loop that also shows repeat usage and cross-host reuse on the shared-home surface.
+
+**Why:** A default-entry lane is not convincing if it only succeeds once and then falls back to story time instead of proof.
+
+**Shipped locally:** the canonical website QA MCP proof now covers `INSTALL_REQUIRED -> install -> rerun -> cross-host reuse -> repeat usage`, and `doctor` now distinguishes repeat usage from cross-host reuse so operators can see the next missing proof directly.
+
+**Effort:** M
+**Priority:** P1
+**Depends on:** Phase 12 QA-entry routing confidence
+**Completed:** shipped_local (2026-04-23)
 
 ### Shipped OpenCode as the third thin host shell
 

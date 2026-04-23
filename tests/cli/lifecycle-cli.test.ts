@@ -232,12 +232,13 @@ describe("lifecycle cli", () => {
         expect.objectContaining({
           verdict: "in_progress",
           phase: "install_required_pending",
-          proofs: {
+          proofs: expect.objectContaining({
             installRequiredObserved: false,
             verifyConfirmed: false,
+            repeatUsageConfirmed: false,
             crossHostReuseConfirmed: false,
             replayReady: false
-          }
+          })
         })
       );
       expect(result.websiteQaLoop).toEqual(result.familyProofs.website_qa);

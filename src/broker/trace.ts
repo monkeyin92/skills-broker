@@ -1,9 +1,12 @@
 import type { CapabilityCard } from "../core/capability-card.js";
 import type { NormalizeRequestInput } from "../core/request.js";
 import type { SemanticResolverVerdict } from "./semantic-resolver.js";
+import { compileEnvelopeRequest } from "./query-compiler.js";
 import type {
+  BrokerHost,
   BrokerHostAction,
   BrokerOutcomeCode,
+  CapabilityQuery,
   CapabilityProofFamily,
   CapabilityPackageInstallState
 } from "../core/types.js";
@@ -41,6 +44,7 @@ export type BrokerTraceRequestContract =
   | "raw_envelope_fallback";
 export type BrokerTraceSelectionMode = "explicit";
 export type BrokerTraceSemanticMatchReason = SemanticResolverVerdict;
+export type BrokerTraceRequestedProofFamily = CapabilityProofFamily | null;
 
 export type BrokerRoutingTrace = {
   traceVersion: typeof BROKER_TRACE_VERSION;
@@ -62,6 +66,7 @@ export type BrokerRoutingTrace = {
   selectedLeafCapabilityId: string | null;
   selectedImplementationId: string | null;
   selectedPackageInstallState: CapabilityPackageInstallState | null;
+  requestedProofFamily: BrokerTraceRequestedProofFamily;
   semanticMatchReason: BrokerTraceSemanticMatchReason | null;
   semanticMatchCandidateId: string | null;
   semanticMatchProofFamily: CapabilityProofFamily | null;
@@ -130,7 +135,7 @@ type RuntimeTraceOptions = {
 
 type SyntheticHostSkippedTraceOptions = {
   requestText: string;
-  host: string;
+  host: BrokerHost;
   now: Date;
   hostDecision?: Exclude<BrokerTraceHostDecision, "broker_first">;
   hostAction?: BrokerHostAction | null;
@@ -138,6 +143,70 @@ type SyntheticHostSkippedTraceOptions = {
 
 function requestTextFromInput(input: NormalizeRequestInput): string {
   return "task" in input ? input.task : input.requestText;
+}
+
+function hasQueryFamily(query: CapabilityQuery, family: string): boolean {
+  return query.jobFamilies?.includes(family) ?? false;
+}
+
+function hasQueryArtifact(query: CapabilityQuery, artifact: string): boolean {
+  return query.artifacts?.includes(artifact) ?? false;
+}
+
+function requestedProofFamilyFromCapabilityQuery(
+  query: CapabilityQuery
+): BrokerTraceRequestedProofFamily {
+  if (
+    hasQueryFamily(query, "quality_assurance") ||
+    hasQueryFamily(query, "website_qa") ||
+    hasQueryArtifact(query, "qa_report")
+  ) {
+    return "website_qa";
+  }
+
+  if (
+    hasQueryArtifact(query, "markdown") &&
+    hasQueryFamily(query, "social_content_conversion")
+  ) {
+    return "social_post_to_markdown";
+  }
+
+  if (
+    hasQueryArtifact(query, "markdown") &&
+    (hasQueryFamily(query, "web_content_conversion") ||
+      hasQueryFamily(query, "content_acquisition"))
+  ) {
+    return "web_content_to_markdown";
+  }
+
+  if (
+    hasQueryFamily(query, "capability_acquisition") ||
+    hasQueryArtifact(query, "installation_plan")
+  ) {
+    return "capability_discovery_or_install";
+  }
+
+  return null;
+}
+
+function requestedProofFamilyFromInput(
+  input: NormalizeRequestInput
+): BrokerTraceRequestedProofFamily {
+  if ("task" in input) {
+    return "web_content_to_markdown";
+  }
+
+  if (input.capabilityQuery !== undefined) {
+    return requestedProofFamilyFromCapabilityQuery(input.capabilityQuery);
+  }
+
+  const compiled = compileEnvelopeRequest(input);
+
+  if (compiled.kind !== "compiled") {
+    return null;
+  }
+
+  return requestedProofFamilyFromCapabilityQuery(compiled.capabilityQuery);
 }
 
 function normalizationFromInput(input: NormalizeRequestInput): {
@@ -399,6 +468,7 @@ export function createBrokerRoutingTrace(
     selectedLeafCapabilityId: selected?.leaf.subskillId ?? null,
     selectedImplementationId: selected?.implementation.id ?? null,
     selectedPackageInstallState: selected?.package.installState ?? null,
+    requestedProofFamily: requestedProofFamilyFromInput(options.input),
     semanticMatchReason: options.semanticRouting?.verdict ?? null,
     semanticMatchCandidateId:
       options.semanticRouting?.topMatch?.candidateId ?? null,
@@ -435,6 +505,10 @@ export function createSyntheticHostSkippedBrokerTrace(
     selectedLeafCapabilityId: null,
     selectedImplementationId: null,
     selectedPackageInstallState: null,
+    requestedProofFamily: requestedProofFamilyFromInput({
+      requestText: options.requestText,
+      host: options.host
+    }),
     semanticMatchReason: null,
     semanticMatchCandidateId: null,
     semanticMatchProofFamily: null,

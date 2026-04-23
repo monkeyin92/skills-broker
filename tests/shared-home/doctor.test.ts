@@ -321,6 +321,7 @@ async function writeReusableFamilyProofFixtures(
   options: {
     includeOpencodeWebMarkdown?: boolean;
     includeSocialMarkdown?: boolean;
+    includeWebsiteQaRepeatUsageWithoutCrossHost?: boolean;
   } = {
     includeSocialMarkdown: true
   }
@@ -389,9 +390,18 @@ async function writeReusableFamilyProofFixtures(
             candidateId: "gstack.qa",
             packageId: "gstack",
             leafCapabilityId: "gstack.qa",
-            successfulRoutes: 1,
+            successfulRoutes: options.includeWebsiteQaRepeatUsageWithoutCrossHost
+              ? 2
+              : 1,
             installedAt: "2026-04-16T05:00:00.000Z",
-            verifiedAt: "2026-04-16T05:00:00.000Z",
+            verifiedAt: options.includeWebsiteQaRepeatUsageWithoutCrossHost
+              ? "2026-04-16T05:10:00.000Z"
+              : "2026-04-16T05:00:00.000Z",
+            ...(options.includeWebsiteQaRepeatUsageWithoutCrossHost
+              ? {
+                  firstReuseAt: "2026-04-16T05:10:00.000Z"
+                }
+              : {}),
             verifiedHosts: ["codex"],
             provenance: "package_probe"
           },
@@ -1074,10 +1084,14 @@ describe("doctor shared broker home", () => {
         firstReuseRecorded: 1,
         crossHostReuse: 1,
         qualityAssuranceSuccessfulRoutes: 1,
-        qualityAssuranceFirstReuseRecorded: 0
+        qualityAssuranceFirstReuseRecorded: 0,
+        qualityAssuranceCrossHostReuse: 0
       });
       expect(rendered).toContain(
-        "Acquisition memory: present, entries=2, successful_routes=3, first_reuse_after_install=1, cross_host_reuse=1, website_qa_successful_reruns=1, website_qa_first_reuse=0"
+        "Acquisition memory: present, entries=2, successful_routes=3, first_reuse_after_install=1, cross_host_reuse=1, website_qa_successful_reruns=1, website_qa_repeat_usage=0"
+      );
+      expect(rendered).toContain(
+        "Website QA acquisition proof: repeat_usage=0, cross_host_reuse=0"
       );
 
       const parsed = JSON.parse(formatLifecycleResult(result, "json")) as typeof result;
@@ -1090,7 +1104,8 @@ describe("doctor shared broker home", () => {
         firstReuseRecorded: 1,
         crossHostReuse: 1,
         qualityAssuranceSuccessfulRoutes: 1,
-        qualityAssuranceFirstReuseRecorded: 0
+        qualityAssuranceFirstReuseRecorded: 0,
+        qualityAssuranceCrossHostReuse: 0
       });
     } finally {
       await rm(runtimeDirectory, { recursive: true, force: true });
@@ -1258,27 +1273,31 @@ describe("doctor shared broker home", () => {
         installRequiredTraces: 1,
         rerunSuccessfulRoutes: 1,
         reuseRecorded: 0,
+        crossHostReuseRecorded: 0,
         downstreamReplayManifests: 1,
         acquisitionMemoryState: "present",
         verifiedDownstreamState: "present",
         verdict: "in_progress",
-        phase: "cross_host_reuse_pending",
+        phase: "repeat_usage_pending",
         proofs: {
           installRequiredObserved: true,
           verifyConfirmed: true,
+          repeatUsageConfirmed: false,
           crossHostReuseConfirmed: false,
           replayReady: true
         },
         verifyState: "confirmed",
+        repeatUsageState: "pending",
         crossHostReuseState: "pending",
         nextAction:
-          "Repeat the same website QA request from another host to record the first proven reuse."
+          "Repeat the same website QA request once more to prove repeat usage beyond the first verified handoff."
       });
       expect(result.familyProofs.web_content_to_markdown).toEqual({
         label: "Web Markdown",
         installRequiredTraces: 1,
         rerunSuccessfulRoutes: 1,
         reuseRecorded: 1,
+        crossHostReuseRecorded: 1,
         downstreamReplayManifests: 1,
         acquisitionMemoryState: "present",
         verifiedDownstreamState: "present",
@@ -1287,10 +1306,12 @@ describe("doctor shared broker home", () => {
         proofs: {
           installRequiredObserved: true,
           verifyConfirmed: true,
+          repeatUsageConfirmed: true,
           crossHostReuseConfirmed: true,
           replayReady: true
         },
         verifyState: "confirmed",
+        repeatUsageState: "confirmed",
         crossHostReuseState: "confirmed",
         nextAction:
           "Web Markdown loop is proven; keep this request path as the second maintained-family demo."
@@ -1300,6 +1321,7 @@ describe("doctor shared broker home", () => {
         installRequiredTraces: 1,
         rerunSuccessfulRoutes: 2,
         reuseRecorded: 1,
+        crossHostReuseRecorded: 1,
         downstreamReplayManifests: 1,
         acquisitionMemoryState: "present",
         verifiedDownstreamState: "present",
@@ -1308,19 +1330,48 @@ describe("doctor shared broker home", () => {
         proofs: {
           installRequiredObserved: true,
           verifyConfirmed: true,
+          repeatUsageConfirmed: true,
           crossHostReuseConfirmed: true,
           replayReady: true
         },
         verifyState: "confirmed",
+        repeatUsageState: "confirmed",
         crossHostReuseState: "confirmed",
         nextAction:
           "Social Markdown loop is proven; keep this request path as the next maintained-family demo."
       });
       expect(result.websiteQaLoop).toEqual(result.familyProofs.website_qa);
+      expect(result.websiteQaRouting).toEqual({
+        windowDays: 7,
+        observed: 1,
+        syntheticHostSkips: 0,
+        hits: 0,
+        misroutes: 0,
+        fallbacks: 1,
+        hitRate: 0,
+        misrouteRate: 0,
+        fallbackRate: 1,
+        hosts: [
+          {
+            name: "codex",
+            observed: 1,
+            syntheticHostSkips: 0,
+            hits: 0,
+            misroutes: 0,
+            fallbacks: 1,
+            hitRate: 0,
+            misrouteRate: 0,
+            fallbackRate: 1
+          }
+        ],
+        nextAction:
+          "Resolve the remaining website QA fallbacks so clear requests reach a stable handoff."
+      });
 
       const parsed = JSON.parse(formatLifecycleResult(result, "json")) as typeof result;
       expect(parsed.websiteQaLoop).toEqual(parsed.familyProofs.website_qa);
-      expect(parsed.familyProofs.website_qa.phase).toBe("cross_host_reuse_pending");
+      expect(parsed.websiteQaRouting).toEqual(result.websiteQaRouting);
+      expect(parsed.familyProofs.website_qa.phase).toBe("repeat_usage_pending");
       expect(parsed.familyProofs.web_content_to_markdown.verdict).toBe("proven");
       expect(parsed.familyProofs.web_content_to_markdown.phase).toBe(
         "cross_host_reuse_confirmed"
@@ -1356,7 +1407,7 @@ describe("doctor shared broker home", () => {
       const rendered = formatLifecycleResult(result, "text");
 
       expect(rendered).toContain(
-        "Website QA verdict: in_progress (phase=cross_host_reuse_pending)"
+        "Website QA verdict: in_progress (phase=repeat_usage_pending)"
       );
       expect(rendered.indexOf("Website QA verdict: in_progress")).toBeLessThan(
         rendered.indexOf("Routing metrics")
@@ -1365,13 +1416,28 @@ describe("doctor shared broker home", () => {
         "Website QA loop: install_required=observed (1 install_required trace); rerun=confirmed (1 successful rerun); reuse=pending (no website QA reuse recorded yet); replay=ready (1 verified downstream manifest)"
       );
       expect(rendered).toContain(
-        "Website QA next action: Repeat the same website QA request from another host to record the first proven reuse."
+        "Website QA repeat-usage proof: pending (no repeated successful route recorded yet)"
+      );
+      expect(rendered).toContain(
+        "Website QA next action: Repeat the same website QA request once more to prove repeat usage beyond the first verified handoff."
+      );
+      expect(rendered).toContain(
+        "Website QA routing (last 7d): observed=1, host_skips=0, hit=0.00, misroute=0.00, fallback=1.00"
+      );
+      expect(rendered).toContain(
+        "Website QA routing host codex: observed=1, host_skips=0, hit=0.00, misroute=0.00, fallback=1.00"
+      );
+      expect(rendered).toContain(
+        "Website QA routing next action: Resolve the remaining website QA fallbacks so clear requests reach a stable handoff."
       );
       expect(rendered).toContain(
         "Web Markdown loop: install_required=observed (1 install_required trace); verify=confirmed (1 successful route); reuse=confirmed (1 first reuse event); replay=ready (1 verified downstream manifest)"
       );
       expect(rendered).toContain(
         "Web Markdown verify proof: confirmed (successful verification evidence recorded)"
+      );
+      expect(rendered).toContain(
+        "Web Markdown repeat-usage proof: confirmed (at least one repeated successful route recorded)"
       );
       expect(rendered).toContain(
         "Web Markdown cross-host reuse proof: confirmed (first reuse across hosts recorded)"
@@ -1384,6 +1450,9 @@ describe("doctor shared broker home", () => {
       );
       expect(rendered).toContain(
         "Social Markdown verify proof: confirmed (successful verification evidence recorded)"
+      );
+      expect(rendered).toContain(
+        "Social Markdown repeat-usage proof: confirmed (at least one repeated successful route recorded)"
       );
       expect(rendered).toContain(
         "Social Markdown cross-host reuse proof: confirmed (first reuse across hosts recorded)"
@@ -1438,8 +1507,10 @@ describe("doctor shared broker home", () => {
         expect.objectContaining({
           rerunSuccessfulRoutes: 2,
           reuseRecorded: 1,
+          crossHostReuseRecorded: 1,
           downstreamReplayManifests: 2,
           verifyState: "confirmed",
+          repeatUsageState: "confirmed",
           crossHostReuseState: "confirmed",
           verdict: "proven",
           phase: "cross_host_reuse_confirmed"
@@ -1452,7 +1523,65 @@ describe("doctor shared broker home", () => {
         "Web Markdown loop: install_required=observed (1 install_required trace); verify=confirmed (2 successful routes); reuse=confirmed (1 first reuse event); replay=ready (2 verified downstream manifests)"
       );
       expect(rendered).toContain(
+        "Web Markdown repeat-usage proof: confirmed (at least one repeated successful route recorded)"
+      );
+      expect(rendered).toContain(
         "Web Markdown cross-host reuse proof: confirmed (first reuse across hosts recorded)"
+      );
+    } finally {
+      await rm(runtimeDirectory, { recursive: true, force: true });
+    }
+  });
+
+  it("distinguishes website QA repeat usage from cross-host reuse on the doctor surface", async () => {
+    const runtimeDirectory = await mkdtemp(
+      join(tmpdir(), "skills-broker-doctor-qa-repeat-vs-cross-host-")
+    );
+    const brokerHomeDirectory = join(runtimeDirectory, ".skills-broker");
+
+    try {
+      await installSharedBrokerHome({
+        brokerHomeDirectory,
+        projectRoot: process.cwd()
+      });
+      await writeReusableFamilyProofFixtures(brokerHomeDirectory, {
+        includeSocialMarkdown: false,
+        includeWebsiteQaRepeatUsageWithoutCrossHost: true
+      });
+
+      const result = await doctorSharedBrokerHome({
+        brokerHomeDirectory,
+        homeDirectory: runtimeDirectory,
+        cwd: runtimeDirectory,
+        now: new Date("2026-04-16T08:00:00.000Z")
+      });
+      const rendered = formatLifecycleResult(result, "text");
+
+      expect(result.familyProofs.website_qa).toEqual(
+        expect.objectContaining({
+          rerunSuccessfulRoutes: 2,
+          reuseRecorded: 1,
+          crossHostReuseRecorded: 0,
+          verifyState: "confirmed",
+          repeatUsageState: "confirmed",
+          crossHostReuseState: "pending",
+          phase: "cross_host_reuse_pending",
+          nextAction:
+            "Repeat the same website QA request from another host to record the first proven cross-host reuse."
+        })
+      );
+      expect(result.familyProofs.website_qa.proofs).toEqual({
+        installRequiredObserved: true,
+        verifyConfirmed: true,
+        repeatUsageConfirmed: true,
+        crossHostReuseConfirmed: false,
+        replayReady: true
+      });
+      expect(rendered).toContain(
+        "Website QA repeat-usage proof: confirmed (at least one repeated successful route recorded)"
+      );
+      expect(rendered).toContain(
+        "Website QA cross-host reuse proof: pending (first reuse across hosts not recorded yet)"
       );
     } finally {
       await rm(runtimeDirectory, { recursive: true, force: true });
@@ -1610,6 +1739,7 @@ describe("doctor shared broker home", () => {
       expect(result.familyProofs.website_qa.proofs).toEqual({
         installRequiredObserved: false,
         verifyConfirmed: false,
+        repeatUsageConfirmed: false,
         crossHostReuseConfirmed: false,
         replayReady: false
       });
@@ -1645,6 +1775,9 @@ describe("doctor shared broker home", () => {
       );
       expect(rendered).toContain(
         "Website QA verify proof: unknown (acquisition memory unreadable)"
+      );
+      expect(rendered).toContain(
+        "Website QA repeat-usage proof: unknown (acquisition memory unreadable)"
       );
       expect(rendered).toContain(
         "Website QA cross-host reuse proof: unknown (acquisition memory unreadable)"
@@ -1870,7 +2003,7 @@ describe("doctor shared broker home", () => {
           }),
           JSON.stringify({
             traceVersion: "2026-03-31",
-            requestText: "raw miss",
+            requestText: "qa near miss",
             host: "codex",
             hostDecision: "broker_first",
             resultCode: "UNSUPPORTED_REQUEST",
@@ -1888,6 +2021,7 @@ describe("doctor shared broker home", () => {
             selectedLeafCapabilityId: null,
             selectedImplementationId: null,
             selectedPackageInstallState: null,
+            requestedProofFamily: "website_qa",
             workflowId: null,
             runId: null,
             stageId: null,
@@ -1940,11 +2074,39 @@ describe("doctor shared broker home", () => {
             selectedLeafCapabilityId: "website-qa",
             selectedImplementationId: "io.example/website-qa",
             selectedPackageInstallState: "available",
+            requestedProofFamily: "website_qa",
             workflowId: null,
             runId: null,
             stageId: null,
             reasonCode: "package_not_installed",
             timestamp: "2026-03-31T11:15:00.000Z"
+          }),
+          JSON.stringify({
+            traceVersion: "2026-03-31",
+            requestText: "QA this website https://example.com",
+            host: "opencode",
+            hostDecision: "handle_normally",
+            resultCode: "HOST_SKIPPED_BROKER",
+            routingOutcome: "host_skipped",
+            missLayer: "host_selection",
+            normalizedBy: null,
+            requestSurface: null,
+            requestContract: null,
+            selectionMode: null,
+            hostAction: "continue_normally",
+            candidateCount: null,
+            winnerId: null,
+            winnerPackageId: null,
+            selectedCapabilityId: null,
+            selectedLeafCapabilityId: null,
+            selectedImplementationId: null,
+            selectedPackageInstallState: null,
+            requestedProofFamily: "website_qa",
+            workflowId: null,
+            runId: null,
+            stageId: null,
+            reasonCode: null,
+            timestamp: "2026-03-31T11:20:00.000Z"
           })
         ].join("\n"),
         "utf8"
@@ -1959,8 +2121,8 @@ describe("doctor shared broker home", () => {
 
       expect(result.routingMetrics).toEqual({
         windowDays: 7,
-        observed: 4,
-        syntheticHostSkips: 0,
+        observed: 5,
+        syntheticHostSkips: 1,
         acquisition: {
           trueNoCandidate: 1,
           installRequired: 1
@@ -2033,6 +2195,43 @@ describe("doctor shared broker home", () => {
           }
         ]
       });
+      expect(result.websiteQaRouting).toEqual({
+        windowDays: 7,
+        observed: 2,
+        syntheticHostSkips: 1,
+        hits: 0,
+        misroutes: 1,
+        fallbacks: 1,
+        hitRate: 0,
+        misrouteRate: 0.5,
+        fallbackRate: 0.5,
+        hosts: [
+          {
+            name: "codex",
+            observed: 2,
+            syntheticHostSkips: 0,
+            hits: 0,
+            misroutes: 1,
+            fallbacks: 1,
+            hitRate: 0,
+            misrouteRate: 0.5,
+            fallbackRate: 0.5
+          },
+          {
+            name: "opencode",
+            observed: 0,
+            syntheticHostSkips: 1,
+            hits: 0,
+            misroutes: 0,
+            fallbacks: 0,
+            hitRate: 0,
+            misrouteRate: 0,
+            fallbackRate: 0
+          }
+        ],
+        nextAction:
+          "Review host-side coarse boundary prompts so clear website QA asks cross into broker_first instead of staying in the host."
+      });
 
       expect(formatLifecycleResult(result, "text")).toContain(
         "Routing contract query_native: observed=2, hit=0.50, misroute=0.00, fallback=0.50"
@@ -2042,6 +2241,12 @@ describe("doctor shared broker home", () => {
       );
       expect(formatLifecycleResult(result, "text")).toContain(
         "Acquisition routing: true_no_candidate=1, install_required=1"
+      );
+      expect(formatLifecycleResult(result, "text")).toContain(
+        "Website QA routing (last 7d): observed=2, host_skips=1, hit=0.00, misroute=0.50, fallback=0.50"
+      );
+      expect(formatLifecycleResult(result, "text")).toContain(
+        "Website QA routing host opencode: observed=0, host_skips=1, hit=0.00, misroute=0.00, fallback=0.00"
       );
     } finally {
       await rm(runtimeDirectory, { recursive: true, force: true });

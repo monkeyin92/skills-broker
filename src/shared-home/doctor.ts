@@ -13,6 +13,7 @@ import {
 import {
   BROKER_HOSTS,
   brokerHostKnownShellEntries,
+  isBrokerHost,
   type BrokerHost,
   type BrokerIntent,
   type CapabilityProofFamily
@@ -49,6 +50,7 @@ export type DoctorFamilyProofPhase =
   | "install_required_pending"
   | "verify_pending"
   | "verify_confirmed"
+  | "repeat_usage_pending"
   | "cross_host_reuse_pending"
   | "cross_host_reuse_confirmed"
   | "proof_unreadable";
@@ -59,6 +61,7 @@ export type DoctorFamilyProofSummary = {
   installRequiredTraces: number;
   rerunSuccessfulRoutes: number;
   reuseRecorded: number;
+  crossHostReuseRecorded: number;
   downstreamReplayManifests: number;
   acquisitionMemoryState: DoctorProofRailState;
   verifiedDownstreamState: DoctorProofRailState;
@@ -67,10 +70,12 @@ export type DoctorFamilyProofSummary = {
   proofs: {
     installRequiredObserved: boolean;
     verifyConfirmed: boolean;
+    repeatUsageConfirmed: boolean;
     crossHostReuseConfirmed: boolean;
     replayReady: boolean;
   };
   verifyState: "confirmed" | "pending" | "unknown";
+  repeatUsageState: "confirmed" | "pending" | "unknown";
   crossHostReuseState: "confirmed" | "pending" | "unknown";
   nextAction: string;
 };
@@ -92,6 +97,7 @@ export type DoctorLifecycleResult = {
     crossHostReuse: number;
     qualityAssuranceSuccessfulRoutes: number;
     qualityAssuranceFirstReuseRecorded: number;
+    qualityAssuranceCrossHostReuse: number;
   };
   verifiedDownstreamManifests: {
     rootPath: string;
@@ -106,6 +112,29 @@ export type DoctorLifecycleResult = {
   };
   familyProofs: Record<DoctorProofFamily, DoctorFamilyProofSummary>;
   websiteQaLoop: DoctorFamilyProofSummary;
+  websiteQaRouting: {
+    windowDays: number;
+    observed: number;
+    syntheticHostSkips: number;
+    hits: number;
+    misroutes: number;
+    fallbacks: number;
+    hitRate: number;
+    misrouteRate: number;
+    fallbackRate: number;
+    hosts: Array<{
+      name: BrokerHost;
+      observed: number;
+      syntheticHostSkips: number;
+      hits: number;
+      misroutes: number;
+      fallbacks: number;
+      hitRate: number;
+      misrouteRate: number;
+      fallbackRate: number;
+    }>;
+    nextAction: string;
+  };
   routingMetrics: {
     windowDays: number;
     observed: number;
@@ -254,6 +283,7 @@ type DoctorFamilyEvidence = {
   installRequiredTraces: number;
   rerunSuccessfulRoutes: number;
   reuseRecorded: number;
+  crossHostReuseRecorded: number;
   downstreamReplayManifests: number;
   acquisitionMemoryState: DoctorProofRailState;
   verifiedDownstreamState: DoctorProofRailState;
@@ -288,12 +318,16 @@ function familyNextAction(
     return `Repair verified downstream manifests so doctor can prove replay and reuse readiness for ${config.requestLabel}.`;
   }
 
-  if (input.reuseRecorded === 0) {
-    return `Repeat the same ${config.requestLabel} request from another host to record the first proven reuse.`;
-  }
-
   if (input.downstreamReplayManifests === 0) {
     return `Verify one successful ${config.requestLabel} handoff so the downstream replay manifest is recorded.`;
+  }
+
+  if (input.reuseRecorded === 0) {
+    return `Repeat the same ${config.requestLabel} request once more to prove repeat usage beyond the first verified handoff.`;
+  }
+
+  if (input.crossHostReuseRecorded === 0) {
+    return `Repeat the same ${config.requestLabel} request from another host to record the first proven cross-host reuse.`;
   }
 
   return config.provenMessage;
@@ -314,19 +348,31 @@ function familyCrossHostReuseState(
     return "unknown";
   }
 
+  return input.crossHostReuseRecorded > 0 ? "confirmed" : "pending";
+}
+
+function familyRepeatUsageState(
+  input: DoctorFamilyEvidence
+): "confirmed" | "pending" | "unknown" {
+  if (input.acquisitionMemoryState === "unreadable") {
+    return "unknown";
+  }
+
   return input.reuseRecorded > 0 ? "confirmed" : "pending";
 }
 
 function buildFamilyProofFlags(input: DoctorFamilyEvidence): {
   installRequiredObserved: boolean;
   verifyConfirmed: boolean;
+  repeatUsageConfirmed: boolean;
   crossHostReuseConfirmed: boolean;
   replayReady: boolean;
 } {
   return {
     installRequiredObserved: input.installRequiredTraces > 0,
     verifyConfirmed: input.rerunSuccessfulRoutes > 0,
-    crossHostReuseConfirmed: input.reuseRecorded > 0,
+    repeatUsageConfirmed: input.reuseRecorded > 0,
+    crossHostReuseConfirmed: input.crossHostReuseRecorded > 0,
     replayReady: input.downstreamReplayManifests > 0
   };
 }
@@ -348,6 +394,10 @@ function familyPhase(input: DoctorFamilyEvidence): DoctorFamilyProofPhase {
   }
 
   if (input.reuseRecorded === 0) {
+    return "repeat_usage_pending";
+  }
+
+  if (input.crossHostReuseRecorded === 0) {
     return "cross_host_reuse_pending";
   }
 
@@ -377,6 +427,7 @@ function buildFamilyProofSummary(
     installRequiredTraces: input.installRequiredTraces,
     rerunSuccessfulRoutes: input.rerunSuccessfulRoutes,
     reuseRecorded: input.reuseRecorded,
+    crossHostReuseRecorded: input.crossHostReuseRecorded,
     downstreamReplayManifests: input.downstreamReplayManifests,
     acquisitionMemoryState: input.acquisitionMemoryState,
     verifiedDownstreamState: input.verifiedDownstreamState,
@@ -384,6 +435,7 @@ function buildFamilyProofSummary(
     phase,
     proofs: buildFamilyProofFlags(input),
     verifyState: familyVerifyState(input),
+    repeatUsageState: familyRepeatUsageState(input),
     crossHostReuseState: familyCrossHostReuseState(input),
     nextAction: familyNextAction(config, input)
   };
@@ -473,12 +525,138 @@ function isFamilyTrace(
   config: DoctorFamilyConfig
 ): boolean {
   return (
+    includesConfiguredValue(trace.requestedProofFamily, config.proofFamilies) ||
     includesConfiguredValue(trace.winnerId, config.winnerIds) ||
     includesConfiguredValue(trace.selectedCapabilityId, config.capabilityIds) ||
     includesConfiguredValue(trace.selectedLeafCapabilityId, config.subskillIds) ||
     includesConfiguredValue(trace.semanticMatchCandidateId, config.candidateIds) ||
     includesConfiguredValue(trace.semanticMatchProofFamily, config.proofFamilies)
   );
+}
+
+function doctorRate(numerator: number, denominator: number): number {
+  if (denominator === 0) {
+    return 0;
+  }
+
+  return numerator / denominator;
+}
+
+function websiteQaRoutingNextAction(input: {
+  observed: number;
+  syntheticHostSkips: number;
+  misroutes: number;
+  fallbacks: number;
+}): string {
+  if (input.observed === 0 && input.syntheticHostSkips === 0) {
+    return "Trigger one clear website QA request through a supported host to record broker-first routing evidence.";
+  }
+
+  if (input.syntheticHostSkips > 0) {
+    return "Review host-side coarse boundary prompts so clear website QA asks cross into broker_first instead of staying in the host.";
+  }
+
+  if (input.misroutes > 0) {
+    return "Inspect recent website QA misroutes and tighten normalization for nearby non-QA phrasing.";
+  }
+
+  if (input.fallbacks > 0) {
+    return "Resolve the remaining website QA fallbacks so clear requests reach a stable handoff.";
+  }
+
+  return "Website QA routing evidence is healthy across recent traces.";
+}
+
+function summarizeWebsiteQaRouting(
+  traces: BrokerRoutingTrace[],
+  options: {
+    since: Date;
+    windowDays: number;
+  }
+): DoctorLifecycleResult["websiteQaRouting"] {
+  const websiteQaConfig = DOCTOR_FAMILY_CONFIGS[0];
+  const totals = {
+    observed: 0,
+    syntheticHostSkips: 0,
+    hits: 0,
+    misroutes: 0,
+    fallbacks: 0
+  };
+  const perHost = new Map<
+    BrokerHost,
+    Omit<DoctorLifecycleResult["websiteQaRouting"]["hosts"][number], "name" | "hitRate" | "misrouteRate" | "fallbackRate">
+  >(
+    BROKER_HOSTS.map((host) => [
+      host,
+      {
+        observed: 0,
+        syntheticHostSkips: 0,
+        hits: 0,
+        misroutes: 0,
+        fallbacks: 0
+      }
+    ])
+  );
+
+  for (const trace of traces) {
+    if (new Date(trace.timestamp) < options.since || !isFamilyTrace(trace, websiteQaConfig)) {
+      continue;
+    }
+
+    if (!isBrokerHost(trace.host)) {
+      continue;
+    }
+
+    const hostSummary = perHost.get(trace.host)!;
+
+    if (trace.routingOutcome === "host_skipped") {
+      totals.syntheticHostSkips += 1;
+      hostSummary.syntheticHostSkips += 1;
+      continue;
+    }
+
+    totals.observed += 1;
+    hostSummary.observed += 1;
+
+    switch (trace.routingOutcome) {
+      case "hit":
+        totals.hits += 1;
+        hostSummary.hits += 1;
+        break;
+      case "misroute":
+        totals.misroutes += 1;
+        hostSummary.misroutes += 1;
+        break;
+      case "fallback":
+        totals.fallbacks += 1;
+        hostSummary.fallbacks += 1;
+        break;
+    }
+  }
+
+  return {
+    windowDays: options.windowDays,
+    observed: totals.observed,
+    syntheticHostSkips: totals.syntheticHostSkips,
+    hits: totals.hits,
+    misroutes: totals.misroutes,
+    fallbacks: totals.fallbacks,
+    hitRate: doctorRate(totals.hits, totals.observed),
+    misrouteRate: doctorRate(totals.misroutes, totals.observed),
+    fallbackRate: doctorRate(totals.fallbacks, totals.observed),
+    hosts: BROKER_HOSTS.map((host) => {
+      const summary = perHost.get(host)!;
+
+      return {
+        name: host,
+        ...summary,
+        hitRate: doctorRate(summary.hits, summary.observed),
+        misrouteRate: doctorRate(summary.misroutes, summary.observed),
+        fallbackRate: doctorRate(summary.fallbacks, summary.observed)
+      };
+    }).filter((host) => host.observed > 0 || host.syntheticHostSkips > 0),
+    nextAction: websiteQaRoutingNextAction(totals)
+  };
 }
 
 async function summarizeDoctorAcquisitionMemory(
@@ -498,7 +676,8 @@ async function summarizeDoctorAcquisitionMemory(
       firstReuseRecorded: 0,
       crossHostReuse: 0,
       qualityAssuranceSuccessfulRoutes: 0,
-      qualityAssuranceFirstReuseRecorded: 0
+      qualityAssuranceFirstReuseRecorded: 0,
+      qualityAssuranceCrossHostReuse: 0
     };
   }
 
@@ -529,6 +708,9 @@ async function summarizeDoctorAcquisitionMemory(
       ),
       qualityAssuranceFirstReuseRecorded: websiteQaEntries.filter(
         (entry) => entry.firstReuseAt !== undefined
+      ).length,
+      qualityAssuranceCrossHostReuse: websiteQaEntries.filter(
+        (entry) => entry.verifiedHosts.length > 1
       ).length
     };
   } catch (error) {
@@ -545,7 +727,8 @@ async function summarizeDoctorAcquisitionMemory(
       firstReuseRecorded: 0,
       crossHostReuse: 0,
       qualityAssuranceSuccessfulRoutes: 0,
-      qualityAssuranceFirstReuseRecorded: 0
+      qualityAssuranceFirstReuseRecorded: 0,
+      qualityAssuranceCrossHostReuse: 0
     };
   }
 }
@@ -776,6 +959,7 @@ async function collectFamilyAcquisitionMetrics(
     {
       rerunSuccessfulRoutes: number;
       reuseRecorded: number;
+      crossHostReuseRecorded: number;
     }
   >
 > {
@@ -784,7 +968,8 @@ async function collectFamilyAcquisitionMetrics(
       config.family,
       {
         rerunSuccessfulRoutes: 0,
-        reuseRecorded: 0
+        reuseRecorded: 0,
+        crossHostReuseRecorded: 0
       }
     ])
   ) as Record<
@@ -792,6 +977,7 @@ async function collectFamilyAcquisitionMetrics(
     {
       rerunSuccessfulRoutes: number;
       reuseRecorded: number;
+      crossHostReuseRecorded: number;
     }
   >;
 
@@ -814,7 +1000,10 @@ async function collectFamilyAcquisitionMetrics(
           0
         ),
         reuseRecorded: entries.filter((entry) => entry.firstReuseAt !== undefined)
-          .length
+          .length,
+        crossHostReuseRecorded: entries.filter(
+          (entry) => entry.verifiedHosts.length > 1
+        ).length
       };
     }
 
@@ -1006,15 +1195,20 @@ export async function doctorSharedBrokerHome(
   const routingTraces = await readBrokerRoutingTraces(
     routingTraceLogFilePath(options.brokerHomeDirectory)
   );
+  const routingSince = new Date(
+    (options.now ?? new Date()).getTime() -
+      routingWindowDays * 24 * 60 * 60 * 1000
+  );
   const routingSummary = summarizeBrokerRoutingTraces(
     routingTraces,
     {
-      since: new Date(
-        (options.now ?? new Date()).getTime() -
-          routingWindowDays * 24 * 60 * 60 * 1000
-      )
+      since: routingSince
     }
   );
+  const websiteQaRouting = summarizeWebsiteQaRouting(routingTraces, {
+    since: routingSince,
+    windowDays: routingWindowDays
+  });
   const acquisitionMemory = await summarizeDoctorAcquisitionMemory(
     options.brokerHomeDirectory,
     warnings
@@ -1067,17 +1261,15 @@ export async function doctorSharedBrokerHome(
       const evidence: DoctorFamilyEvidence = {
         installRequiredTraces: routingTraces.filter(
           (trace) =>
-            new Date(trace.timestamp) >=
-              new Date(
-                (options.now ?? new Date()).getTime() -
-                  routingWindowDays * 24 * 60 * 60 * 1000
-              ) &&
+            new Date(trace.timestamp) >= routingSince &&
             trace.resultCode === "INSTALL_REQUIRED" &&
             isFamilyTrace(trace, config)
         ).length,
         rerunSuccessfulRoutes:
           familyAcquisitionMetrics[config.family].rerunSuccessfulRoutes,
         reuseRecorded: familyAcquisitionMetrics[config.family].reuseRecorded,
+        crossHostReuseRecorded:
+          familyAcquisitionMetrics[config.family].crossHostReuseRecorded,
         downstreamReplayManifests: familyReplayCounts[config.family],
         acquisitionMemoryState: acquisitionMemory.state,
         verifiedDownstreamState: verifiedDownstreamManifests.state
@@ -1094,6 +1286,7 @@ export async function doctorSharedBrokerHome(
     verifiedDownstreamManifests,
     familyProofs,
     websiteQaLoop,
+    websiteQaRouting,
     routingMetrics: {
       windowDays: routingWindowDays,
       observed: routingSummary.observed,

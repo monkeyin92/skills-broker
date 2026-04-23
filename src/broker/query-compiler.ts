@@ -88,11 +88,13 @@ function isSocialUrl(url: string | undefined): boolean {
 }
 
 function hasCapabilityKeywords(requestText: string): boolean {
-  return /(?:\bskill\b|\bmcp\b|\bplugin\b|\bcapability\b)/i.test(requestText);
+  return /(?:\bskill\b|\bmcp\b|\bplugin\b|\bcapability\b|技能|插件)/i.test(
+    requestText
+  );
 }
 
 function hasCapabilityDiscoveryVerb(requestText: string): boolean {
-  return /(?:\bfind\b|\bdiscover\b|\bsearch\b|\binstall\b|\brecommend\b|\bget\b)/i.test(
+  return /(?:\bfind\b|\bdiscover\b|\bsearch\b|\binstall\b|\brecommend\b|\bget\b|找(?:个|一个)?|搜索|搜一下|推荐(?:一下)?|安装|装上|有没有|有无|现成)/i.test(
     requestText
   );
 }
@@ -141,7 +143,7 @@ function hasWebContentSignal(requestText: string): boolean {
 }
 
 function hasAmbiguousContentSignal(requestText: string): boolean {
-  return /(?:\blink\b|\bpost\b|\bpage\b|\barticle\b|\burl\b|\bwebpage\b|\bwebsite\b|\btweet\b|\bthread\b)/i.test(
+  return /(?:\blink\b|\bpost\b|\bpage\b|\barticle\b|\burl\b|\bwebpage\b|\bwebsite\b|\btweet\b|\bthread\b|链接|帖子|页面|网页|文章|网址|网站|站点)/i.test(
     requestText
   );
 }
@@ -158,20 +160,34 @@ function hasWebsiteTargetSignal(
   );
 }
 
+function hasExplicitWebsiteQaTargetSignal(requestText: string): boolean {
+  return /(?:\bwebsite\b|\bsite\b|\bweb app\b|\bwebapp\b|\blanding page\b|\bhomepage\b|\bhome page\b|网站|站点)/i.test(
+    requestText
+  );
+}
+
 function hasWebsiteQaTargetSignal(
   requestText: string,
   url: string | undefined
 ): boolean {
   return (
     (url !== undefined && !isSocialUrl(url)) ||
-    /(?:\bwebsite\b|\bsite\b|\bweb app\b|\bwebapp\b|网站|站点)/i.test(
-      requestText
-    )
+    hasExplicitWebsiteQaTargetSignal(requestText)
   );
 }
 
-function hasQaSignal(requestText: string): boolean {
-  return /(?:\bqa\b|\bquality(?:\s|-)?check(?:ing)?\b|\bquality assurance\b|\btest(?:ing)?\b|\baudit\b|质量|测试|测下|检测)/i.test(
+function hasStrongQaSignal(requestText: string): boolean {
+  return /(?:\bqa\b|\bquality(?:\s|-)?check(?:ing)?\b|\bquality assurance\b|\baudit\b|质量|测下|检测)/i.test(
+    requestText
+  );
+}
+
+function hasWeakQaSignal(requestText: string): boolean {
+  return /(?:\btest(?:ing)?\b|测试)/i.test(requestText);
+}
+
+function hasInspectionSignal(requestText: string): boolean {
+  return /(?:\bcheck\b|\btest(?:ing)?\b|检查|测试|测下)/i.test(
     requestText
   );
 }
@@ -265,9 +281,22 @@ function looksLikeWebsiteQaRequest(
   requestText: string,
   url: string | undefined
 ): boolean {
+  const hasStrongQa = hasStrongQaSignal(requestText);
+  const hasWeakQa = hasWeakQaSignal(requestText);
+
   return (
-    hasQaSignal(requestText) &&
-    hasWebsiteQaTargetSignal(requestText, url) &&
+    ((hasStrongQa && hasWebsiteQaTargetSignal(requestText, url)) ||
+      (hasWeakQa && hasExplicitWebsiteQaTargetSignal(requestText))) &&
+    !hasMarkdownTarget(requestText) &&
+    !hasNonMarkdownTarget(requestText)
+  );
+}
+
+function looksLikeAmbiguousInspectionRequest(requestText: string): boolean {
+  return (
+    hasInspectionSignal(requestText) &&
+    hasAmbiguousContentSignal(requestText) &&
+    !hasExplicitWebsiteQaTargetSignal(requestText) &&
     !hasMarkdownTarget(requestText) &&
     !hasNonMarkdownTarget(requestText)
   );
@@ -733,6 +762,10 @@ export function compileEnvelopeRequest(
       kind: "compiled",
       capabilityQuery: buildWebsiteQaCapabilityQuery(input, url)
     };
+  }
+
+  if (looksLikeAmbiguousInspectionRequest(requestText)) {
+    return { kind: "ambiguous" };
   }
 
   if (looksAmbiguous(requestText)) {

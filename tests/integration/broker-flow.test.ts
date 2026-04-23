@@ -2159,7 +2159,7 @@ describe("runBroker", () => {
     }
   });
 
-  it("proves website QA INSTALL_REQUIRED -> install -> rerun -> cross-host reuse for an MCP bundle", async () => {
+  it("proves website QA INSTALL_REQUIRED -> install -> rerun -> cross-host reuse -> repeat usage for an MCP bundle", async () => {
     const runtime = await createRuntimePaths();
     const hostCatalogFilePath = join(runtime.directory, "mcp-proof-host.json");
     const firstMcpRegistryFilePath = join(runtime.directory, "mcp-proof-first.json");
@@ -2426,6 +2426,39 @@ describe("runBroker", () => {
         verifiedHosts: expect.arrayContaining(["claude-code", "codex"])
       });
 
+      const repeated = await runBroker(
+        {
+          ...request,
+          host: "opencode",
+          capabilityQuery: {
+            ...request.capabilityQuery,
+            host: "opencode"
+          }
+        },
+        {
+          brokerHomeDirectory: runtime.brokerHomeDirectory,
+          cacheFilePath: join(runtime.directory, "mcp-repeated.json"),
+          hostCatalogFilePath,
+          mcpRegistryFilePath: secondMcpRegistryFilePath,
+          currentHost: "opencode",
+          packageSearchRoots: [searchRoot],
+          now: new Date("2026-04-16T07:15:00.000Z")
+        }
+      );
+
+      expect(repeated.ok).toBe(true);
+      expect(repeated.outcome.code).toBe("HANDOFF_READY");
+      expect(repeated.debug.cacheHit).toBe(false);
+      expect(repeated.winner.id).toBe("io.example/website-qa");
+      expect(repeated.trace).toMatchObject({
+        host: "opencode",
+        hostDecision: "broker_first",
+        resultCode: "HANDOFF_READY",
+        winnerId: "io.example/website-qa",
+        winnerPackageId: "io.example/website-qa",
+        reasonCode: "query_native"
+      });
+
       const persistedTraces = (
         await readFile(
           routingTraceLogFilePath(runtime.brokerHomeDirectory),
@@ -2461,8 +2494,40 @@ describe("runBroker", () => {
           resultCode: "HANDOFF_READY",
           reasonCode: "query_native",
           winnerId: "io.example/website-qa"
+        }),
+        expect.objectContaining({
+          host: "opencode",
+          resultCode: "HANDOFF_READY",
+          reasonCode: "query_native",
+          winnerId: "io.example/website-qa"
         })
       ]);
+
+      const repeatedAcquisitionMemory = JSON.parse(
+        await readFile(
+          acquisitionMemoryFilePath(runtime.brokerHomeDirectory),
+          "utf8"
+        )
+      ) as {
+        entries: Array<{
+          packageId: string;
+          successfulRoutes: number;
+          firstReuseAt?: string;
+          verifiedHosts: string[];
+        }>;
+      };
+
+      expect(repeatedAcquisitionMemory.entries).toHaveLength(1);
+      expect(repeatedAcquisitionMemory.entries[0]).toMatchObject({
+        packageId: "io.example/website-qa",
+        successfulRoutes: 3,
+        firstReuseAt: "2026-04-16T07:10:00.000Z",
+        verifiedHosts: expect.arrayContaining([
+          "claude-code",
+          "codex",
+          "opencode"
+        ])
+      });
     } finally {
       await rm(runtime.directory, { recursive: true, force: true });
     }

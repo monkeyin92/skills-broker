@@ -145,6 +145,8 @@ The point of v0 is to prove that a broker can pick and prepare the right capabil
 
 **Current product phase:** keep adoption health green while turning discovery/install into a stronger reuse flywheel, expanding the evidence-backed capability surface, and protecting the now-full-parity Claude Code / Codex / OpenCode runtime with explicit CI trust guardrails. The first default-entry habit this packet still wants to make obvious is website QA.
 
+Hosts choose only `broker_first`, `handle_normally`, or `clarify_before_broker`; the broker still chooses the concrete QA winner.
+
 **Migration note:** `capabilityQuery` is now the only public request contract the broker wants callers to depend on. `intent` still exists, but it now survives only as an internal compatibility lane label for supplier adapters, explicit late tie-breaks, maintained-family proof rails, and legacy workflow/session continuity.
 
 **Active DX bar for this packet:** make the supported-host truth obvious, get to first routed success in under 5 minutes, and make operator-facing failures point at problem, cause, and fix.
@@ -220,6 +222,8 @@ If you only try one published path, make it this one: install the shared broker 
 
 This packet treats website QA as the QA default-entry loop and the fastest operator path to doctor truth. Other maintained lanes stay supported, but they are not the first move.
 
+Hosts choose only `broker_first`, `handle_normally`, or `clarify_before_broker`; the broker still chooses the concrete QA winner.
+
 ### 1. Install or refresh the shared broker home
 
 ```bash
@@ -270,14 +274,17 @@ On the first blocked pass, the host-side outcome should look like:
 }
 ```
 
-After the first verified reuse, `doctor` should include a line like:
+After the first repeated usage across another host, `doctor` should include lines like:
 
 ```text
-Acquisition memory: present, entries=2, successful_routes=3, first_reuse_after_install=1, cross_host_reuse=1
-Verified downstream manifests: total=2, claude-code=1, codex=1
+Website QA acquisition proof: repeat_usage=1, cross_host_reuse=1
+Website QA repeat-usage proof: confirmed (at least one repeated successful route recorded)
+Website QA cross-host reuse proof: confirmed (first reuse across hosts recorded)
 ```
 
 If you later clear acquisition memory, a verified downstream manifest from one host should still be enough for another host to recover `INSTALL_REQUIRED` instead of falling all the way back to `NO_CANDIDATE`.
+
+`doctor` now exposes website QA routing evidence plus separate repeat-usage and cross-host reuse proof states.
 
 If you want to clear only that advisory memory and re-run the loop from scratch, use:
 
@@ -295,6 +302,8 @@ This is the fastest way to confirm the shared-home install is real after the QA 
 
 - you can tell in one command whether adoption health is `green`, `blocked`, or `inactive`
 - the support matrix now claims Claude Code, Codex, and OpenCode with full lifecycle / proof parity, and the operator-facing docs say the same thing
+- the host still explains only the coarse broker-first boundary instead of choosing the concrete QA winner up front
+- `doctor` shows both website QA routing evidence and the next missing repeat-usage / cross-host reuse proof
 - operator-facing failures tell you what broke and what to inspect next
 
 ### 4. Try explicit shared-home directories
@@ -318,10 +327,10 @@ This will:
 For automation or CI, every lifecycle command also supports `--json`. For the published family-proof loops, prefer reading `familyProofs.website_qa.verdict` for the default-entry lane and `familyProofs.web_content_to_markdown.verdict` for the second proven lane:
 
 - `blocked`: proof rails are unreadable or the loop is otherwise not trustworthy yet
-- `in_progress`: the loop has started, but install -> verify -> cross-host reuse is not fully proven
+- `in_progress`: the loop has started, but install -> verify -> repeat usage -> cross-host reuse is not fully proven
 - `proven`: the loop has reached cross-host reuse proof
 
-`familyProofs.<family>.phase` and `familyProofs.<family>.proofs` remain available when a caller needs more detail, but consumers should not have to parse the human-readable doctor text.
+`familyProofs.<family>.phase` and `familyProofs.<family>.proofs` remain available when a caller needs more detail. In particular, `repeat_usage_pending` means the next missing proof is another successful run of the same request, while `cross_host_reuse_pending` means the next missing proof is the first successful run from another supported host.
 
 ### 5. Clone the repository for local development
 

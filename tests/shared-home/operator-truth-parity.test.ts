@@ -2,11 +2,15 @@ import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
+  formatCoarseBoundaryLine,
+  formatCoarseBoundaryZhLine,
   OPERATOR_TRUTH_CONTRACT,
   formatFullLifecycleParityLine,
   formatFullLifecycleParityZhLine,
   formatSupportedHostsLine,
   formatSupportedHostsZhLine,
+  formatWebsiteQaProofSurfaceLine,
+  formatWebsiteQaProofSurfaceZhLine,
   formatThirdHostReadinessLine,
   formatThirdHostReadinessZhLine
 } from "../../src/core/operator-truth";
@@ -64,6 +68,14 @@ describe("operator truth parity", () => {
         "npx skills-broker doctor",
         "npx skills-broker remove"
       ],
+      coarseBoundary: {
+        en: formatCoarseBoundaryLine(),
+        zh: formatCoarseBoundaryZhLine()
+      },
+      websiteQaProofSurface: {
+        en: formatWebsiteQaProofSurfaceLine(),
+        zh: formatWebsiteQaProofSurfaceZhLine()
+      },
       thirdHostReadinessTokens: [
         "shared broker home",
         "thin host shell",
@@ -85,6 +97,8 @@ describe("operator truth parity", () => {
       [
         formatSupportedHostsLine(),
         formatFullLifecycleParityLine(),
+        formatCoarseBoundaryLine(),
+        formatWebsiteQaProofSurfaceLine(),
         OPERATOR_TRUTH_CONTRACT.heroLane,
         OPERATOR_TRUTH_CONTRACT.secondProvenFamily,
         OPERATOR_TRUTH_CONTRACT.thirdProvenFamily,
@@ -97,6 +111,8 @@ describe("operator truth parity", () => {
       [
         formatSupportedHostsZhLine(),
         formatFullLifecycleParityZhLine(),
+        formatCoarseBoundaryZhLine(),
+        formatWebsiteQaProofSurfaceZhLine(),
         OPERATOR_TRUTH_CONTRACT.heroLane,
         OPERATOR_TRUTH_CONTRACT.secondProvenFamily,
         OPERATOR_TRUTH_CONTRACT.thirdProvenFamily,
@@ -109,6 +125,8 @@ describe("operator truth parity", () => {
       [
         formatSupportedHostsLine(),
         formatFullLifecycleParityLine(),
+        formatCoarseBoundaryLine(),
+        formatWebsiteQaProofSurfaceLine(),
         OPERATOR_TRUTH_CONTRACT.heroLane,
         OPERATOR_TRUTH_CONTRACT.secondProvenFamily,
         OPERATOR_TRUTH_CONTRACT.thirdProvenFamily,
@@ -121,6 +139,8 @@ describe("operator truth parity", () => {
       [
         formatSupportedHostsLine(),
         formatFullLifecycleParityLine(),
+        formatCoarseBoundaryLine(),
+        formatWebsiteQaProofSurfaceLine(),
         OPERATOR_TRUTH_CONTRACT.heroLane,
         OPERATOR_TRUTH_CONTRACT.secondProvenFamily,
         OPERATOR_TRUTH_CONTRACT.thirdProvenFamily,
@@ -228,7 +248,7 @@ describe("operator truth parity", () => {
     expect(phase5Item).toBeDefined();
     expect(phase5Item).toMatchObject({
       id: "phase5-opencode-thin-host-shell",
-      status: "shipped_local"
+      status: "shipped_remote"
     });
     expect(phase5Item!.summary).toContain(formatSupportedHostsLine());
     expect(phase5Item!.summary).toContain(formatFullLifecycleParityLine());
@@ -250,6 +270,73 @@ describe("operator truth parity", () => {
         expect.objectContaining({
           type: "test",
           path: "tests/e2e/shared-home-smoke.test.ts"
+        })
+      ])
+    );
+  });
+
+  it("records the Phase 12 and Phase 13 QA-first confidence packets in the canonical STATUS board", async () => {
+    const status = await readRepoFile("STATUS.md");
+    const items = extractCanonicalStatusItems(status);
+    const phase12Item = items.find(
+      (item) => item.id === "phase12-website-qa-routing-confidence"
+    );
+    const phase13Item = items.find(
+      (item) => item.id === "phase13-website-qa-repeat-usage-loop"
+    );
+
+    expect(phase12Item).toBeDefined();
+    expect(phase12Item).toMatchObject({
+      id: "phase12-website-qa-routing-confidence",
+      status: "shipped_remote"
+    });
+    expect(phase12Item!.summary).toContain("website QA");
+    expect(phase12Item!.summary).toContain("routing evidence");
+    expect(phase12Item!.proofs).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          type: "file",
+          path: "src/broker/query-compiler.ts"
+        }),
+        expect.objectContaining({
+          type: "file",
+          path: "src/shared-home/doctor.ts"
+        }),
+        expect.objectContaining({
+          type: "test",
+          path: "tests/e2e/phase2-coarse-boundary-eval.test.ts"
+        }),
+        expect.objectContaining({
+          type: "test",
+          path: "tests/shared-home/doctor.test.ts"
+        })
+      ])
+    );
+
+    expect(phase13Item).toBeDefined();
+    expect(phase13Item).toMatchObject({
+      id: "phase13-website-qa-repeat-usage-loop",
+      status: "shipped_remote"
+    });
+    expect(phase13Item!.summary).toContain("repeat-usage");
+    expect(phase13Item!.summary).toContain("cross-host reuse");
+    expect(phase13Item!.proofs).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          type: "file",
+          path: "src/shared-home/doctor.ts"
+        }),
+        expect.objectContaining({
+          type: "file",
+          path: "src/shared-home/format.ts"
+        }),
+        expect.objectContaining({
+          type: "test",
+          path: "tests/integration/broker-flow.test.ts"
+        }),
+        expect.objectContaining({
+          type: "test",
+          path: "tests/cli/lifecycle-cli.test.ts"
         })
       ])
     );

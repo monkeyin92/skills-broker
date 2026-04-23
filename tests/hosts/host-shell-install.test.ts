@@ -7,6 +7,7 @@ import {
   maintainedBrokerFirstBoundaryExamples
 } from "../../src/core/maintained-broker-first";
 import {
+  formatCoarseBoundaryLine,
   formatFullLifecycleParityLine,
   formatPublishedLifecycleCommandsLine,
   formatSupportedHostsLine,
@@ -50,6 +51,7 @@ function expectHostSkillLayout(
     '# Skills Broker',
     "Use this skill only at the coarse broker boundary.",
     "The host decides only one of these boundary outcomes:",
+    formatCoarseBoundaryLine(),
     "Do not decide whether the request is QA, markdown conversion, requirements analysis, investigation, or capability discovery at the host layer.",
     "## Supported Host Truth",
     formatSupportedHostsLine(),
@@ -78,7 +80,6 @@ function expectHostSkillLayout(
     "## Clarify Before Broker (`clarify_before_broker`)",
     '"check this page"',
     "## Host Contract",
-    "choose only `broker_first`, `handle_normally`, or `clarify_before_broker`",
     "do not pick a package, workflow family, skill, or MCP at the host layer",
     "build a broker envelope with raw request text plus safe hints",
     "keep it in the host's normal flow",
@@ -104,6 +105,9 @@ function expectHostSkillLayout(
 
   expect(skill).toContain(
     "The host decides only the boundary; the broker chooses the package, workflow, skill, or MCP."
+  );
+  expect(skill).toContain(
+    "2. choose only `broker_first`, `handle_normally`, or `clarify_before_broker`"
   );
   expect(skill).toContain("a specialized reusable workflow");
   expect(skill).toContain("structured `capabilityQuery`");

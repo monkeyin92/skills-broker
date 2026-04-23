@@ -6,6 +6,14 @@ export type OperatorTruthContract = {
   thirdProvenFamily: "social markdown";
   lifecycleCommands: readonly string[];
   thirdHostReadinessTokens: readonly string[];
+  coarseBoundary: {
+    en: string;
+    zh: string;
+  };
+  websiteQaProofSurface: {
+    en: string;
+    zh: string;
+  };
   fullLifecycleParity: {
     en: string;
     zh: string;
@@ -28,6 +36,14 @@ export const OPERATOR_TRUTH_CONTRACT = {
     "thin host shell",
     "proof/reuse state"
   ],
+  coarseBoundary: {
+    en: "Hosts choose only `broker_first`, `handle_normally`, or `clarify_before_broker`; the broker still chooses the concrete QA winner.",
+    zh: "宿主只选择 `broker_first` / `handle_normally` / `clarify_before_broker`；具体 QA winner 仍由 broker 决定。"
+  },
+  websiteQaProofSurface: {
+    en: "`doctor` now exposes website QA routing evidence plus separate repeat-usage and cross-host reuse proof states.",
+    zh: "`doctor` 现在会直接输出 website QA routing evidence，并把 repeat usage 与 cross-host reuse proof state 分开呈现。"
+  },
   fullLifecycleParity: {
     en: "Claude Code, Codex, and OpenCode now share full published lifecycle and proof/reuse parity.",
     zh: "Claude Code、Codex、OpenCode 现在已经共享完整的发布态 lifecycle 与 proof/reuse parity。"
@@ -48,6 +64,14 @@ export function formatDeferredHostsLine(): string {
 
 export function formatPublishedLifecycleCommandsLine(): string {
   return `Published lifecycle commands: ${OPERATOR_TRUTH_CONTRACT.lifecycleCommands.join(" / ")}`;
+}
+
+export function formatCoarseBoundaryLine(): string {
+  return OPERATOR_TRUTH_CONTRACT.coarseBoundary.en;
+}
+
+export function formatWebsiteQaProofSurfaceLine(): string {
+  return OPERATOR_TRUTH_CONTRACT.websiteQaProofSurface.en;
 }
 
 export function formatFullLifecycleParityLine(): string {
@@ -72,6 +96,14 @@ export function formatDeferredHostsZhLine(): string {
 
 export function formatPublishedLifecycleCommandsZhLine(): string {
   return `发布态 lifecycle 命令统一为：${OPERATOR_TRUTH_CONTRACT.lifecycleCommands.join(" / ")}`;
+}
+
+export function formatCoarseBoundaryZhLine(): string {
+  return OPERATOR_TRUTH_CONTRACT.coarseBoundary.zh;
+}
+
+export function formatWebsiteQaProofSurfaceZhLine(): string {
+  return OPERATOR_TRUTH_CONTRACT.websiteQaProofSurface.zh;
 }
 
 export function formatFullLifecycleParityZhLine(): string {

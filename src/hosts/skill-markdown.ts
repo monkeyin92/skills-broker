@@ -1,5 +1,6 @@
 import type { BrokerHost } from "../core/types.js";
 import {
+  formatCoarseBoundaryLine,
   OPERATOR_TRUTH_CONTRACT,
   formatFullLifecycleParityLine,
   formatPublishedLifecycleCommandsLine,
@@ -189,6 +190,8 @@ The host decides only one of these boundary outcomes:
 - \`broker_first\`
 - \`handle_normally\`
 - \`clarify_before_broker\`
+
+${formatCoarseBoundaryLine()}
 
 Do not decide whether the request is QA, markdown conversion, requirements analysis, investigation, or capability discovery at the host layer. That selection belongs to the broker after handoff.
 
