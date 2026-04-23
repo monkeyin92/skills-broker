@@ -10,16 +10,16 @@ This file is the repo-native execution board for `skills-broker`.
 
 - The discovery/install flywheel packet is now shipped on the active shipping ref: install-required is a first-class outcome, acquisition memory and verified downstream manifests both compound reuse, and `doctor` / repo docs now tell the same operator truth.
 - Phase 1 QA default-entry proof is now shipped on `origin/main`: website QA stays the single first move across repo docs and installed shells, and doctor truth keeps that operator-facing loop honest.
-- The Phase 2 family-proof packet is now shipped locally on `HEAD`: website QA remains the only hero lane, web markdown is the second proven family, and doctor JSON/text, installed shells, and repo docs now mirror that same operator truth.
+- The Phase 2 family-proof packet is now shipped on the active shipping ref: website QA remains the only hero lane, web markdown is the second proven family, and doctor JSON/text, installed shells, and repo docs now mirror that same operator truth.
 - The Phase 7 social-markdown family packet is now shipped locally on `HEAD`: website QA remains the hero lane, web markdown remains the second proven family, social markdown is now the next proven family, and the new loop is proven through the same install -> verify -> cross-host reuse rails.
 - The Phase 7 investigation workflow packet is now shipped locally on `HEAD`: `investigation-to-fix` is the second broker-owned workflow, start/resume parity now holds across Claude Code, Codex, and OpenCode, and website QA remains a separate maintained lane instead of being swallowed by the workflow.
 - The Phase 7 MCP registry explainability packet is now shipped locally on `HEAD`: MCP candidates now carry validated version / transport / endpoint / query-coverage metadata, broker explanations surface that registry evidence, and advisory MCP suggestions still stay behind installed/local winners.
-- The Phase 8 CI trust guardrail packet is now shipped locally on `HEAD`: Supported now: Claude Code, Codex, OpenCode. Claude Code, Codex, and OpenCode now share full published lifecycle and proof/reuse parity. Published lifecycle commands: npx skills-broker update / npx skills-broker doctor / npx skills-broker remove. website QA remains the hero lane. web markdown remains the second proven family. social markdown is now the next proven family. `npm run ci:blind-spot` now budgets the repo's high-risk surfaces, `npm run test:ci:narrative-parity` explicitly guards docs plus installed shell truth, and `verify:local` remains the local preflight instead of pretending to be CI truth.
-- The Phase 9 canonical release gate packet is now shipped locally on `HEAD`: `npm run release:gate` collapses the blind-spot report, focused narrative parity suite, and strict repo-scoped doctor gate into one repo-local release verdict with failing rail, shipping ref, and remote freshness, while `verify:local` stays local-only.
-- The Phase 10 repo-owned proof promotion packet is now shipped locally on `HEAD`: `npm run release:promote` re-evaluates canonical `STATUS.md` truth against the shipping ref, upgrades only eligible `shipped_local` items to `shipped_remote`, and fails closed on ship-ref, refresh, proof, or mismatch blockers.
-- The Phase 11 publish-flow closure packet is now shipped locally on `HEAD`: `.github/workflows/publish-npm.yml` now runs `release:gate` before publish, `release:promote` after publish, pushes promoted `STATUS.md` truth back to the default branch, and closes out on the same canonical release gate.
-- The Phase 12 website-QA routing-confidence packet is now shipped locally on `HEAD`: clear website QA asks cross the coarse broker-first boundary more reliably, nearby page-level phrasing stays fail-closed, and `doctor` now surfaces website QA routing evidence directly.
-- The Phase 13 website-QA repeat-usage packet is now shipped locally on `HEAD`: the website QA loop now proves repeat usage and cross-host reuse on the three-host shared-home surface, and `doctor` now distinguishes the two states.
+- The Phase 8 CI trust guardrail packet is now shipped on the active shipping ref: Supported now: Claude Code, Codex, OpenCode. Claude Code, Codex, and OpenCode now share full published lifecycle and proof/reuse parity. Published lifecycle commands: npx skills-broker update / npx skills-broker doctor / npx skills-broker remove. website QA remains the hero lane. web markdown remains the second proven family. social markdown is now the next proven family. `npm run ci:blind-spot` now budgets the repo's high-risk surfaces, `npm run test:ci:narrative-parity` explicitly guards docs plus installed shell truth, and `verify:local` remains the local preflight instead of pretending to be CI truth.
+- The Phase 9 canonical release gate packet is now shipped on the active shipping ref: `npm run release:gate` collapses the blind-spot report, focused narrative parity suite, and strict repo-scoped doctor gate into one repo-local release verdict with failing rail, shipping ref, and remote freshness, while `verify:local` stays local-only.
+- The Phase 10 repo-owned proof promotion packet is now shipped on the active shipping ref: `npm run release:promote` re-evaluates canonical `STATUS.md` truth against the shipping ref, upgrades only eligible `shipped_local` items to `shipped_remote`, and fails closed on ship-ref, refresh, proof, or mismatch blockers.
+- The Phase 11 publish-flow closure packet is now shipped on the active shipping ref: `.github/workflows/publish-npm.yml` now runs `release:gate` before publish, `release:promote` after publish, pushes promoted `STATUS.md` truth back to the default branch, and closes out on the same canonical release gate.
+- The Phase 12 website-QA routing-confidence packet is now shipped on the active shipping ref: clear website QA asks cross the coarse broker-first boundary more reliably, nearby page-level phrasing stays fail-closed, and `doctor` now surfaces website QA routing evidence directly.
+- The Phase 13 website-QA repeat-usage packet is now shipped on the active shipping ref: the website QA loop now proves repeat usage and cross-host reuse on the three-host shared-home surface, and `doctor` now distinguishes the two states.
 - Hosts choose only `broker_first`, `handle_normally`, or `clarify_before_broker`; the broker still chooses the concrete QA winner.
 - `doctor` now exposes website QA routing evidence plus separate repeat-usage and cross-host reuse proof states.
 - Compatibility-intent routing metrics are shipped on `origin/main`.
@@ -28,7 +28,7 @@ This file is the repo-native execution board for `skills-broker`.
 - The coarse broker-first host boundary tightening is now shipped on the active shipping ref.
 - The Phase 2 / Phase 3 broker-first compiler, gate, and recovery slice is now shipped on `origin/main`.
 - The web-markdown downstream hardening packet is now shipped on the active shipping ref: broker-selected local skills hand off by file path, broken downstream retries stay in-lane, stale cross-lane cache winners are ignored, and shared-home update auto-repairs the broker-managed `baoyu-fetch` runtime.
-- The OpenCode three-host lifecycle/proof packet is now shipped locally on `HEAD`: Supported now: Claude Code, Codex, OpenCode. Claude Code, Codex, and OpenCode now share full published lifecycle and proof/reuse parity. Published lifecycle commands stay pinned to `npx skills-broker update`, `npx skills-broker doctor`, and `npx skills-broker remove`. website QA remains the hero lane. web markdown remains the second proven family. social markdown is now the next proven family. All supported hosts now share the same shared broker home, thin host shell, proof/reuse state, and published lifecycle contract.
+- The OpenCode three-host lifecycle/proof packet is now shipped on the active shipping ref: Supported now: Claude Code, Codex, OpenCode. Claude Code, Codex, and OpenCode now share full published lifecycle and proof/reuse parity. Published lifecycle commands stay pinned to `npx skills-broker update`, `npx skills-broker doctor`, and `npx skills-broker remove`. website QA remains the hero lane. web markdown remains the second proven family. social markdown is now the next proven family. All supported hosts now share the same shared broker home, thin host shell, proof/reuse state, and published lifecycle contract.
 - The Phase 4 operator-truth packet remains the readiness baseline that locked the support-matrix seam, hero lane, second proven family, and third-host parity checklist before the Phase 5 support flip landed.
 
 <!-- skills-broker-status:start -->
@@ -141,7 +141,7 @@ This file is the repo-native execution board for `skills-broker`.
       "id": "phase2-family-proofs",
       "title": "Phase 2 family-proof packet",
       "summary": "Canonical family proofs now keep website QA as the single hero lane while web markdown becomes the second proven family across doctor, installed shells, integration proof, and repo docs.",
-      "status": "shipped_local",
+      "status": "shipped_remote",
       "proofs": [
         {
           "type": "file",
@@ -184,7 +184,7 @@ This file is the repo-native execution board for `skills-broker`.
       "id": "phase4-operator-truth-readiness",
       "title": "Phase 4 operator-truth and third-host readiness packet",
       "summary": "Phase 4 locked the support-matrix seam, lifecycle wording, hero lane, second proven family, and third-host parity checklist before the Phase 5 support flip landed.",
-      "status": "shipped_local",
+      "status": "shipped_remote",
       "proofs": [
         {
           "type": "file",
@@ -237,7 +237,7 @@ This file is the repo-native execution board for `skills-broker`.
       "id": "phase5-opencode-thin-host-shell",
       "title": "Phase 5 OpenCode thin-host shipping packet",
       "summary": "Supported now: Claude Code, Codex, OpenCode. Claude Code, Codex, and OpenCode now share full published lifecycle and proof/reuse parity. website QA remains the hero lane. web markdown remains the second proven family. social markdown is now the next proven family. All supported hosts now share the same shared broker home, thin host shell, proof/reuse state, and published lifecycle contract.",
-      "status": "shipped_local",
+      "status": "shipped_remote",
       "proofs": [
         {
           "type": "file",
@@ -285,7 +285,7 @@ This file is the repo-native execution board for `skills-broker`.
       "id": "phase8-ci-trust-guardrails",
       "title": "Phase 8 CI trust guardrail packet",
       "summary": "Supported now: Claude Code, Codex, OpenCode. Claude Code, Codex, and OpenCode now share full published lifecycle and proof/reuse parity. Published lifecycle commands: npx skills-broker update / npx skills-broker doctor / npx skills-broker remove. website QA remains the hero lane. web markdown remains the second proven family. social markdown is now the next proven family. CI now runs a blind-spot report plus a focused narrative parity suite before broader build/test/status jobs, while verify:local stays local-only.",
-      "status": "shipped_local",
+      "status": "shipped_remote",
       "proofs": [
         {
           "type": "file",
@@ -328,7 +328,7 @@ This file is the repo-native execution board for `skills-broker`.
       "id": "phase9-release-gate-verdicts",
       "title": "Phase 9 canonical release gate packet",
       "summary": "`npm run release:gate` now turns the CI blind-spot report, focused narrative parity suite, and strict repo-scoped doctor gate into one canonical repo-local release verdict with failing rail, shipping ref, and remote freshness diagnostics.",
-      "status": "shipped_local",
+      "status": "shipped_remote",
       "proofs": [
         {
           "type": "file",
@@ -366,7 +366,7 @@ This file is the repo-native execution board for `skills-broker`.
       "id": "phase10-proof-promotion-flow",
       "title": "Phase 10 repo-owned proof promotion packet",
       "summary": "`npm run release:promote` now re-evaluates canonical `STATUS.md` truth against the shipping ref, upgrades only eligible `shipped_local` items to `shipped_remote`, and leaves `STATUS.md` untouched when ship-ref, refresh, proof, or mismatch blockers exist.",
-      "status": "shipped_local",
+      "status": "shipped_remote",
       "proofs": [
         {
           "type": "file",
@@ -399,7 +399,7 @@ This file is the repo-native execution board for `skills-broker`.
       "id": "phase11-publish-flow-closure",
       "title": "Phase 11 canonical publish closure packet",
       "summary": "The npm publish workflow now reuses canonical release truth end to end: pre-publish `release:gate`, post-publish `release:promote`, pushback of promoted `STATUS.md`, and final closeout on the same repo-owned release gate.",
-      "status": "shipped_local",
+      "status": "shipped_remote",
       "proofs": [
         {
           "type": "file",
@@ -524,7 +524,7 @@ This file is the repo-native execution board for `skills-broker`.
       "id": "phase12-website-qa-routing-confidence",
       "title": "Phase 12 website QA routing confidence packet",
       "summary": "Clear website QA asks now cross the coarse broker-first boundary more reliably, nearby page-level phrasing stays fail-closed, and doctor surfaces website QA routing evidence directly.",
-      "status": "shipped_local",
+      "status": "shipped_remote",
       "proofs": [
         {
           "type": "file",
@@ -557,7 +557,7 @@ This file is the repo-native execution board for `skills-broker`.
       "id": "phase13-website-qa-repeat-usage-loop",
       "title": "Phase 13 website QA repeat-usage loop",
       "summary": "The website QA proof loop now reaches repeat-usage and cross-host reuse on the three-host shared-home surface, and doctor surfaces those proof states separately.",
-      "status": "shipped_local",
+      "status": "shipped_remote",
       "proofs": [
         {
           "type": "file",
