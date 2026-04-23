@@ -196,7 +196,7 @@ const DOCTOR_FAMILY_CONFIGS: readonly DoctorFamilyConfig[] = [
     candidateIds: [WEBSITE_QA_WINNER_ID, WEBSITE_QA_CAPABILITY_ID],
     capabilityIds: [WEBSITE_QA_CAPABILITY_ID],
     subskillIds: [WEBSITE_QA_SUBSKILL_ID],
-    proofFamilies: [],
+    proofFamilies: ["website_qa"],
     compatibilityIntents: [],
     canonicalKeyFragments: ["families:quality_assurance"],
     skillNames: [WEBSITE_QA_SUBSKILL_ID],

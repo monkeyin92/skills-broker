@@ -200,6 +200,7 @@ describe("lifecycle cli", () => {
           }
         })
       );
+      expect(result.websiteQaLoop).toEqual(result.familyProofs.website_qa);
       expect(result.sharedHome).toEqual({
         path: brokerHomeDirectory,
         exists: false,
@@ -1069,6 +1070,95 @@ describe("lifecycle cli", () => {
 
       expect(doctorResult.brokerFirstGate.hasStrictIssues).toBe(false);
       expect(doctorResult.brokerFirstGate.freshness.state).toBe("fresh");
+    } finally {
+      await rm(runtimeDirectory, { recursive: true, force: true });
+    }
+  }, 15000);
+
+  it("prints rollback manual recovery blockers in lifecycle update output", async () => {
+    const scriptPath = resolve("src/bin/skills-broker.ts");
+    const runtimeDirectory = await mkdtemp(
+      resolve(tmpdir(), "skills-broker-cli-manual-recovery-output-")
+    );
+    const brokerHomeDirectory = resolve(runtimeDirectory, ".skills-broker");
+    const codexInstallDirectory = resolve(
+      runtimeDirectory,
+      ".agents",
+      "skills",
+      "skills-broker"
+    );
+
+    try {
+      await installSharedBrokerHome({
+        brokerHomeDirectory,
+        projectRoot: process.cwd()
+      });
+      await mkdir(codexInstallDirectory, { recursive: true });
+      await writeManagedShellManifest(codexInstallDirectory, {
+        managedBy: "skills-broker",
+        host: "codex",
+        version: "test-version",
+        brokerHome: brokerHomeDirectory
+      });
+      await writePeerSurfaceManualRecoveryMarker(brokerHomeDirectory, {
+        schemaVersion: 1,
+        markerId: "marker-rollback-1",
+        host: "codex",
+        attemptId: "attempt-rollback-1",
+        createdAt: "2026-04-03T01:00:00.000Z",
+        failurePhase: "rollback",
+        failedPeers: ["baoyu-danger-x-to-markdown"],
+        rollbackStatus: "failed",
+        evidenceRefs: [],
+        reason: "rollback failed during repair"
+      });
+      await appendPeerSurfaceLedgerEvent(
+        brokerHomeDirectory,
+        createPeerSurfaceLedgerEvent({
+          eventType: "manual_recovery_required",
+          host: "codex",
+          actor: "skills-broker",
+          result: "failed",
+          evidenceRefs: [],
+          attemptId: "attempt-rollback-1",
+          markerId: "marker-rollback-1",
+          details: {
+            failedPeers: ["baoyu-danger-x-to-markdown"],
+            failurePhase: "rollback",
+            rollbackStatus: "failed",
+            reason: "rollback failed during repair"
+          }
+        })
+      );
+
+      const { stdout } = await execFileAsync(
+        "node",
+        [
+          "--loader",
+          tsNodeLoaderPath,
+          scriptPath,
+          "update",
+          "--broker-home",
+          brokerHomeDirectory,
+          "--codex-dir",
+          codexInstallDirectory
+        ],
+        {
+          env: {
+            ...process.env,
+            HOME: runtimeDirectory
+          },
+          encoding: "utf8"
+        }
+      );
+
+      expect(stdout).toContain("Host codex: failed");
+      expect(stdout).toContain(
+        "Host codex manual recovery: markerId=marker-rollback-1, failurePhase=rollback, rollbackStatus=failed"
+      );
+      expect(stdout).toContain("Host codex clear command:");
+      expect(stdout).toContain("--clear-manual-recovery");
+      expect(stdout).toContain("--marker-id marker-rollback-1");
     } finally {
       await rm(runtimeDirectory, { recursive: true, force: true });
     }

@@ -97,6 +97,8 @@ Current scope is intentionally narrow:
 
 Within that lake, **website QA is the clearest default-entry lane today**. Requirements analysis and investigation remain supported maintained families, but QA is the first workflow the docs should teach people to try.
 
+The second proven family is **web markdown**. It is the next operator loop to run after website QA, not a competing first move.
+
 v0 currently includes:
 
 - a shared broker envelope across hosts
@@ -173,10 +175,10 @@ That means switching hosts should not reset discovery quality.
 
 If a user first proves a strong winner in Claude Code and later starts using Codex, the broker should reuse the same shared knowledge instead of rediscovering from zero.
 
-The product-level maintenance command for this model is intended to be:
+The product-level maintenance command for this model is:
 
 ```bash
-skills-broker update
+npx skills-broker update
 ```
 
 Its job is meant to be:
@@ -191,7 +193,11 @@ Its job is meant to be:
 
 - Supported now: Claude Code, Codex
 - Deferred but planned: OpenCode thin host shell
+- Published lifecycle commands: npx skills-broker update / npx skills-broker doctor / npx skills-broker remove
+- Third-host readiness stays gated on the same shared broker home, thin host shell, proof/reuse state, and published lifecycle parity.
 - Not supported in v0: other hosts
+
+OpenCode stays deferred until the explicit third-host readiness contract in `docs/superpowers/specs/2026-04-22-third-host-thin-shell-readiness.md` is satisfied.
 
 ## Why It Is Different
 
@@ -318,12 +324,14 @@ cd skills-broker
 npm ci
 ```
 
-### 6. Build and verify the local checkout
+### 6. Preflight and verify the local checkout
 
 ```bash
-npm run build
-npx vitest run
+# CI-aligned local baseline: Node 22 + npm ci + npm run build + npm test
+npm run verify:local
 ```
+
+Use `npm run verify:local -- --check-only` when you want the deterministic preflight without starting the suite. If the preflight reports a broken npm / Rollup / Vitest state, run `npm ci`, rerun `npm run verify:local -- --check-only`, and then rerun `npm run verify:local` once the health check is green.
 
 ### 7. Install the repo-local Claude Code package
 
@@ -494,7 +502,7 @@ Because the product first had to prove one shared broker contract across real co
 
 Yes. The repository now includes an experimental shared-home flow so that Claude Code and Codex can reuse the same capability cache, history, and runtime instead of each building their own isolated copy.
 
-### What is `skills-broker update` supposed to do?
+### What is `npx skills-broker update` supposed to do?
 
 It is the current product-level maintenance command for the shared-home model. It updates the shared runtime, rescans known hosts, and installs or repairs thin host shells without wiping existing broker knowledge by default.
 

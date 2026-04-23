@@ -6,6 +6,12 @@ import {
   loadMaintainedBrokerFirstContract,
   maintainedBrokerFirstBoundaryExamples
 } from "../../src/core/maintained-broker-first";
+import {
+  formatDeferredHostsLine,
+  formatPublishedLifecycleCommandsLine,
+  formatSupportedHostsLine,
+  formatThirdHostReadinessLine
+} from "../../src/core/operator-truth";
 import { installClaudeCodeHostShell } from "../../src/hosts/claude-code/install";
 import { installCodexHostShell } from "../../src/hosts/codex/install";
 
@@ -44,6 +50,11 @@ function expectHostSkillLayout(
     "Use this skill only at the coarse broker boundary.",
     "The host decides only one of these boundary outcomes:",
     "Do not decide whether the request is QA, markdown conversion, requirements analysis, investigation, or capability discovery at the host layer.",
+    "## Supported Host Truth",
+    formatSupportedHostsLine(),
+    formatDeferredHostsLine(),
+    formatPublishedLifecycleCommandsLine(),
+    formatThirdHostReadinessLine(),
     "## Broker-First (`broker_first`)",
     "If you need one concrete broker-first example to calibrate the boundary, start with website QA.",
     "Treat the examples below as semantic anchors, not literal trigger phrases.",
@@ -51,12 +62,13 @@ function expectHostSkillLayout(
     "Keep website QA visually first. It is the QA default-entry lane and the calibration lane. Other maintained lanes are still valid, but secondary.",
     ...HERO_LANE_EXAMPLES,
     "### Secondary maintained lanes",
+    "The second proven family is web markdown. Keep it visible here after website QA, not as a competing first move.",
     "Requirements analysis and investigation still stay broker-first. They are maintained lanes, but they should not be the first thing this installed shell makes you try.",
+    '"把这个页面转成 markdown: https://example.com/a"',
+    '"convert this webpage to markdown https://example.com/a"',
     ...secondaryMaintainedExamples,
     "### Other broker-first lanes",
     '"我有一个想法：做一个自动串起评审和发版的工具"',
-    '"把这个页面转成 markdown: https://example.com/a"',
-    '"convert this webpage to markdown https://example.com/a"',
     "## Handle Normally (`handle_normally`)",
     '"save this webpage as pdf"',
     "## Clarify Before Broker (`clarify_before_broker`)",
@@ -129,8 +141,12 @@ describe("host shell installers", () => {
         await readFile(join(claudeResult.installDirectory, ".skills-broker.json"), "utf8")
       ) as { managedBy?: string };
 
-      expect(claudeRunner).toContain(resolve(relativeBrokerHomeDirectory));
-      expect(codexRunner).toContain(resolve(relativeBrokerHomeDirectory));
+      expect(claudeRunner).not.toContain(resolve(relativeBrokerHomeDirectory));
+      expect(codexRunner).not.toContain(resolve(relativeBrokerHomeDirectory));
+      expect(claudeRunner).toContain(".skills-broker.json");
+      expect(codexRunner).toContain(".skills-broker.json");
+      expect(claudeRunner).toContain("managed manifest");
+      expect(codexRunner).toContain("managed manifest");
       expect(claudeRunner).toContain("[--debug] '<broker-envelope-json>'");
       expect(codexRunner).toContain("[--debug] '<broker-envelope-json>'");
       expect(claudeSkill).toContain(

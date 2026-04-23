@@ -10,9 +10,11 @@ const execFileAsync = promisify(execFile);
 
 describe("Claude Code smoke", () => {
   it(
-    "installs a minimal Claude Code plugin and returns HANDOFF_READY for markdown handoff",
+    "installs a minimal Claude Code plugin under an awkward path and returns HANDOFF_READY for markdown handoff",
     async () => {
-      const runtimeDirectory = await mkdtemp(join(tmpdir(), "skills-broker-claude-code-"));
+      const runtimeDirectory = await mkdtemp(
+        join(tmpdir(), "skills broker awkward \"$HOME\" $(echo nope)-")
+      );
       const installDirectory = join(runtimeDirectory, "claude-code-plugin");
       const cacheFilePath = join(runtimeDirectory, "broker-cache.json");
       const packageJsonPath = join(installDirectory, "package.json");
@@ -85,7 +87,7 @@ describe("Claude Code smoke", () => {
 
         const relocatedInstallDirectory = join(
           runtimeDirectory,
-          "claude-code-plugin-relocated"
+          "claude-code-plugin-relocated \"$HOME\" $(echo nope)"
         );
         await rename(installDirectory, relocatedInstallDirectory);
         const relocatedRunnerPath = join(relocatedInstallDirectory, "bin", "run-broker");

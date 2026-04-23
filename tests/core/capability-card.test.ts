@@ -207,4 +207,37 @@ describe("toCapabilityCard", () => {
       }
     });
   });
+
+  it("allows website QA cards to carry explicit proven-family metadata without changing compatibility intent", () => {
+    const card = toCapabilityCard({
+      kind: "skill",
+      id: "website-qa",
+      label: "Website QA",
+      intent: "capability_discovery_or_install",
+      query: {
+        summary: "QA websites and produce reusable QA reports",
+        keywords: ["website", "qa", "quality"],
+        antiKeywords: ["markdown"],
+        confidenceHints: ["website", "url", "qa_report"],
+        proofFamily: "website_qa",
+        jobFamilies: ["quality_assurance"],
+        targetTypes: ["website", "url"],
+        artifacts: ["qa_report"],
+        examples: ["QA 这个网站"]
+      }
+    });
+
+    expect(card.compatibilityIntent).toBe("capability_discovery_or_install");
+    expect(card.query).toMatchObject({
+      summary: "QA websites and produce reusable QA reports",
+      keywords: ["skill", "mcp", "install", "discover", "website", "qa", "quality"],
+      antiKeywords: ["markdown", "transcribe"],
+      confidenceHints: ["text", "problem_statement", "website", "url", "qa_report"],
+      proofFamily: "website_qa",
+      jobFamilies: ["quality_assurance"],
+      targetTypes: ["website", "url"],
+      artifacts: ["qa_report"],
+      examples: ["QA 这个网站"]
+    });
+  });
 });

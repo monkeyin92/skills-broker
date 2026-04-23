@@ -150,6 +150,16 @@ function resolveOverallStatus(
     return "failed";
   }
 
+  if (
+    hosts.some(
+      (host) =>
+        host.manualRecovery !== undefined &&
+        host.manualRecovery.failurePhase === "rollback"
+    )
+  ) {
+    return "failed";
+  }
+
   const problemCount = hosts.filter(
     (host) =>
       host.status === "skipped_conflict" ||
@@ -376,6 +386,10 @@ async function enterPeerSurfaceManualRecovery(
     })
   );
 
+  warningCollector.push(
+    `${host}: ${reason}; manual recovery required (${markerId})`
+  );
+
   return {
     ...marker,
     path: peerSurfaceManualRecoveryMarkerPath(brokerHomeDirectory, host),
@@ -385,6 +399,23 @@ async function enterPeerSurfaceManualRecovery(
       brokerHomeDirectory
     )
   };
+}
+
+function summarizeRollbackFailureReason(input: {
+  failurePhase: "move" | "append";
+  cause: string;
+  rollbackWarnings: string[];
+}): string {
+  const repairFailureReason =
+    input.failurePhase === "append"
+      ? `peer-surface audit append failed: ${input.cause}`
+      : `peer-surface repair failed before completion: ${input.cause}`;
+  const rollbackReason =
+    input.rollbackWarnings.length > 0
+      ? input.rollbackWarnings.join("; ")
+      : "rollback could not fully restore the host surface";
+
+  return `${repairFailureReason}; rollback failed during repair: ${rollbackReason}`;
 }
 
 async function repairHostPeerSurface(
@@ -477,15 +508,40 @@ async function repairHostPeerSurface(
         const appendMessage = error instanceof Error ? error.message : String(error);
         const rollback = await rollbackPeerSkillMoves(moved);
         warnings.push(...rollback.warnings.map((warning) => `${host}: ${warning}`));
+        await appendPeerSurfaceWarningEvent(
+          brokerHomeDirectory,
+          warnings,
+          createPeerSurfaceLedgerEvent({
+            eventType: "repair_failed",
+            host,
+            actor: "skills-broker",
+            result: "failed",
+            evidenceRefs: [],
+            attemptId,
+            details: {
+              competingPeerSkills: initialState.competingPeerSkills,
+              migratedPeerSkills: moved.map((move) => move.skillName),
+              failurePhase: "append",
+              rollbackStatus:
+                rollback.failedPeerSkills.length > 0 ? "failed" : "succeeded",
+              reason: appendMessage
+            }
+          })
+        );
 
         if (rollback.failedPeerSkills.length > 0) {
+          const rollbackFailureReason = summarizeRollbackFailureReason({
+            failurePhase: "append",
+            cause: appendMessage,
+            rollbackWarnings: rollback.warnings
+          });
           const manualRecovery = await enterPeerSurfaceManualRecovery(
             host,
             brokerHomeDirectory,
             attemptId,
-            "append",
+            "rollback",
             rollback.failedPeerSkills,
-            appendMessage,
+            rollbackFailureReason,
             warnings
           );
 
@@ -495,7 +551,7 @@ async function repairHostPeerSurface(
             warnings,
             integrityIssues: [],
             manualRecovery,
-            reason: `BROKER_FIRST_PEER_SURFACE_MANUAL_RECOVERY_REQUIRED: ${appendMessage}`
+            reason: `BROKER_FIRST_PEER_SURFACE_MANUAL_RECOVERY_REQUIRED: ${rollbackFailureReason}`
           };
         }
 
@@ -552,13 +608,18 @@ async function repairHostPeerSurface(
       );
 
       if (rollback.failedPeerSkills.length > 0) {
+        const rollbackFailureReason = summarizeRollbackFailureReason({
+          failurePhase: "move",
+          cause: moveMessage,
+          rollbackWarnings: rollback.warnings
+        });
         const manualRecovery = await enterPeerSurfaceManualRecovery(
           host,
           brokerHomeDirectory,
           attemptId,
           "rollback",
           rollback.failedPeerSkills,
-          moveMessage,
+          rollbackFailureReason,
           warnings
         );
 
@@ -568,7 +629,7 @@ async function repairHostPeerSurface(
           warnings,
           integrityIssues: [],
           manualRecovery,
-          reason: `BROKER_FIRST_PEER_SURFACE_MANUAL_RECOVERY_REQUIRED: ${moveMessage}`
+          reason: `BROKER_FIRST_PEER_SURFACE_MANUAL_RECOVERY_REQUIRED: ${rollbackFailureReason}`
         };
       }
 

@@ -951,8 +951,10 @@ describe("doctor shared broker home", () => {
         nextAction:
           "Web Markdown loop is proven; keep this request path as the second maintained-family demo."
       });
+      expect(result.websiteQaLoop).toEqual(result.familyProofs.website_qa);
 
       const parsed = JSON.parse(formatLifecycleResult(result, "json")) as typeof result;
+      expect(parsed.websiteQaLoop).toEqual(parsed.familyProofs.website_qa);
       expect(parsed.familyProofs.website_qa.phase).toBe("cross_host_reuse_pending");
       expect(parsed.familyProofs.web_content_to_markdown.verdict).toBe("proven");
       expect(parsed.familyProofs.web_content_to_markdown.phase).toBe(

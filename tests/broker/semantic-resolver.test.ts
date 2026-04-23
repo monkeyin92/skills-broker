@@ -1,6 +1,6 @@
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   resolveSemanticCandidates,
@@ -8,6 +8,33 @@ import {
 } from "../../src/broker/semantic-resolver";
 import { toCapabilityCard } from "../../src/core/capability-card";
 import { HostSkillCatalogValidationError, loadHostSkillCandidates } from "../../src/sources/host-skill-catalog";
+
+async function writeInvalidHostCatalogFixture(
+  prefix: string,
+  query: Record<string, unknown>
+): Promise<string> {
+  const runtimeDirectory = await mkdtemp(join(tmpdir(), prefix));
+  const fixturePath = join(runtimeDirectory, "host.json");
+
+  await writeFile(
+    fixturePath,
+    JSON.stringify({
+      packages: [],
+      skills: [
+        {
+          id: "web-content-to-markdown",
+          kind: "skill",
+          label: "Web Content to Markdown",
+          intent: "web_content_to_markdown",
+          query
+        }
+      ]
+    }),
+    "utf8"
+  );
+
+  return fixturePath;
+}
 
 describe("semantic resolver metadata", () => {
   it("routes an explicit web markdown request directly", () => {
@@ -314,5 +341,73 @@ describe("semantic resolver metadata", () => {
       confidenceHints: ["url", "website", "repo"],
       proofFamily: "web_content_to_markdown"
     });
+  });
+
+  it("loads the real host seed website QA card with explicit proven-family metadata", async () => {
+    const fixturePath = join(process.cwd(), "config", "host-skills.seed.json");
+
+    const candidates = await loadHostSkillCandidates(
+      "capability_discovery_or_install",
+      fixturePath
+    );
+
+    const websiteQaCandidate = candidates.find((candidate) => candidate.id === "website-qa");
+
+    expect(websiteQaCandidate).toBeDefined();
+    expect(toCapabilityCard(websiteQaCandidate!)).toMatchObject({
+      compatibilityIntent: "capability_discovery_or_install",
+      query: {
+        summary: "QA websites and produce reusable QA reports",
+        keywords: expect.arrayContaining(["website", "qa", "quality", "test", "audit"]),
+        antiKeywords: expect.arrayContaining(["markdown", "social", "installation"]),
+        confidenceHints: expect.arrayContaining(["website", "url", "qa_report"]),
+        proofFamily: "website_qa",
+        jobFamilies: ["quality_assurance"],
+        targetTypes: ["website", "url"],
+        artifacts: ["qa_report"],
+        examples: expect.arrayContaining(["QA 这个网站", "check this website quality"])
+      }
+    });
+  });
+
+  it.each([
+    {
+      name: "targetTypes",
+      query: { targetTypes: ["url", "bogus-target"] },
+      path: "skills[0].query.targetTypes[1]"
+    },
+    {
+      name: "jobFamilies",
+      query: { jobFamilies: ["content_acquisition", ""] },
+      path: "skills[0].query.jobFamilies[1]"
+    },
+    {
+      name: "artifacts",
+      query: { artifacts: ["markdown", ""] },
+      path: "skills[0].query.artifacts[1]"
+    },
+    {
+      name: "examples",
+      query: { examples: ["turn this webpage into markdown", ""] },
+      path: "skills[0].query.examples[1]"
+    }
+  ])("rejects invalid $name values in host catalogs", async ({ query, path, name }) => {
+    const fixturePath = await writeInvalidHostCatalogFixture(
+      `skills-broker-invalid-${name}-`,
+      query
+    );
+
+    try {
+      await expect(
+        loadHostSkillCandidates("web_content_to_markdown", fixturePath)
+      ).rejects.toBeInstanceOf(HostSkillCatalogValidationError);
+      await expect(
+        loadHostSkillCandidates("web_content_to_markdown", fixturePath)
+      ).rejects.toThrow(
+        `Invalid host skill catalog at ${fixturePath} (${path})`
+      );
+    } finally {
+      await rm(dirname(fixturePath), { recursive: true, force: true });
+    }
   });
 });

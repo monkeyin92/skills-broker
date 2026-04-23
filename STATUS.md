@@ -10,12 +10,14 @@ This file is the repo-native execution board for `skills-broker`.
 
 - The discovery/install flywheel packet is now shipped on the active shipping ref: install-required is a first-class outcome, acquisition memory and verified downstream manifests both compound reuse, and `doctor` / repo docs now tell the same operator truth.
 - Phase 1 QA default-entry proof is now shipped on `origin/main`: website QA stays the single first move across repo docs and installed shells, and doctor truth keeps that operator-facing loop honest.
+- The Phase 2 family-proof packet is now shipped locally on `HEAD`: website QA remains the only hero lane, web markdown is the second proven family, and doctor JSON/text, installed shells, and repo docs now mirror that same operator truth.
 - Compatibility-intent routing metrics are shipped on `origin/main`.
 - The query-native request migration tail is now shipped on the active shipping ref: top-level public requests stay `capabilityQuery`-native, and legacy cache/session records migrate forward without hiding compatibility-assisted routing.
 - The package-vs-leaf identity migration tail is now shipped on the active shipping ref: discovery, workflow stages, managed host seeds, and legacy workflow sessions all keep package-plus-leaf identity explicit and treat `implementation.id` as execution metadata only.
 - The coarse broker-first host boundary tightening is now shipped on the active shipping ref.
 - The Phase 2 / Phase 3 broker-first compiler, gate, and recovery slice is now shipped on `origin/main`.
 - The web-markdown downstream hardening packet is now shipped on the active shipping ref: broker-selected local skills hand off by file path, broken downstream retries stay in-lane, stale cross-lane cache winners are ignored, and shared-home update auto-repairs the broker-managed `baoyu-fetch` runtime.
+- The Phase 4 operator-truth packet is now shipped locally on `HEAD`: Supported now: Claude Code, Codex. Deferred but planned: OpenCode thin host shell. Published lifecycle commands stay pinned to `npx skills-broker update`, `npx skills-broker doctor`, and `npx skills-broker remove`. website QA remains the hero lane. web markdown remains the second proven family. Third-host readiness stays gated on the same shared broker home, thin host shell, proof/reuse state, and published lifecycle parity.
 
 <!-- skills-broker-status:start -->
 ```json
@@ -120,6 +122,102 @@ This file is the repo-native execution board for `skills-broker`.
           "type": "test",
           "path": "tests/e2e/shared-home-smoke.test.ts",
           "label": "shared-home doctor confidence smoke"
+        }
+      ]
+    },
+    {
+      "id": "phase2-family-proofs",
+      "title": "Phase 2 family-proof packet",
+      "summary": "Canonical family proofs now keep website QA as the single hero lane while web markdown becomes the second proven family across doctor, installed shells, integration proof, and repo docs.",
+      "status": "shipped_local",
+      "proofs": [
+        {
+          "type": "file",
+          "path": "src/shared-home/doctor.ts",
+          "label": "canonical familyProofs plus websiteQaLoop compatibility alias"
+        },
+        {
+          "type": "file",
+          "path": "src/hosts/skill-markdown.ts",
+          "label": "installed-shell hero-lane versus second-proven-family wording"
+        },
+        {
+          "type": "file",
+          "path": "README.md",
+          "label": "english operator-facing second-proven-family wording"
+        },
+        {
+          "type": "file",
+          "path": "README.zh-CN.md",
+          "label": "chinese operator-facing second-proven-family wording"
+        },
+        {
+          "type": "test",
+          "path": "tests/shared-home/doctor.test.ts",
+          "label": "doctor family-proof coverage"
+        },
+        {
+          "type": "test",
+          "path": "tests/integration/broker-flow.test.ts",
+          "label": "web markdown install, verify, and cross-host reuse proof"
+        },
+        {
+          "type": "test",
+          "path": "tests/hosts/host-shell-install.test.ts",
+          "label": "installed-shell wording hierarchy coverage"
+        }
+      ]
+    },
+    {
+      "id": "phase4-operator-truth-readiness",
+      "title": "Phase 4 operator-truth and third-host readiness packet",
+      "summary": "Supported now: Claude Code, Codex. Deferred but planned: OpenCode thin host shell. website QA remains the hero lane. web markdown remains the second proven family. Third-host readiness stays gated on the same shared broker home, thin host shell, proof/reuse state, and published lifecycle parity.",
+      "status": "shipped_local",
+      "proofs": [
+        {
+          "type": "file",
+          "path": "src/core/operator-truth.ts",
+          "label": "canonical operator truth contract"
+        },
+        {
+          "type": "file",
+          "path": "src/hosts/skill-markdown.ts",
+          "label": "installed host shell reuses canonical truth"
+        },
+        {
+          "type": "file",
+          "path": "README.md",
+          "label": "english operator truth and lifecycle wording"
+        },
+        {
+          "type": "file",
+          "path": "README.zh-CN.md",
+          "label": "chinese operator truth and lifecycle wording"
+        },
+        {
+          "type": "file",
+          "path": "TODOS.md",
+          "label": "backlog readiness contract mirrored"
+        },
+        {
+          "type": "file",
+          "path": "docs/superpowers/specs/2026-04-22-third-host-thin-shell-readiness.md",
+          "label": "third-host readiness checklist"
+        },
+        {
+          "type": "test",
+          "path": "tests/shared-home/operator-truth-parity.test.ts",
+          "label": "cross-surface operator-truth parity coverage"
+        },
+        {
+          "type": "test",
+          "path": "tests/hosts/host-shell-install.test.ts",
+          "label": "installed-shell truth and boundary coverage"
+        },
+        {
+          "type": "test",
+          "path": "tests/e2e/shared-home-smoke.test.ts",
+          "label": "shared-home smoke for installed-shell truth reuse"
         }
       ]
     },

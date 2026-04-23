@@ -7,6 +7,12 @@ import { describe, expect, it } from "vitest";
 import { runClaudeCodeAdapter } from "../../src/hosts/claude-code/adapter";
 import { runCodexAdapter } from "../../src/hosts/codex/adapter";
 import { loadMaintainedBrokerFirstContract } from "../../src/core/maintained-broker-first";
+import {
+  formatDeferredHostsLine,
+  formatPublishedLifecycleCommandsLine,
+  formatSupportedHostsLine,
+  formatThirdHostReadinessLine
+} from "../../src/core/operator-truth";
 import { installSharedBrokerHome } from "../../src/shared-home/install";
 
 const execFileAsync = promisify(execFile);
@@ -36,20 +42,26 @@ function expectCodexSkillLayout(skill: string): void {
     "# Skills Broker",
     "Use this skill only at the coarse broker boundary.",
     "The host decides only one of these boundary outcomes:",
+    "## Supported Host Truth",
+    formatSupportedHostsLine(),
+    formatDeferredHostsLine(),
+    formatPublishedLifecycleCommandsLine(),
+    formatThirdHostReadinessLine(),
     "## Broker-First (`broker_first`)",
     "If you need one concrete broker-first example to calibrate the boundary, start with website QA.",
     "### Hero lane: website QA",
     "Keep website QA visually first. It is the QA default-entry lane and the calibration lane. Other maintained lanes are still valid, but secondary.",
     ...HERO_LANE_EXAMPLES,
     "### Secondary maintained lanes",
+    "The second proven family is web markdown. Keep it visible here after website QA, not as a competing first move.",
     "Requirements analysis and investigation still stay broker-first. They are maintained lanes, but they should not be the first thing this installed shell makes you try.",
+    '"把这个页面转成 markdown: https://example.com/a"',
+    '"convert this webpage to markdown https://example.com/a"',
     '"帮我做需求分析并产出设计文档"',
     '"帮我看看这个需求有没有漏洞"',
     '"investigate this site failure with a reusable workflow"',
     "### Other broker-first lanes",
     '"我有一个想法：做一个自动串起评审和发版的工具"',
-    '"把这个页面转成 markdown: https://example.com/a"',
-    '"convert this webpage to markdown https://example.com/a"',
     "## Handle Normally (`handle_normally`)",
     "## Clarify Before Broker (`clarify_before_broker`)",
     '"check this page"',
@@ -108,7 +120,9 @@ describe("shared broker home smoke", () => {
   it(
     "lets Claude Code and Codex reuse the same shared broker home",
     async () => {
-      const runtimeDirectory = await mkdtemp(join(tmpdir(), "skills-broker-shared-home-"));
+      const runtimeDirectory = await mkdtemp(
+        join(tmpdir(), "skills broker awkward \"$HOME\" $(echo nope)-")
+      );
       const brokerHomeDirectory = join(runtimeDirectory, ".skills-broker");
       const claudeShellDirectory = join(runtimeDirectory, ".claude", "skills", "skills-broker");
       const codexShellDirectory = join(runtimeDirectory, ".agents", "skills", "skills-broker");
@@ -181,6 +195,7 @@ describe("shared broker home smoke", () => {
         expect(sharedContract).toEqual(sourceContract);
 
         const codexSkillContents = await readFile(codexSkillPath, "utf8");
+        const codexRunnerContents = await readFile(codexRunnerPath, "utf8");
         expectCodexSkillLayout(codexSkillContents);
         expect(codexSkillContents).toContain(
           "Treat the examples below as semantic anchors, not literal trigger phrases."
@@ -188,6 +203,8 @@ describe("shared broker home smoke", () => {
         expect(codexSkillContents).toContain(
           "Prefer semantic judgment over exact string overlap."
         );
+        expect(codexRunnerContents).toContain(".skills-broker.json");
+        expect(codexRunnerContents).not.toContain(brokerHomeDirectory);
 
         const claudeResult = await runClaudeCodeAdapter(
           {

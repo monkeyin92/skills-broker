@@ -51,7 +51,7 @@ function buildRuntimePackageJson(version: string) {
   };
 }
 
-function buildHostShellRunnerScript(brokerHomeDirectory: string): string {
+function buildHostShellRunnerScript(): string {
   return `#!/usr/bin/env bash
 set -euo pipefail
 
@@ -73,7 +73,45 @@ fi
 
 CLI_ARGS+=("\${BROKER_INPUT}")
 
-BROKER_CURRENT_HOST="claude-code" exec "${brokerHomeDirectory}/bin/run-broker" "\${CLI_ARGS[@]}"
+SCRIPT_DIR="$(cd "$(dirname "\${BASH_SOURCE[0]}")" && pwd)"
+INSTALL_DIR="$(cd "\${SCRIPT_DIR}/.." && pwd)"
+BROKER_HOME="$(SKILLS_BROKER_SHELL_DIR="\${INSTALL_DIR}" node --input-type=module <<'EOF'
+import { readFileSync } from "node:fs";
+import { join, resolve } from "node:path";
+
+const shellDirectory = resolve(process.env.SKILLS_BROKER_SHELL_DIR ?? ".");
+const manifestPath = join(shellDirectory, ".skills-broker.json");
+
+let manifest;
+
+try {
+  manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
+} catch (error) {
+  const message =
+    error instanceof Error ? error.message : "unknown manifest read failure";
+  process.stderr.write(
+    \`skills-broker host shell could not read managed manifest: \${message}\\n\`
+  );
+  process.exit(1);
+}
+
+if (manifest?.managedBy !== "skills-broker" || typeof manifest.brokerHome !== "string") {
+  process.stderr.write(
+    "skills-broker host shell manifest is missing a usable brokerHome path\\n"
+  );
+  process.exit(1);
+}
+
+process.stdout.write(manifest.brokerHome);
+EOF
+)"
+
+if [[ -z "\${BROKER_HOME}" ]]; then
+  echo "skills-broker host shell could not resolve brokerHome" >&2
+  exit 1
+fi
+
+BROKER_CURRENT_HOST="claude-code" exec "\${BROKER_HOME}/bin/run-broker" "\${CLI_ARGS[@]}"
 `;
 }
 
@@ -256,7 +294,7 @@ export async function installClaudeCodeHostShell(
   );
   await writeFile(
     runnerPath,
-    buildHostShellRunnerScript(brokerHomeDirectory),
+    buildHostShellRunnerScript(),
     "utf8"
   );
   await chmod(runnerPath, 0o755);

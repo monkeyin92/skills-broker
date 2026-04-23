@@ -98,6 +98,7 @@ export const SEMANTIC_CONFIDENCE_HINTS = [
 export type SemanticConfidenceHint = (typeof SEMANTIC_CONFIDENCE_HINTS)[number];
 
 export const CAPABILITY_PROOF_FAMILIES = [
+  "website_qa",
   "web_content_to_markdown",
   "social_post_to_markdown",
   "capability_discovery_or_install"

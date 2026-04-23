@@ -2540,6 +2540,8 @@ describe("runBroker", () => {
         reasonCode: "package_not_installed",
         winnerId: "web-content-to-markdown",
         winnerPackageId: "baoyu",
+        selectedCapabilityId: "baoyu.url-to-markdown",
+        selectedLeafCapabilityId: "url-to-markdown",
         semanticMatchReason: "direct_route",
         semanticMatchCandidateId: "web-content-to-markdown",
         semanticMatchProofFamily: "web_content_to_markdown"
@@ -2573,6 +2575,8 @@ describe("runBroker", () => {
         reasonCode: "query_native",
         winnerId: "web-content-to-markdown",
         winnerPackageId: "baoyu",
+        selectedCapabilityId: "baoyu.url-to-markdown",
+        selectedLeafCapabilityId: "url-to-markdown",
         semanticMatchReason: "direct_route",
         semanticMatchCandidateId: "web-content-to-markdown",
         semanticMatchProofFamily: "web_content_to_markdown"
@@ -2637,6 +2641,8 @@ describe("runBroker", () => {
         reasonCode: "query_native",
         winnerId: "web-content-to-markdown",
         winnerPackageId: "baoyu",
+        selectedCapabilityId: "baoyu.url-to-markdown",
+        selectedLeafCapabilityId: "url-to-markdown",
         semanticMatchReason: "direct_route",
         semanticMatchCandidateId: "web-content-to-markdown",
         semanticMatchProofFamily: "web_content_to_markdown"
@@ -2674,34 +2680,54 @@ describe("runBroker", () => {
         .split("\n")
         .map((line) =>
           JSON.parse(line) as {
+            requestText: string;
             host: string;
             resultCode: string;
             reasonCode: string | null;
             winnerId: string | null;
+            selectedCapabilityId: string | null;
+            selectedLeafCapabilityId: string | null;
+            semanticMatchReason: string | null;
+            semanticMatchCandidateId: string | null;
             semanticMatchProofFamily: string | null;
           }
         );
 
       expect(persistedTraces).toEqual([
         expect.objectContaining({
+          requestText: "turn this webpage into markdown",
           host: "codex",
           resultCode: "INSTALL_REQUIRED",
           reasonCode: "package_not_installed",
           winnerId: "web-content-to-markdown",
+          selectedCapabilityId: "baoyu.url-to-markdown",
+          selectedLeafCapabilityId: "url-to-markdown",
+          semanticMatchReason: "direct_route",
+          semanticMatchCandidateId: "web-content-to-markdown",
           semanticMatchProofFamily: "web_content_to_markdown"
         }),
         expect.objectContaining({
+          requestText: "turn this webpage into markdown",
           host: "codex",
           resultCode: "HANDOFF_READY",
           reasonCode: "query_native",
           winnerId: "web-content-to-markdown",
+          selectedCapabilityId: "baoyu.url-to-markdown",
+          selectedLeafCapabilityId: "url-to-markdown",
+          semanticMatchReason: "direct_route",
+          semanticMatchCandidateId: "web-content-to-markdown",
           semanticMatchProofFamily: "web_content_to_markdown"
         }),
         expect.objectContaining({
+          requestText: "turn this webpage into markdown",
           host: "claude-code",
           resultCode: "HANDOFF_READY",
           reasonCode: "query_native",
           winnerId: "web-content-to-markdown",
+          selectedCapabilityId: "baoyu.url-to-markdown",
+          selectedLeafCapabilityId: "url-to-markdown",
+          semanticMatchReason: "direct_route",
+          semanticMatchCandidateId: "web-content-to-markdown",
           semanticMatchProofFamily: "web_content_to_markdown"
         })
       ]);

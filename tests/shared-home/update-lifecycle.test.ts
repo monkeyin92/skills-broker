@@ -19,6 +19,7 @@ import {
   writePeerSurfaceManualRecoveryMarker
 } from "../../src/shared-home/peer-surface-audit";
 import * as peerSurfaceAudit from "../../src/shared-home/peer-surface-audit";
+import * as hostSurface from "../../src/shared-home/host-surface";
 import { updateSharedBrokerHome } from "../../src/shared-home/update";
 
 async function seedManualRecovery(
@@ -739,7 +740,7 @@ describe("shared-home lifecycle paths", () => {
     }
   });
 
-  it.skip("fails closed when repair cannot append the ledger and rollback cannot restore the host surface", async () => {
+  it("fails closed when repair cannot append the ledger and rollback cannot restore the host surface", async () => {
     const runtimeDirectory = await mkdtemp(
       join(tmpdir(), "skills-broker-update-peer-repair-rollback-")
     );
@@ -750,40 +751,89 @@ describe("shared-home lifecycle paths", () => {
       "skills",
       "skills-broker"
     );
+    const peerSkillDirectory = join(
+      runtimeDirectory,
+      ".claude",
+      "skills",
+      "baoyu-url-to-markdown"
+    );
+    const peerSkillPath = join(peerSkillDirectory, "SKILL.md");
+    const downstreamSkillPath = join(
+      brokerHomeDirectory,
+      "downstream",
+      "claude-code",
+      "skills",
+      "baoyu-url-to-markdown",
+      "SKILL.md"
+    );
+    const appendSpy = vi
+      .spyOn(peerSurfaceAudit, "appendPeerSurfaceLedgerEvent")
+      .mockRejectedValueOnce(new Error("ledger offline"));
+    const rollbackSpy = vi
+      .spyOn(hostSurface, "rollbackPeerSkillMoves")
+      .mockResolvedValueOnce({
+        restoredPeerSkills: [],
+        failedPeerSkills: ["baoyu-url-to-markdown"],
+        warnings: ["failed to rollback baoyu-url-to-markdown: rename blocked"]
+      });
 
     try {
+      await mkdir(peerSkillDirectory, { recursive: true });
+      await writeFile(peerSkillPath, "# peer skill\n", "utf8");
+
       const result = await updateSharedBrokerHome({
         brokerHomeDirectory,
         claudeCodeInstallDirectory,
         homeDirectory: runtimeDirectory,
         repairHostSurface: true
-      }) as unknown as {
-        status: string;
-        hosts: Array<{
-          name: "claude-code";
-          status: string;
-          reason?: string;
-          manualRecovery?: {
-            markerId: string;
-            failurePhase: string;
-            failedPeers: string[];
-          };
-        }>;
-        warnings: string[];
-      };
+      });
+      const marker = await readPeerSurfaceManualRecoveryMarker(
+        brokerHomeDirectory,
+        "claude-code"
+      );
+      const ledger = await readPeerSurfaceLedger(brokerHomeDirectory);
 
       expect(result.status).toBe("failed");
       expect(result.hosts).toContainEqual(
         expect.objectContaining({
           name: "claude-code",
           status: "failed",
+          reason: expect.stringContaining(
+            "BROKER_FIRST_PEER_SURFACE_MANUAL_RECOVERY_REQUIRED"
+          ),
           manualRecovery: expect.objectContaining({
-            failurePhase: expect.stringMatching(/rollback/i)
+            failurePhase: "rollback",
+            rollbackStatus: "failed",
+            failedPeers: ["baoyu-url-to-markdown"]
           })
         })
       );
+      expect(marker).toMatchObject({
+        host: "claude-code",
+        failurePhase: "rollback",
+        rollbackStatus: "failed",
+        failedPeers: ["baoyu-url-to-markdown"],
+        reason: expect.stringContaining("rollback failed during repair")
+      });
+      expect(ledger.at(-1)).toEqual(
+        expect.objectContaining({
+          eventType: "manual_recovery_required",
+          host: "claude-code",
+          markerId: marker?.markerId,
+          details: expect.objectContaining({
+            failurePhase: "rollback",
+            rollbackStatus: "failed",
+            failedPeers: ["baoyu-url-to-markdown"]
+          })
+        })
+      );
+      await expect(access(peerSkillPath)).rejects.toThrow();
+      await expect(readFile(downstreamSkillPath, "utf8")).resolves.toBe("# peer skill\n");
+      expect(result.warnings.join("\n")).toContain("rollback failed during repair");
       expect(result.warnings.join("\n")).toContain("manual recovery");
     } finally {
+      rollbackSpy.mockRestore();
+      appendSpy.mockRestore();
       await rm(runtimeDirectory, { recursive: true, force: true });
     }
   });
