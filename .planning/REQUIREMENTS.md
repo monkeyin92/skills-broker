@@ -3,31 +3,25 @@
 **Defined:** 2026-04-23
 **Core Value:** 用户只需要描述想达成的结果，broker 就能在当前宿主里找到、准备并复用合适的能力，而不用让用户记住工具名、重新发现赢家、或自己判断安装路径。
 
-## v1.3 Requirements
+## v1.4 Requirements
 
-### Routing Confidence
+### Adoption Signals
 
-- [x] **ROUTE-01**: Supported hosts can classify clear `website QA` requests as `broker_first` while keeping obviously ordinary chat/coding/drafting requests in `handle_normally`
-- [x] **ROUTE-02**: Broker can route clear `website QA` requests to the maintained QA path and reject nearby non-QA phrasings cleanly instead of misrouting them into the hero lane
-- [x] **ROUTE-03**: Maintainer can inspect repo-owned hit / misroute / fallback evidence for `website QA` broker-first traffic without relying on ad hoc session notes
+- [ ] **ADOPT-01**: Maintainer can inspect recent website QA default-entry signal from repo-owned surfaces, including broker-first hits, repeat usage, and per-host coverage, without reading raw traces
+- [ ] **ADOPT-02**: Repo can distinguish active website QA adoption from stale historical proof, so one successful demo does not masquerade as a healthy current default-entry habit forever
+- [ ] **ADOPT-03**: When website QA adoption signal is incomplete or stale, operator surfaces point to the next concrete refresh action instead of leaving maintainers to infer it from low-level counters
 
-### Repeat Usage Proof
+### Shared-Home Health
 
-- [x] **REUSE-01**: Maintainer can prove the `website QA` `INSTALL_REQUIRED -> install -> rerun -> cross-host reuse` loop on the canonical Claude Code / Codex / OpenCode surface with repo-owned tests or fixtures
-- [x] **REUSE-02**: Maintainer can prove at least one repeat-usage path beyond the first successful install/reuse, so QA-first evidence is not limited to a one-time demo loop
-- [x] **REUSE-03**: `skills-broker doctor`, acquisition memory, and verified downstream manifests stay aligned on `website QA` verify/reuse proof state and point to the next missing proof when the loop is incomplete
+- [ ] **HEALTH-01**: Shared-home adoption health stays aligned with the website QA default-entry signal and does not report a misleading green/default-ready posture when the hero-lane signal is stale, missing, or contradicted
+- [ ] **HEALTH-02**: Maintainer can prove website QA signal freshness and refresh transitions on the canonical Claude Code / Codex / OpenCode shared-home surface with repo-owned tests or fixtures
 
-### Operator Truth
+### Audit Truth
 
-- [x] **TRUTH-01**: README、README.zh-CN、generated host shell wording、`STATUS.md` 与 `TODOS.md` 都把 `website QA` 保持为单一 default-entry hero lane，并一致呈现 maintained family 的层级顺序
-- [x] **TRUTH-02**: Operator-facing wording explains the coarse broker-first boundary consistently: hosts choose only `broker_first` / `handle_normally` / `clarify_before_broker`, while the broker still chooses the concrete QA winner
-- [x] **TRUTH-03**: Repo-native guardrails can fail closed when QA-first wording or proof surfaces drift, instead of leaving bilingual/operator truth regressions to manual review
+- [ ] **TRUST-01**: `doctor`、canonical `STATUS.md`、and CI trust surfaces summarize the same website QA adoption packet and fail closed when counts, freshness semantics, or wording drift
+- [ ] **TRUST-02**: Milestone audit output can reuse the current website QA adoption packet directly instead of reconstructing freshness / repeat-usage truth from raw traces after ship
 
 ## Future Requirements
-
-### Adoption Confidence
-
-- **ADOPT-01**: 默认入口 proof 应继续升级成可审计的 adoption signal，把 `website QA` 的 repeat usage 与 broker-first confidence 做成长期可跟踪的 repo truth
 
 ### Host Expansion
 
@@ -46,9 +40,9 @@
 
 | Feature | Reason |
 |---------|--------|
-| 重新打开 release truth / shipped-proof promotion 主题 | v1.2 已经闭环，当前更值钱的是 QA-first 默认入口可信度 |
-| 在本 milestone 里重新开启第四宿主或新增 proven family / workflow 扩展 | 当前 bottleneck 是默认入口 habit formation，不是 capability breadth |
-| 重新打开 query-native migration、package-vs-leaf identity migration 或 maintained-family schema 泛化 | 当前 sequencing 仍然成立，除非 QA-first 方案被证明显著失效 |
+| 重新打开 release truth / shipped-proof promotion 主题 | v1.2 已经闭环，当前更值钱的是 QA-first adoption signal |
+| 在本 milestone 里重新开启第四宿主或新增 proven family / workflow 扩展 | 当前 bottleneck 是默认入口 freshness / habit proof，不是 capability breadth |
+| 重新打开 query-native migration、package-vs-leaf identity migration 或 maintained-family schema 泛化 | 当前 sequencing 仍然成立，除非 QA-first adoption signal 方案被证明显著失效 |
 | 让安装后的 host shell 直接选择具体 QA skill / package / MCP winner | 这会打破 coarse broker-first boundary |
 | 引入 embeddings、语义搜索或模型分类来替换当前 deterministic / metadata-driven routing | 不符合当前产品方向与 proof-first 可解释性约束 |
 | 把 broker 变成 marketplace 或直接执行下游能力的平台 | 产品定位仍然是运行时能力决策层与 handoff 协调层 |
@@ -57,22 +51,20 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| ROUTE-01 | Phase 12 | Satisfied |
-| ROUTE-02 | Phase 12 | Satisfied |
-| ROUTE-03 | Phase 12 | Satisfied |
-| REUSE-01 | Phase 13 | Satisfied |
-| REUSE-02 | Phase 13 | Satisfied |
-| REUSE-03 | Phase 13 | Satisfied |
-| TRUTH-01 | Phase 14 | Satisfied |
-| TRUTH-02 | Phase 14 | Satisfied |
-| TRUTH-03 | Phase 14 | Satisfied |
+| ADOPT-01 | Phase 15 | Pending |
+| ADOPT-02 | Phase 15 | Pending |
+| ADOPT-03 | Phase 16 | Pending |
+| HEALTH-01 | Phase 16 | Pending |
+| HEALTH-02 | Phase 16 | Pending |
+| TRUST-01 | Phase 17 | Pending |
+| TRUST-02 | Phase 17 | Pending |
 
 **Coverage:**
 
-- v1.3 requirements: 9 total
-- Mapped to phases: 9
+- v1.4 requirements: 7 total
+- Mapped to phases: 7
 - Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-04-23*
-*Last updated: 2026-04-23 after completing Phase 14*
+*Last updated: 2026-04-23 after defining v1.4 requirements*

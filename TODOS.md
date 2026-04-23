@@ -2,21 +2,21 @@
 
 ## Current Focus
 
-### Milestone v1.3 active; Phase 14 operator-truth lock remains
+### Milestone v1.4 active; Phase 15 adoption-signal quantification comes first
 
-**What:** Lock README / README.zh-CN / generated host shell / STATUS / TODOS onto the same QA-first operator story, then fail-close that wording in the existing parity and CI trust rails.
+**What:** Turn the shipped website-QA default-entry proof into a current adoption signal: quantify recent QA-first usage, distinguish active versus stale signal, and make the next refresh action obvious on repo-owned surfaces.
 
-**Why:** Phase 12 and Phase 13 already landed the runtime truth that matters: clear website QA asks now cross the coarse broker-first boundary more reliably, and the website QA proof loop now reaches repeat usage plus cross-host reuse on the three-host shared-home surface. The remaining risk is operator-truth drift.
+**Why:** v1.3 already proved that website QA can be the trusted default-entry lane. The next risk is not "did it ever work?" but "is it still alive now?" If maintainers cannot read recent adoption signal and freshness from repo-owned surfaces, the QA-first story decays back into historical demo truth.
 
-**Context:** Supported now: Claude Code, Codex, OpenCode. Claude Code, Codex, and OpenCode now share full published lifecycle and proof/reuse parity. Published lifecycle commands: npx skills-broker update / npx skills-broker doctor / npx skills-broker remove. website QA remains the hero lane. web markdown remains the second proven family. social markdown remains the next proven family. Hosts choose only `broker_first`, `handle_normally`, or `clarify_before_broker`; the broker still chooses the concrete QA winner. `doctor` now exposes website QA routing evidence plus separate repeat-usage and cross-host reuse proof states.
+**Context:** Supported now: Claude Code, Codex, OpenCode. Claude Code, Codex, and OpenCode now share full published lifecycle and proof/reuse parity. Published lifecycle commands: npx skills-broker update / npx skills-broker doctor / npx skills-broker remove. website QA remains the hero lane. web markdown remains the second proven family. social markdown remains the next proven family. Hosts choose only `broker_first`, `handle_normally`, or `clarify_before_broker`; the broker still chooses the concrete QA winner. `doctor` already exposes website QA routing evidence plus separate repeat-usage and cross-host reuse proof states; v1.4 now needs to add freshness and adoption semantics on top of that packet.
 
 **Readiness contract:** `docs/superpowers/specs/2026-04-22-third-host-thin-shell-readiness.md`
 
-**Readiness gate:** All supported hosts now share the same shared broker home, thin host shell, proof/reuse state, and published lifecycle contract. The next green bar is that README / README.zh-CN / STATUS / TODOS / generated host shell all tell that same QA-first story without drift.
+**Readiness gate:** All supported hosts now share the same shared broker home, thin host shell, proof/reuse state, and published lifecycle contract. The next green bar is that maintainer-facing surfaces can tell whether website QA is currently active, stale, or missing as a default-entry habit without raw trace spelunking.
 
 **Effort:** S
 **Priority:** P1
-**Depends on:** Phase 12 route-confidence truth and Phase 13 repeat-usage proof staying green
+**Depends on:** Phase 12 route-confidence truth, Phase 13 repeat-usage proof, and Phase 14 operator-truth guardrails staying green
 
 ## Completed
 
