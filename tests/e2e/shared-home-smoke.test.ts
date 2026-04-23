@@ -16,6 +16,7 @@ import {
   formatThirdHostReadinessLine
 } from "../../src/core/operator-truth";
 import { installSharedBrokerHome } from "../../src/shared-home/install";
+import { writeFreshWebsiteQaAdoptionFixtures } from "../helpers/website-qa-adoption";
 
 const execFileAsync = promisify(execFile);
 const HERO_LANE_EXAMPLES = [
@@ -215,6 +216,12 @@ describe("shared broker home smoke", () => {
           opencodeShellDirectory
         ], {
           cwd: runtimeDirectory
+        });
+        await writeFreshWebsiteQaAdoptionFixtures(brokerHomeDirectory, {
+          installRequiredAt: "2026-04-23T04:55:00.000Z",
+          codexHitAt: "2026-04-23T05:00:00.000Z",
+          claudeHitAt: "2026-04-23T05:05:00.000Z",
+          opencodeHitAt: "2026-04-23T05:10:00.000Z"
         });
 
         const { stdout: doctorStdout } = await execFileAsync("node", [
@@ -519,10 +526,10 @@ describe("shared broker home smoke", () => {
         expect(parityDoctorResult.acquisitionMemory).toEqual(
           expect.objectContaining({
             state: "present",
-            entries: 2,
-            successfulRoutes: 5,
-            firstReuseRecorded: 2,
-            crossHostReuse: 2
+            entries: 3,
+            successfulRoutes: 8,
+            firstReuseRecorded: 3,
+            crossHostReuse: 3
           })
         );
         expect(parityDoctorResult.familyProofs.web_content_to_markdown).toEqual(

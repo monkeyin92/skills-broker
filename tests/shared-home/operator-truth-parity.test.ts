@@ -275,7 +275,7 @@ describe("operator truth parity", () => {
     );
   });
 
-  it("records the Phase 12 and Phase 13 QA-first confidence packets in the canonical STATUS board", async () => {
+  it("records the Phase 12-17 QA-first confidence packets in the canonical STATUS board", async () => {
     const status = await readRepoFile("STATUS.md");
     const items = extractCanonicalStatusItems(status);
     const phase12Item = items.find(
@@ -283,6 +283,15 @@ describe("operator truth parity", () => {
     );
     const phase13Item = items.find(
       (item) => item.id === "phase13-website-qa-repeat-usage-loop"
+    );
+    const phase15Item = items.find(
+      (item) => item.id === "phase15-website-qa-adoption-signals"
+    );
+    const phase16Item = items.find(
+      (item) => item.id === "phase16-website-qa-freshness-health"
+    );
+    const phase17Item = items.find(
+      (item) => item.id === "phase17-adoption-signal-audit-truth"
     );
 
     expect(phase12Item).toBeDefined();
@@ -337,6 +346,82 @@ describe("operator truth parity", () => {
         expect.objectContaining({
           type: "test",
           path: "tests/cli/lifecycle-cli.test.ts"
+        })
+      ])
+    );
+
+    expect(phase15Item).toBeDefined();
+    expect(phase15Item).toMatchObject({
+      id: "phase15-website-qa-adoption-signals",
+      status: "shipped_local"
+    });
+    expect(phase15Item!.summary).toContain("adoption packet");
+    expect(phase15Item!.summary).toContain("freshness");
+    expect(phase15Item!.proofs).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          type: "file",
+          path: "src/shared-home/doctor.ts"
+        }),
+        expect.objectContaining({
+          type: "file",
+          path: "src/shared-home/format.ts"
+        }),
+        expect.objectContaining({
+          type: "test",
+          path: "tests/shared-home/doctor.test.ts"
+        })
+      ])
+    );
+
+    expect(phase16Item).toBeDefined();
+    expect(phase16Item).toMatchObject({
+      id: "phase16-website-qa-freshness-health",
+      status: "shipped_local"
+    });
+    expect(phase16Item!.summary).toContain("adoptionHealth");
+    expect(phase16Item!.summary).toContain("stale-to-fresh");
+    expect(phase16Item!.proofs).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          type: "file",
+          path: "src/shared-home/adoption-health.ts"
+        }),
+        expect.objectContaining({
+          type: "test",
+          path: "tests/e2e/shared-home-smoke.test.ts"
+        }),
+        expect.objectContaining({
+          type: "test",
+          path: "tests/e2e/status-doctor-git.test.ts"
+        })
+      ])
+    );
+
+    expect(phase17Item).toBeDefined();
+    expect(phase17Item).toMatchObject({
+      id: "phase17-adoption-signal-audit-truth",
+      status: "shipped_local"
+    });
+    expect(phase17Item!.summary).toContain("CI trust");
+    expect(phase17Item!.summary).toContain("adoption packet");
+    expect(phase17Item!.proofs).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          type: "file",
+          path: "src/core/operator-truth.ts"
+        }),
+        expect.objectContaining({
+          type: "file",
+          path: "src/dev/ci-trust.ts"
+        }),
+        expect.objectContaining({
+          type: "test",
+          path: "tests/shared-home/operator-truth-parity.test.ts"
+        }),
+        expect.objectContaining({
+          type: "test",
+          path: "tests/dev/ci-trust.test.ts"
         })
       ])
     );

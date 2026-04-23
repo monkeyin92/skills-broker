@@ -80,6 +80,50 @@ export type DoctorFamilyProofSummary = {
   nextAction: string;
 };
 
+export type DoctorWebsiteQaAdoptionSignalStatus =
+  | "active"
+  | "stale"
+  | "missing";
+
+export type DoctorWebsiteQaAdoptionSignal = {
+  windowDays: number;
+  status: DoctorWebsiteQaAdoptionSignalStatus;
+  recent: {
+    observed: number;
+    hits: number;
+    misroutes: number;
+    fallbacks: number;
+    hostSkips: number;
+    hostsCovered: number;
+    supportedHosts: number;
+  };
+  proofs: {
+    verifyState: DoctorFamilyProofSummary["verifyState"];
+    repeatUsageState: DoctorFamilyProofSummary["repeatUsageState"];
+    crossHostReuseState: DoctorFamilyProofSummary["crossHostReuseState"];
+  };
+  latest: {
+    traceAt?: string;
+    verifiedAt?: string;
+    firstReuseAt?: string;
+    verifiedManifestAt?: string;
+    activityAt?: string;
+  };
+  hosts: Array<{
+    name: BrokerHost;
+    status: DoctorWebsiteQaAdoptionSignalStatus;
+    observed: number;
+    hits: number;
+    misroutes: number;
+    fallbacks: number;
+    hostSkips: number;
+    lastTraceAt?: string;
+    lastVerifiedManifestAt?: string;
+    historicalVerified: boolean;
+  }>;
+  nextAction: string;
+};
+
 export type DoctorLifecycleResult = {
   command: "doctor";
   sharedHome: {
@@ -112,6 +156,7 @@ export type DoctorLifecycleResult = {
   };
   familyProofs: Record<DoctorProofFamily, DoctorFamilyProofSummary>;
   websiteQaLoop: DoctorFamilyProofSummary;
+  websiteQaAdoption: DoctorWebsiteQaAdoptionSignal;
   websiteQaRouting: {
     windowDays: number;
     observed: number;
@@ -186,6 +231,7 @@ type DoctorVerifiedDownstreamHostSummary =
 
 type DoctorVerifiedDownstreamHostScan = DoctorVerifiedDownstreamHostSummary & {
   familyManifestCounts: Record<DoctorProofFamily, number>;
+  familyLatestVerifiedAt: Record<DoctorProofFamily, string | undefined>;
   qualityAssuranceManifests: number;
   unreadableReason?: string;
 };
@@ -193,6 +239,15 @@ type DoctorVerifiedDownstreamHostScan = DoctorVerifiedDownstreamHostSummary & {
 type DoctorVerifiedDownstreamScan =
   DoctorLifecycleResult["verifiedDownstreamManifests"] & {
     familyManifestCounts: Record<DoctorProofFamily, number>;
+    familyLatestVerifiedAt: Record<DoctorProofFamily, string | undefined>;
+    hostFamilyManifestCounts: Record<
+      BrokerHost,
+      Record<DoctorProofFamily, number>
+    >;
+    hostFamilyLatestVerifiedAt: Record<
+      BrokerHost,
+      Record<DoctorProofFamily, string | undefined>
+    >;
   };
 
 type DoctorSharedHomeSummary = DoctorLifecycleResult["sharedHome"];
@@ -279,6 +334,15 @@ function emptyFamilyManifestCounts(): Record<DoctorProofFamily, number> {
   ) as Record<DoctorProofFamily, number>;
 }
 
+function emptyFamilyLatestVerifiedAt(): Record<
+  DoctorProofFamily,
+  string | undefined
+> {
+  return Object.fromEntries(
+    DOCTOR_FAMILY_CONFIGS.map((config) => [config.family, undefined])
+  ) as Record<DoctorProofFamily, string | undefined>;
+}
+
 type DoctorFamilyEvidence = {
   installRequiredTraces: number;
   rerunSuccessfulRoutes: number;
@@ -290,6 +354,7 @@ type DoctorFamilyEvidence = {
 };
 
 type ParsedVerifiedManifestCandidate = {
+  verifiedAt?: string;
   skillName?: string;
   candidateId?: string;
   compatibilityIntent?: string;
@@ -439,6 +504,46 @@ function buildFamilyProofSummary(
     crossHostReuseState: familyCrossHostReuseState(input),
     nextAction: familyNextAction(config, input)
   };
+}
+
+function parseValidTimestamp(value: string | undefined): Date | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  const parsed = new Date(value);
+
+  return Number.isNaN(parsed.getTime()) ? undefined : parsed;
+}
+
+function latestTimestamp(
+  ...values: Array<string | undefined>
+): string | undefined {
+  let latestValue: string | undefined;
+  let latestDate: Date | undefined;
+
+  for (const value of values) {
+    const parsed = parseValidTimestamp(value);
+    if (parsed === undefined) {
+      continue;
+    }
+
+    if (latestDate === undefined || parsed > latestDate) {
+      latestDate = parsed;
+      latestValue = value;
+    }
+  }
+
+  return latestValue;
+}
+
+function isTimestampOnOrAfter(
+  value: string | undefined,
+  since: Date
+): boolean {
+  const parsed = parseValidTimestamp(value);
+
+  return parsed !== undefined && parsed >= since;
 }
 
 async function pathExists(pathname: string): Promise<boolean> {
@@ -760,6 +865,8 @@ function parseVerifiedManifestCandidate(raw: string): ParsedVerifiedManifestCand
         : undefined;
 
     return {
+      verifiedAt:
+        typeof parsed.verifiedAt === "string" ? parsed.verifiedAt : undefined,
       skillName,
       candidateId:
         typeof verifiedCandidate?.id === "string" ? verifiedCandidate.id : undefined,
@@ -804,6 +911,7 @@ async function summarizeVerifiedDownstreamHost(
     const familyManifestCounts = Object.fromEntries(
       DOCTOR_FAMILY_CONFIGS.map((config) => [config.family, 0])
     ) as Record<DoctorProofFamily, number>;
+    const familyLatestVerifiedAt = emptyFamilyLatestVerifiedAt();
 
     for (const entry of entries) {
       const entryPath = join(directory, entry.name);
@@ -819,6 +927,10 @@ async function summarizeVerifiedDownstreamHost(
         for (const config of DOCTOR_FAMILY_CONFIGS) {
           familyManifestCounts[config.family] +=
             nested.familyManifestCounts[config.family];
+          familyLatestVerifiedAt[config.family] = latestTimestamp(
+            familyLatestVerifiedAt[config.family],
+            nested.familyLatestVerifiedAt[config.family]
+          );
         }
         continue;
       }
@@ -838,6 +950,7 @@ async function summarizeVerifiedDownstreamHost(
           state: "unreadable",
           manifests,
           familyManifestCounts,
+          familyLatestVerifiedAt,
           qualityAssuranceManifests,
           unreadableReason: `${entryPath}: ${reason}`
         };
@@ -850,6 +963,7 @@ async function summarizeVerifiedDownstreamHost(
           state: "unreadable",
           manifests,
           familyManifestCounts,
+          familyLatestVerifiedAt,
           qualityAssuranceManifests,
           unreadableReason: `${entryPath}: invalid verified downstream manifest`
         };
@@ -859,6 +973,10 @@ async function summarizeVerifiedDownstreamHost(
       for (const config of DOCTOR_FAMILY_CONFIGS) {
         if (isFamilyManifest(parsed, config)) {
           familyManifestCounts[config.family] += 1;
+          familyLatestVerifiedAt[config.family] = latestTimestamp(
+            familyLatestVerifiedAt[config.family],
+            parsed.verifiedAt
+          );
         }
       }
       qualityAssuranceManifests = familyManifestCounts.website_qa;
@@ -869,6 +987,7 @@ async function summarizeVerifiedDownstreamHost(
       state: manifests > 0 ? "present" : "missing",
       manifests,
       familyManifestCounts,
+      familyLatestVerifiedAt,
       qualityAssuranceManifests
     };
   } catch (error) {
@@ -879,6 +998,7 @@ async function summarizeVerifiedDownstreamHost(
         state: "missing",
         manifests: 0,
         familyManifestCounts: emptyFamilyManifestCounts(),
+        familyLatestVerifiedAt: emptyFamilyLatestVerifiedAt(),
         qualityAssuranceManifests: 0
       };
     }
@@ -890,6 +1010,7 @@ async function summarizeVerifiedDownstreamHost(
       state: "unreadable",
       manifests: 0,
       familyManifestCounts: emptyFamilyManifestCounts(),
+      familyLatestVerifiedAt: emptyFamilyLatestVerifiedAt(),
       qualityAssuranceManifests: 0,
       unreadableReason: `${directory}: ${reason}`
     };
@@ -930,12 +1051,31 @@ async function summarizeDoctorVerifiedDownstreamManifests(
       )
     ])
   ) as DoctorVerifiedDownstreamScan["familyManifestCounts"];
+  const familyLatestVerifiedAt = Object.fromEntries(
+    DOCTOR_FAMILY_CONFIGS.map((config) => [
+      config.family,
+      hosts.reduce<string | undefined>(
+        (latest, host) =>
+          latestTimestamp(latest, host.familyLatestVerifiedAt[config.family]),
+        undefined
+      )
+    ])
+  ) as DoctorVerifiedDownstreamScan["familyLatestVerifiedAt"];
+  const hostFamilyManifestCounts = Object.fromEntries(
+    hosts.map((host) => [host.name, host.familyManifestCounts])
+  ) as DoctorVerifiedDownstreamScan["hostFamilyManifestCounts"];
+  const hostFamilyLatestVerifiedAt = Object.fromEntries(
+    hosts.map((host) => [host.name, host.familyLatestVerifiedAt])
+  ) as DoctorVerifiedDownstreamScan["hostFamilyLatestVerifiedAt"];
 
   return {
     rootPath: join(brokerHomeDirectory, "downstream"),
     state,
     manifests: hosts.reduce((total, host) => total + host.manifests, 0),
     familyManifestCounts,
+    familyLatestVerifiedAt,
+    hostFamilyManifestCounts,
+    hostFamilyLatestVerifiedAt,
     qualityAssuranceManifests: hosts.reduce(
       (total, host) => total + host.qualityAssuranceManifests,
       0
@@ -944,6 +1084,7 @@ async function summarizeDoctorVerifiedDownstreamManifests(
       ({
         unreadableReason: _unreadableReason,
         familyManifestCounts: _familyManifestCounts,
+        familyLatestVerifiedAt: _familyLatestVerifiedAt,
         ...host
       }) => host
     )
@@ -960,6 +1101,10 @@ async function collectFamilyAcquisitionMetrics(
       rerunSuccessfulRoutes: number;
       reuseRecorded: number;
       crossHostReuseRecorded: number;
+      latestVerifiedAt?: string;
+      latestFirstReuseAt?: string;
+      verifiedHosts: BrokerHost[];
+      entries: number;
     }
   >
 > {
@@ -969,15 +1114,23 @@ async function collectFamilyAcquisitionMetrics(
       {
         rerunSuccessfulRoutes: 0,
         reuseRecorded: 0,
-        crossHostReuseRecorded: 0
+        crossHostReuseRecorded: 0,
+        latestVerifiedAt: undefined,
+        latestFirstReuseAt: undefined,
+        verifiedHosts: [] as BrokerHost[],
+        entries: 0
       }
     ])
-  ) as Record<
+  ) as unknown as Record<
     DoctorProofFamily,
     {
       rerunSuccessfulRoutes: number;
       reuseRecorded: number;
       crossHostReuseRecorded: number;
+      latestVerifiedAt?: string;
+      latestFirstReuseAt?: string;
+      verifiedHosts: BrokerHost[];
+      entries: number;
     }
   >;
 
@@ -1003,7 +1156,19 @@ async function collectFamilyAcquisitionMetrics(
           .length,
         crossHostReuseRecorded: entries.filter(
           (entry) => entry.verifiedHosts.length > 1
-        ).length
+        ).length,
+        latestVerifiedAt: entries.reduce<string | undefined>(
+          (latest, entry) => latestTimestamp(latest, entry.verifiedAt),
+          undefined
+        ),
+        latestFirstReuseAt: entries.reduce<string | undefined>(
+          (latest, entry) => latestTimestamp(latest, entry.firstReuseAt),
+          undefined
+        ),
+        verifiedHosts: Array.from(
+          new Set(entries.flatMap((entry) => entry.verifiedHosts))
+        ),
+        entries: entries.length
       };
     }
 
@@ -1011,6 +1176,181 @@ async function collectFamilyAcquisitionMetrics(
   } catch {
     return empty;
   }
+}
+
+function summarizeWebsiteQaHistoricalTraceActivity(
+  traces: BrokerRoutingTrace[]
+): {
+  lastTraceAt?: string;
+  hosts: Record<BrokerHost, { lastTraceAt?: string }>;
+} {
+  const hosts = Object.fromEntries(
+    BROKER_HOSTS.map((host) => [host, { lastTraceAt: undefined }])
+  ) as Record<BrokerHost, { lastTraceAt?: string }>;
+  let lastTraceAt: string | undefined;
+
+  for (const trace of traces) {
+    if (!isBrokerHost(trace.host) || !isFamilyTrace(trace, DOCTOR_FAMILY_CONFIGS[0])) {
+      continue;
+    }
+
+    lastTraceAt = latestTimestamp(lastTraceAt, trace.timestamp);
+    hosts[trace.host].lastTraceAt = latestTimestamp(
+      hosts[trace.host].lastTraceAt,
+      trace.timestamp
+    );
+  }
+
+  return {
+    lastTraceAt,
+    hosts
+  };
+}
+
+function websiteQaAdoptionNextAction(input: {
+  status: DoctorWebsiteQaAdoptionSignalStatus;
+  proof: DoctorFamilyProofSummary;
+  routing: DoctorLifecycleResult["websiteQaRouting"];
+}): string {
+  if (input.status === "missing") {
+    return "Trigger one clear website QA request through a supported host, accept INSTALL_REQUIRED if needed, then rerun the same request so doctor records a current adoption signal.";
+  }
+
+  if (input.status === "stale") {
+    if (input.proof.verifyState !== "confirmed") {
+      return "Refresh the website QA signal now: run the same request again, accept INSTALL_REQUIRED if needed, then rerun until doctor records a fresh verification.";
+    }
+
+    if (input.proof.repeatUsageState !== "confirmed") {
+      return "Refresh the website QA signal by rerunning the same website QA request now so repeat usage is visible in the current window.";
+    }
+
+    if (input.proof.crossHostReuseState !== "confirmed") {
+      return "Refresh the website QA signal from another supported host so the shared-home surface records fresh cross-host reuse.";
+    }
+
+    return "Run one clear website QA request through a supported host now so doctor shows a current QA-first signal instead of historical proof only.";
+  }
+
+  if (input.routing.syntheticHostSkips > 0) {
+    return "Refresh the website QA signal on the skipped host so the same QA-first ask crosses the coarse broker-first boundary there too.";
+  }
+
+  if (
+    input.proof.verifyState !== "confirmed" ||
+    input.proof.repeatUsageState !== "confirmed" ||
+    input.proof.crossHostReuseState !== "confirmed"
+  ) {
+    return input.proof.nextAction;
+  }
+
+  if (input.routing.misroutes > 0) {
+    return "Recent website QA signal is active, but nearby phrasing still misroutes. Tighten normalization so the hero lane stays explicit.";
+  }
+
+  if (input.routing.fallbacks > 0 && input.routing.hits === 0) {
+    return "Recent website QA signal is active, but it still depends on fallback-only traffic. Rerun after install so doctor records a fresh stable handoff.";
+  }
+
+  return "Website QA adoption signal is active; keep this hero lane exercised as the default-entry demo.";
+}
+
+function summarizeWebsiteQaAdoptionSignal(input: {
+  routing: DoctorLifecycleResult["websiteQaRouting"];
+  routingTraces: BrokerRoutingTrace[];
+  since: Date;
+  windowDays: number;
+  proof: DoctorFamilyProofSummary;
+  acquisition: Awaited<ReturnType<typeof collectFamilyAcquisitionMetrics>>["website_qa"];
+  verifiedDownstream: DoctorVerifiedDownstreamScan;
+}): DoctorWebsiteQaAdoptionSignal {
+  const historicalTraces = summarizeWebsiteQaHistoricalTraceActivity(
+    input.routingTraces
+  );
+  const latestVerifiedManifestAt =
+    input.verifiedDownstream.familyLatestVerifiedAt.website_qa;
+  const latestActivityAt = latestTimestamp(
+    historicalTraces.lastTraceAt,
+    input.acquisition.latestVerifiedAt,
+    input.acquisition.latestFirstReuseAt,
+    latestVerifiedManifestAt
+  );
+
+  const status: DoctorWebsiteQaAdoptionSignalStatus =
+    latestActivityAt === undefined
+      ? "missing"
+      : isTimestampOnOrAfter(latestActivityAt, input.since)
+        ? "active"
+        : "stale";
+
+  const recentHostCounts = new Map<
+    BrokerHost,
+    DoctorLifecycleResult["websiteQaRouting"]["hosts"][number]
+  >(input.routing.hosts.map((host) => [host.name, host]));
+
+  const hosts = BROKER_HOSTS.map((host) => {
+    const recent = recentHostCounts.get(host);
+    const lastVerifiedManifestAt =
+      input.verifiedDownstream.hostFamilyLatestVerifiedAt[host].website_qa;
+    const historicalVerified =
+      input.acquisition.verifiedHosts.includes(host) ||
+      input.verifiedDownstream.hostFamilyManifestCounts[host].website_qa > 0;
+    const recentSignal =
+      (recent?.observed ?? 0) > 0 ||
+      (recent?.syntheticHostSkips ?? 0) > 0 ||
+      isTimestampOnOrAfter(lastVerifiedManifestAt, input.since);
+    const hostStatus: DoctorWebsiteQaAdoptionSignalStatus = recentSignal
+      ? "active"
+      : historicalTraces.hosts[host].lastTraceAt !== undefined ||
+          historicalVerified === true
+        ? "stale"
+        : "missing";
+
+    return {
+      name: host,
+      status: hostStatus,
+      observed: recent?.observed ?? 0,
+      hits: recent?.hits ?? 0,
+      misroutes: recent?.misroutes ?? 0,
+      fallbacks: recent?.fallbacks ?? 0,
+      hostSkips: recent?.syntheticHostSkips ?? 0,
+      lastTraceAt: historicalTraces.hosts[host].lastTraceAt,
+      lastVerifiedManifestAt,
+      historicalVerified
+    };
+  });
+
+  return {
+    windowDays: input.windowDays,
+    status,
+    recent: {
+      observed: input.routing.observed,
+      hits: input.routing.hits,
+      misroutes: input.routing.misroutes,
+      fallbacks: input.routing.fallbacks,
+      hostSkips: input.routing.syntheticHostSkips,
+      hostsCovered: hosts.filter((host) => host.status === "active").length,
+      supportedHosts: BROKER_HOSTS.length
+    },
+    proofs: {
+      verifyState: input.proof.verifyState,
+      repeatUsageState: input.proof.repeatUsageState,
+      crossHostReuseState: input.proof.crossHostReuseState
+    },
+    latest: {
+      traceAt: historicalTraces.lastTraceAt,
+      verifiedAt: input.acquisition.latestVerifiedAt,
+      firstReuseAt: input.acquisition.latestFirstReuseAt,
+      verifiedManifestAt: latestVerifiedManifestAt,
+      activityAt: latestActivityAt
+    },
+    hosts,
+    nextAction: websiteQaAdoptionNextAction({
+      status,
+      proof: input.proof,
+      routing: input.routing
+    })
+  };
 }
 
 function conflictReason(
@@ -1220,6 +1560,9 @@ export async function doctorSharedBrokerHome(
     );
   const {
     familyManifestCounts,
+    familyLatestVerifiedAt: _familyLatestVerifiedAt,
+    hostFamilyManifestCounts: _hostFamilyManifestCounts,
+    hostFamilyLatestVerifiedAt: _hostFamilyLatestVerifiedAt,
     ...verifiedDownstreamManifests
   } = verifiedDownstreamScan;
   const familyAcquisitionMetrics = await collectFamilyAcquisitionMetrics(
@@ -1278,6 +1621,15 @@ export async function doctorSharedBrokerHome(
     })
   ) as Record<DoctorProofFamily, DoctorFamilyProofSummary>;
   const websiteQaLoop = familyProofs.website_qa;
+  const websiteQaAdoption = summarizeWebsiteQaAdoptionSignal({
+    routing: websiteQaRouting,
+    routingTraces,
+    since: routingSince,
+    windowDays: routingWindowDays,
+    proof: websiteQaLoop,
+    acquisition: familyAcquisitionMetrics.website_qa,
+    verifiedDownstream: verifiedDownstreamScan
+  });
 
   return {
     command: "doctor",
@@ -1286,6 +1638,7 @@ export async function doctorSharedBrokerHome(
     verifiedDownstreamManifests,
     familyProofs,
     websiteQaLoop,
+    websiteQaAdoption,
     websiteQaRouting,
     routingMetrics: {
       windowDays: routingWindowDays,
@@ -1314,7 +1667,8 @@ export async function doctorSharedBrokerHome(
       proofRails: {
         acquisitionMemory: acquisitionMemory.state,
         verifiedDownstreamManifests: verifiedDownstreamManifests.state
-      }
+      },
+      websiteQaSignal: websiteQaAdoption
     }),
     warnings
   };

@@ -41,8 +41,8 @@ export const OPERATOR_TRUTH_CONTRACT = {
     zh: "宿主只选择 `broker_first` / `handle_normally` / `clarify_before_broker`；具体 QA winner 仍由 broker 决定。"
   },
   websiteQaProofSurface: {
-    en: "`doctor` now exposes website QA routing evidence plus separate repeat-usage and cross-host reuse proof states.",
-    zh: "`doctor` 现在会直接输出 website QA routing evidence，并把 repeat usage 与 cross-host reuse proof state 分开呈现。"
+    en: "`doctor` now exposes a website QA adoption packet: recent routing evidence, freshness, and separate repeat-usage / cross-host reuse proof states.",
+    zh: "`doctor` 现在会直接输出一份 website QA adoption packet：近期 routing evidence、freshness，以及拆开的 repeat usage / cross-host reuse proof state。"
   },
   fullLifecycleParity: {
     en: "Claude Code, Codex, and OpenCode now share full published lifecycle and proof/reuse parity.",

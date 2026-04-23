@@ -1,45 +1,45 @@
 # State
 
 **Initialized:** 2026-04-22
-**Status:** milestone_active
+**Status:** milestone_completed
 
 ## Project Reference
 
 See: `.planning/PROJECT.md` (updated 2026-04-23)
 
 **Core value:** 用户只需要描述想达成的结果，broker 就能在当前宿主里找到、准备并复用合适的能力，而不用让用户记住工具名、重新发现赢家、或自己判断安装路径。
-**Current focus:** Milestone v1.4 active — turn website QA proof into auditable adoption signals while keeping adoption health and coarse broker-first truth green
+**Current focus:** Milestone v1.4 completed and archived — website QA now has a repo-owned adoption packet, freshness-aware adoption health, and fail-closed audit truth
 
 ## Current Milestone
 
 - **Milestone:** v1.4 Website QA Adoption Signals
-- **Status:** active
+- **Status:** completed
 - **Started:** 2026-04-23
-- **Previous archive:** `.planning/milestones/v1.3-ROADMAP.md`
+- **Archive:** `.planning/milestones/v1.4-ROADMAP.md`
 
 ## Current Position
 
-- **Phase:** 15
+- **Phase:** —
 - **Plan:** —
-- **Status:** Requirements and roadmap drafted; ready to plan Phase 15
-- **Last activity:** 2026-04-23 — Milestone v1.4 initialized and phases 15-17 were drafted
+- **Status:** Milestone v1.4 completed, audited, and archived
+- **Last activity:** 2026-04-23 — Phases 15-17 executed, verified, and archived under `.planning/milestones/v1.4-phases/`
 
 ## Current Phase
 
-- **Phase:** 15
-- **Goal:** Quantify recent website QA adoption signals without reopening capability breadth or breaking the coarse host boundary
-- **Status:** ready_to_plan
-- **Primary requirements:** `ADOPT-01`, `ADOPT-02`
-- **Plan count:** —
-- **Wave count:** —
+- **Phase:** —
+- **Goal:** —
+- **Status:** no_active_phase
+- **Primary requirements:** —
+- **Plan count:** 6
+- **Wave count:** 3
 
 ## Phase Status
 
 | Phase | Name | Status | Notes |
 |-------|------|--------|-------|
-| 15 | Quantify Website QA Adoption Signals | Pending | Roadmap drafted; plan files not created yet |
-| 16 | Align Shared-Home Health With QA Signal Freshness | Pending | Roadmap drafted; plan files not created yet |
-| 17 | Lock Adoption-Signal Audit Truth | Pending | Roadmap drafted; plan files not created yet |
+| 15 | Quantify Website QA Adoption Signals | Completed | Archived at `.planning/milestones/v1.4-phases/15-quantify-website-qa-adoption-signals/15-VERIFICATION.md` |
+| 16 | Align Shared-Home Health With QA Signal Freshness | Completed | Archived at `.planning/milestones/v1.4-phases/16-align-shared-home-health-with-qa-signal-freshness/16-VERIFICATION.md` |
+| 17 | Lock Adoption-Signal Audit Truth | Completed | Archived at `.planning/milestones/v1.4-phases/17-lock-adoption-signal-audit-truth/17-VERIFICATION.md` |
 
 ## Known Context
 
@@ -49,7 +49,7 @@ See: `.planning/PROJECT.md` (updated 2026-04-23)
 - Claude Code、Codex、OpenCode 继续共享同一套 shared broker home、thin host shell、proof/reuse state 与 published lifecycle contract
 - CI trust rails 已经通过 `release:gate` 收口成 canonical repo-owned release verdict；publish flow 也直接复用同一套 truth
 - Milestone v1.3 现在已经 shipped、audited、archived；route confidence、repeat-usage proof 与 QA-first operator truth 都已经 landed on `main`
-- 当前 bottleneck 已从“一次性证明 website QA 默认入口可行”转向“这条默认入口最近是否仍然活着、是否 stale、以及 repo 能否自己说清楚”
+- 当前 bottleneck 已从“一次性证明 website QA 默认入口可行”收束为 repo-owned adoption packet / health / audit truth，v1.4 已经把这一层闭环
 - host shell 仍然只能判断 `broker_first` / `handle_normally` / `clarify_before_broker`，不能在入口处选择具体 QA winner
 - routing traces、acquisition memory、verified downstream manifests、`doctor`、canonical `STATUS.md`、milestone audit 与 CI trust report 都是 v1.4 可复用的 adoption-signal rail
 - `.planning/milestones/v1.3-phases/` 已承载上一轮 phase archive；`.planning/phases/` 当前为空，适合启动新 phase
@@ -68,6 +68,10 @@ See: `.planning/PROJECT.md` (updated 2026-04-23)
 - 2026-04-23: Phase 14 executed and verified — see `.planning/milestones/v1.3-phases/14-lock-qa-first-operator-truth/14-VERIFICATION.md`
 - 2026-04-23: Milestone v1.3 shipped, audited, and archived — see `.planning/milestones/v1.3-MILESTONE-AUDIT.md`
 - 2026-04-23: Milestone v1.4 started — requirements and roadmap drafted for phases 15-17
+- 2026-04-23: Phase 15 executed and verified — see `.planning/milestones/v1.4-phases/15-quantify-website-qa-adoption-signals/15-VERIFICATION.md`
+- 2026-04-23: Phase 16 executed and verified — see `.planning/milestones/v1.4-phases/16-align-shared-home-health-with-qa-signal-freshness/16-VERIFICATION.md`
+- 2026-04-23: Phase 17 executed and verified — see `.planning/milestones/v1.4-phases/17-lock-adoption-signal-audit-truth/17-VERIFICATION.md`
+- 2026-04-23: Milestone v1.4 audited and archived — see `.planning/milestones/v1.4-MILESTONE-AUDIT.md`
 
 ## Workflow Settings
 
@@ -82,15 +86,14 @@ See: `.planning/PROJECT.md` (updated 2026-04-23)
 
 ## Next Up
 
-Plan the first phase of the new milestone:
+Start the next milestone when ready:
 
-`$gsd-plan-phase 15`
+`$gsd-new-milestone`
 
 Also available:
-- `cat .planning/PROJECT.md`
+- `cat .planning/milestones/v1.4-MILESTONE-AUDIT.md`
 - `cat .planning/REQUIREMENTS.md`
 - `cat .planning/ROADMAP.md`
-- `cat .planning/milestones/v1.3-MILESTONE-AUDIT.md`
 
 ---
 *State initialized: 2026-04-22*

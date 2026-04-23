@@ -21,6 +21,7 @@ import {
   initGitRepo,
   runGit
 } from "../helpers/git";
+import { writeFreshWebsiteQaAdoptionFixtures } from "../helpers/website-qa-adoption";
 
 const execFileAsync = promisify(execFile);
 const tsNodeLoaderPath = resolve("node_modules/ts-node/esm.mjs");
@@ -365,6 +366,12 @@ ${JSON.stringify(
         host: "codex",
         version: "test-version",
         brokerHome: brokerHomeDirectory
+      });
+      await writeFreshWebsiteQaAdoptionFixtures(brokerHomeDirectory, {
+        installRequiredAt: "2026-04-23T04:55:00.000Z",
+        codexHitAt: "2026-04-23T05:00:00.000Z",
+        claudeHitAt: "2026-04-23T05:05:00.000Z",
+        opencodeHitAt: "2026-04-23T05:10:00.000Z"
       });
 
       const { stdout } = await execFileAsync("node", [

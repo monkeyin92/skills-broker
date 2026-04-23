@@ -4,7 +4,7 @@
 
 `skills-broker` 是一个安装一次、跨宿主复用的共享 broker runtime，当前已在 Claude Code、Codex、OpenCode 三个薄宿主壳上完成 published lifecycle 与 proof/reuse parity。它让用户只表达结果，由 broker 负责归一化请求、发现并排序能力候选、准备赢家，并把已验证的能力、proof rail 与 reuse state 跨宿主复用起来。
 
-v1.2 已经把 canonical shipping truth 收口到 repo-owned `release:gate` / `release:promote` 与 publish automation 上，v1.3 又把 `website QA` 的 route confidence、repeat-usage proof 与 operator truth 收成一条可信的 default-entry story。当前阶段的重点转向 v1.4：证明这条 QA-first story 不是“曾经成功过一次”，而是仍然在真实宿主里持续活着、可审计、可刷新。
+v1.2 已经把 canonical shipping truth 收口到 repo-owned `release:gate` / `release:promote` 与 publish automation 上，v1.3 又把 `website QA` 的 route confidence、repeat-usage proof 与 operator truth 收成一条可信的 default-entry story。v1.4 则继续把这条 QA-first story 从“曾经成功过一次”推进到“当前是否仍然活着、能否被 repo-owned surfaces 审计并在 stale 时指出 refresh action”这一层真相。
 
 ## Core Value
 
@@ -17,17 +17,17 @@ v1.2 已经把 canonical shipping truth 收口到 repo-owned `release:gate` / `r
 - **Hero lane:** `website QA`
 - **Proven families:** `web markdown`（second）、`social markdown`（next）
 - **Broker-owned workflows:** `idea-to-ship`、`investigation-to-fix`
-- **Trust posture:** canonical release truth 与 QA-first default-entry confidence 都已 shipped；当前最高价值问题变成“`website QA` 这条默认入口现在是否仍然是活的、近期被使用的、而且可被 repo-owned surfaces 审计”
+- **Trust posture:** canonical release truth 与 QA-first default-entry confidence 都已 shipped；v1.4 又把 `website QA` adoption packet、freshness-aware adoption health 与 fail-closed audit truth 收成 repo-owned product truth
 
-## Current Milestone: v1.4 Website QA Adoption Signals
+## Latest Completed Milestone: v1.4 Website QA Adoption Signals
 
-**Goal:** 把 `website QA` 默认入口从“已被证明可行”推进到“持续可审计地仍在被使用且健康”，让 maintainer 能从 repo-owned surfaces 看出最近的 default-entry habit、staleness 与下一步动作。
+**Goal achieved:** 把 `website QA` 默认入口从“已被证明可行”推进到“持续可审计地仍在被使用且健康”，让 maintainer 能从 repo-owned surfaces 看出最近的 default-entry habit、staleness 与下一步动作。
 
-**Target features:**
+**Delivered features:**
 
-- 把 `website QA` 的 broker-first hits、repeat usage、cross-host reuse 与 host coverage 收成近期 adoption signal，而不是只剩历史成功痕迹
-- 让 shared-home adoption health 与 `doctor` / `STATUS.md` 能区分 active、stale、missing 这三种 QA-first 状态，并明确指出下一步 refresh action
-- 让 canonical `STATUS.md`、milestone audit 与 CI trust rails 消费同一份 adoption packet，而不是让 maintainer 重新手工拼 trace / counters
+- 已把 `website QA` 的 broker-first hits、repeat usage、cross-host reuse 与 host coverage 收成近期 adoption signal，而不是只剩历史成功痕迹
+- 已让 shared-home adoption health 与 `doctor` / `STATUS.md` 能区分 active、stale、missing 这三种 QA-first 状态，并明确指出下一步 refresh action
+- 已让 canonical `STATUS.md`、milestone audit 与 CI trust rails 消费同一份 adoption packet，而不是让 maintainer 重新手工拼 trace / counters
 
 ## Requirements
 
@@ -50,12 +50,13 @@ v1.2 已经把 canonical shipping truth 收口到 repo-owned `release:gate` / `r
 - ✓ 支持宿主里的 `website QA` broker-first 命中率、近邻 fail-closed contract 与 hero-lane route evidence 已被 repo-owned tests / doctor surface 锁住 — v1.3 Phase 12
 - ✓ `website QA` 的 install / verify / repeat-usage / cross-host reuse proof loop 已在三宿主 shared-home surface 上成立，且 `doctor` 已能区分 repeat usage 与 cross-host reuse — v1.3 Phase 13
 - ✓ README、README.zh-CN、generated host shell、`STATUS.md`、`TODOS.md` 与 repo-native guardrails 现在共享同一份 QA-first operator truth，并明确坚持 coarse broker-first boundary — v1.3 Phase 14
+- ✓ `website QA` 的 recent broker-first hits、repeat usage、cross-host reuse 与 host coverage 已被收成 repo-owned adoption signal，而不是只剩历史成功痕迹 — v1.4 Phase 15
+- ✓ shared-home adoption health、`doctor` 与 `STATUS.md` 现在能区分 active / stale / missing，并指出下一步 refresh action — v1.4 Phase 16
+- ✓ canonical `STATUS.md`、milestone audit 与 CI trust rails 现在消费同一份 website QA adoption packet，并对 wording / counts / freshness drift fail closed — v1.4 Phase 17
 
 ### Active
 
-- [ ] 把 `website QA` 的 route confidence / repeat usage / cross-host reuse 从一次性 proof 升级成可审计的近期 adoption signal
-- [ ] 让 adoption health、`doctor` 与 `STATUS.md` 能说清这条默认入口现在是 active、stale 还是 missing，并指出下一步 refresh action
-- [ ] 保持 CI trust / audit surfaces 与 shared-home truth 同步，且不借机重开 capability breadth、shipping truth 或旧 migration 主题
+- 暂无新的 active milestone requirement；v1.4 已完成，下一轮需通过 `$gsd-new-milestone` 重新定义。
 
 ### Out of Scope
 
@@ -70,11 +71,11 @@ v1.2 已经把 canonical shipping truth 收口到 repo-owned `release:gate` / `r
 
 这个仓库仍然是一个 brownfield TypeScript/Node 项目，但当前 repo truth 已经比 v1.0 明确得多：shared broker home、三宿主 thin host shell、三条 proven family、两条 broker-owned workflow、registry-ready MCP explainability 与 canonical operator truth 已经互相咬合成一套可验证产品面。
 
-v1.3 已经把 `website QA` 这条默认入口的三层真相都补齐了：Phase 12 锁住 route confidence 与 repo-owned routing evidence，Phase 13 锁住 repeat usage / cross-host reuse proof loop，Phase 14 把 README、host shell、STATUS、TODOS 与 CI/parity guardrail 对齐到同一份 coarse-boundary operator story。当前缺的已经不再是“能不能证明一次”，而是“这条默认入口最近是否仍然健康、仍然在被使用、如果 stale 了 repo 能不能自己说清楚”。
+v1.3 已经把 `website QA` 这条默认入口的三层真相都补齐了：Phase 12 锁住 route confidence 与 repo-owned routing evidence，Phase 13 锁住 repeat usage / cross-host reuse proof loop，Phase 14 把 README、host shell、STATUS、TODOS 与 CI/parity guardrail 对齐到同一份 coarse-boundary operator story。v1.4 又补上最后一层：Phase 15 收 recent adoption packet，Phase 16 把 adoption health 与 refresh guidance 对齐到 freshness，Phase 17 把 `STATUS.md`、milestone audit 与 CI/parity guardrails 锁到同一份 packet。repo 现在不需要再靠一次 demo 或手工读 trace 去解释默认入口是否还活着。
 
-现成可复用的 rail 已经很多：routing traces、acquisition memory、verified downstream manifests、`doctor`、canonical `STATUS.md`、milestone audit、CI trust report、three-host shared-home smoke。v1.4 应该优先复用这些 surface 把 QA-first story 升级成 adoption signal，而不是急着扩更多 capability surface、宿主模板化，或重开 release truth 的新抽象。
+现成可复用的 rail 已经很多：routing traces、acquisition memory、verified downstream manifests、`doctor`、canonical `STATUS.md`、milestone audit、CI trust report、three-host shared-home smoke。v1.4 已经优先复用这些 surface 把 QA-first story 升级成 adoption signal，而不是急着扩更多 capability surface、宿主模板化，或重开 release truth 的新抽象。
 
-因此 v1.4 的重点是 freshness / adoption / auditability，而不是 breadth。它要回答的是：`website QA` 作为默认入口，今天是否仍然在真实宿主里工作、被重复使用、跨宿主复用，而且 maintainer 能不能不翻 raw trace 就看懂这件事。
+因此当前 repo truth 已经把 freshness / adoption / auditability 这一层闭环：`website QA` 作为默认入口是否仍然在真实宿主里工作、被重复使用、跨宿主复用，以及 maintainer 能否不翻 raw trace 就看懂这件事，现在都有 repo-owned surface 可读。
 
 ## Constraints
 
@@ -100,13 +101,13 @@ v1.3 已经把 `website QA` 这条默认入口的三层真相都补齐了：Phas
 | 默认入口可信度要先靠更强的命中率与 repeat-usage proof 锁住，再扩更多 surface | 当前 bottleneck 是 habit formation，不是 capability breadth | ✓ Good |
 | repeat usage 与 cross-host reuse 必须在 acquisition memory / doctor surface 上被明确拆开 | 否则 maintainer 看不出默认入口缺的是“再跑一次”还是“换个宿主再跑一次” | ✓ Good |
 | QA-first wording 必须跟 coarse broker-first boundary 一起被证明，而不是靠 README 单点表述维持 | 否则文案会漂移回“功能列表”，宿主也容易偷做细粒度判断 | ✓ Good |
-| v1.4 优先把 QA-first proof 升级成 adoption signal，而不是先扩 capability surface 或重开 shipping truth | 当前剩余产品风险是 freshness / auditability，而不是 breadth / ship mechanics | — Pending |
+| v1.4 优先把 QA-first proof 升级成 adoption signal，而不是先扩 capability surface 或重开 shipping truth | 当前剩余产品风险是 freshness / auditability，而不是 breadth / ship mechanics | ✓ Good |
 
 ## Next Milestone Goals
 
-1. 把 `website QA` 的 route confidence、repeat usage 与 cross-host reuse 从“已经证明过”升级成带 freshness 的 adoption signal。
-2. 让 adoption health、`doctor`、`STATUS.md` 与 milestone audit 能说清这条默认入口当前是 active、stale 还是 missing，以及下一步怎么 refresh。
-3. 在不重开 capability breadth、shipping truth 或旧 migration 主题的前提下，继续守住 coarse broker-first boundary 与 shared broker home reuse value。
+1. 通过 `$gsd-new-milestone` 基于 v1.4 已完成的 adoption packet / health / audit truth 重新选择最高价值 bottleneck。
+2. 继续保持 coarse broker-first boundary、shared broker home reuse 与 QA-first default-entry story 为硬约束。
+3. 除非现有 sequencing 被证明失效，否则不重开 capability breadth、shipping truth、第四宿主、query-native migration 或 maintained-family schema 泛化。
 
 ## Evolution
 
@@ -126,4 +127,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-23 after starting v1.4 milestone*
+*Last updated: 2026-04-23 after completing milestone v1.4*

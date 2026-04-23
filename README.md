@@ -284,7 +284,7 @@ Website QA cross-host reuse proof: confirmed (first reuse across hosts recorded)
 
 If you later clear acquisition memory, a verified downstream manifest from one host should still be enough for another host to recover `INSTALL_REQUIRED` instead of falling all the way back to `NO_CANDIDATE`.
 
-`doctor` now exposes website QA routing evidence plus separate repeat-usage and cross-host reuse proof states.
+`doctor` now exposes a website QA adoption packet: recent routing evidence, freshness, and separate repeat-usage / cross-host reuse proof states.
 
 If you want to clear only that advisory memory and re-run the loop from scratch, use:
 
@@ -303,7 +303,7 @@ This is the fastest way to confirm the shared-home install is real after the QA 
 - you can tell in one command whether adoption health is `green`, `blocked`, or `inactive`
 - the support matrix now claims Claude Code, Codex, and OpenCode with full lifecycle / proof parity, and the operator-facing docs say the same thing
 - the host still explains only the coarse broker-first boundary instead of choosing the concrete QA winner up front
-- `doctor` shows both website QA routing evidence and the next missing repeat-usage / cross-host reuse proof
+- `doctor` shows the website QA adoption packet, including freshness plus the next missing repeat-usage / cross-host reuse proof
 - operator-facing failures tell you what broke and what to inspect next
 
 ### 4. Try explicit shared-home directories

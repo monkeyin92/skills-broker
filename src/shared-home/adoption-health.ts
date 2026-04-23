@@ -1,5 +1,8 @@
 import type { BrokerHost } from "../core/types.js";
-import type { DoctorProofRailState } from "./doctor.js";
+import type {
+  DoctorProofRailState,
+  DoctorWebsiteQaAdoptionSignal
+} from "./doctor.js";
 
 export type AdoptionHealthStatus = "green" | "blocked" | "inactive";
 
@@ -17,6 +20,12 @@ export type AdoptionHealthReasonCode =
   | "STATUS_STRICT_ISSUE"
   | "ACQUISITION_MEMORY_UNREADABLE"
   | "VERIFIED_DOWNSTREAM_MANIFESTS_UNREADABLE"
+  | "WEBSITE_QA_SIGNAL_MISSING"
+  | "WEBSITE_QA_SIGNAL_STALE"
+  | "WEBSITE_QA_VERIFY_PENDING"
+  | "WEBSITE_QA_REPEAT_USAGE_PENDING"
+  | "WEBSITE_QA_CROSS_HOST_REUSE_PENDING"
+  | "WEBSITE_QA_ROUTING_UNSTABLE"
   | "NO_MANAGED_HOST";
 
 export type AdoptionHealthReason = {
@@ -29,6 +38,7 @@ export type AdoptionHealthResult = {
   status: AdoptionHealthStatus;
   managedHosts: BrokerHost[];
   reasons: AdoptionHealthReason[];
+  nextAction?: string;
 };
 
 type AdoptionHealthHost = {
@@ -66,6 +76,7 @@ export type ResolveAdoptionHealthInput = {
   brokerFirstGate?: StrictIssueSource;
   statusBoard?: StrictIssueSource;
   proofRails?: ProofRailState;
+  websiteQaSignal?: DoctorWebsiteQaAdoptionSignal;
 };
 
 const MANAGED_HOST_STATUSES = new Set([
@@ -180,6 +191,68 @@ function collectStrictIssueReasons(
   }));
 }
 
+function collectWebsiteQaSignalReasons(
+  signal: DoctorWebsiteQaAdoptionSignal | undefined
+): AdoptionHealthReason[] {
+  if (signal === undefined) {
+    return [];
+  }
+
+  if (signal.status === "missing") {
+    return [
+      {
+        code: "WEBSITE_QA_SIGNAL_MISSING",
+        message: `website QA adoption signal is missing: ${signal.nextAction}`
+      }
+    ];
+  }
+
+  if (signal.status === "stale") {
+    return [
+      {
+        code: "WEBSITE_QA_SIGNAL_STALE",
+        message: `website QA adoption signal is stale: ${signal.nextAction}`
+      }
+    ];
+  }
+
+  const reasons: AdoptionHealthReason[] = [];
+
+  if (signal.proofs.verifyState !== "confirmed") {
+    reasons.push({
+      code: "WEBSITE_QA_VERIFY_PENDING",
+      message: `website QA verify proof is not current yet: ${signal.nextAction}`
+    });
+  }
+
+  if (signal.proofs.repeatUsageState !== "confirmed") {
+    reasons.push({
+      code: "WEBSITE_QA_REPEAT_USAGE_PENDING",
+      message: `website QA repeat-usage proof is not current yet: ${signal.nextAction}`
+    });
+  }
+
+  if (signal.proofs.crossHostReuseState !== "confirmed") {
+    reasons.push({
+      code: "WEBSITE_QA_CROSS_HOST_REUSE_PENDING",
+      message: `website QA cross-host reuse proof is not current yet: ${signal.nextAction}`
+    });
+  }
+
+  if (
+    signal.recent.hostSkips > 0 ||
+    signal.recent.misroutes > 0 ||
+    (signal.recent.observed > 0 && signal.recent.hits === 0)
+  ) {
+    reasons.push({
+      code: "WEBSITE_QA_ROUTING_UNSTABLE",
+      message: `website QA routing still contradicts a healthy default-entry posture: ${signal.nextAction}`
+    });
+  }
+
+  return reasons;
+}
+
 export function resolveAdoptionHealth(
   input: ResolveAdoptionHealthInput
 ): AdoptionHealthResult {
@@ -246,11 +319,21 @@ export function resolveAdoptionHealth(
     });
   }
 
+  const websiteQaSignalReasons =
+    managedHosts.length > 0 && reasons.length === 0
+      ? collectWebsiteQaSignalReasons(input.websiteQaSignal)
+      : [];
+
+  reasons.push(...websiteQaSignalReasons);
+
   if (reasons.length > 0) {
     return {
       status: "blocked",
       managedHosts,
-      reasons
+      reasons,
+      ...(websiteQaSignalReasons.length === 0 || input.websiteQaSignal?.nextAction === undefined
+        ? {}
+        : { nextAction: input.websiteQaSignal.nextAction })
     };
   }
 
