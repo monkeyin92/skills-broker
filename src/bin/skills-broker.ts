@@ -39,6 +39,7 @@ export type LifecycleCliResult = {
   brokerHomeOverride?: string;
   claudeDirOverride?: string;
   codexDirOverride?: string;
+  opencodeDirOverride?: string;
   hostOverride?: BrokerHost;
   markerIdOverride?: string;
   operatorNote?: string;
@@ -100,6 +101,7 @@ export async function runLifecycleCli(argv: string[]): Promise<LifecycleCliResul
   let brokerHomeOverride: string | undefined;
   let claudeDirOverride: string | undefined;
   let codexDirOverride: string | undefined;
+  let opencodeDirOverride: string | undefined;
   let hostOverride: LifecycleCliResult["hostOverride"];
   let markerIdOverride: string | undefined;
   let operatorNote: string | undefined;
@@ -175,6 +177,13 @@ export async function runLifecycleCli(argv: string[]): Promise<LifecycleCliResul
 
     if (arg === "--codex-dir") {
       codexDirOverride = readFlagValue(argv, index, "--codex-dir");
+      seenFlags.add(arg);
+      index += 1;
+      continue;
+    }
+
+    if (arg === "--opencode-dir") {
+      opencodeDirOverride = readFlagValue(argv, index, "--opencode-dir");
       seenFlags.add(arg);
       index += 1;
       continue;
@@ -259,6 +268,7 @@ export async function runLifecycleCli(argv: string[]): Promise<LifecycleCliResul
       "--broker-home",
       "--claude-dir",
       "--codex-dir",
+      "--opencode-dir",
       "--repair-host-surface",
       "--clear-manual-recovery",
       "--host",
@@ -273,6 +283,7 @@ export async function runLifecycleCli(argv: string[]): Promise<LifecycleCliResul
       "--broker-home",
       "--claude-dir",
       "--codex-dir",
+      "--opencode-dir",
       "--refresh-remote",
       "--strict",
       "--repo-root",
@@ -283,6 +294,7 @@ export async function runLifecycleCli(argv: string[]): Promise<LifecycleCliResul
       "--broker-home",
       "--claude-dir",
       "--codex-dir",
+      "--opencode-dir",
       "--reset-acquisition-memory",
       "--purge",
       "--all"
@@ -339,6 +351,7 @@ export async function runLifecycleCli(argv: string[]): Promise<LifecycleCliResul
     brokerHomeOverride,
     claudeDirOverride,
     codexDirOverride,
+    opencodeDirOverride,
     hostOverride,
     markerIdOverride,
     operatorNote,
@@ -355,7 +368,8 @@ async function main(argv = process.argv.slice(2)) {
   const paths = resolveLifecyclePaths({
     brokerHomeOverride: result.brokerHomeOverride,
     claudeDirOverride: result.claudeDirOverride,
-    codexDirOverride: result.codexDirOverride
+    codexDirOverride: result.codexDirOverride,
+    opencodeDirOverride: result.opencodeDirOverride
   });
 
   if (result.command === "update") {
@@ -369,6 +383,10 @@ async function main(argv = process.argv.slice(2)) {
         result.codexDirOverride === undefined
           ? undefined
           : paths.codexInstallDirectory,
+      opencodeInstallDirectory:
+        result.opencodeDirOverride === undefined
+          ? undefined
+          : paths.opencodeInstallDirectory,
       dryRun: result.dryRun,
       repairHostSurface: result.repairHostSurface,
       clearManualRecovery: result.clearManualRecovery,
@@ -399,6 +417,10 @@ async function main(argv = process.argv.slice(2)) {
         result.codexDirOverride === undefined
           ? undefined
           : paths.codexInstallDirectory,
+      opencodeInstallDirectory:
+        result.opencodeDirOverride === undefined
+          ? undefined
+          : paths.opencodeInstallDirectory,
       refreshRemote: result.refreshRemote,
       repoRootOverride: result.repoRootOverride,
       shipRefOverride: result.shipRefOverride
@@ -422,6 +444,10 @@ async function main(argv = process.argv.slice(2)) {
         result.codexDirOverride === undefined
           ? undefined
           : paths.codexInstallDirectory,
+      opencodeInstallDirectory:
+        result.opencodeDirOverride === undefined
+          ? undefined
+          : paths.opencodeInstallDirectory,
       purgeSharedHome: result.purgeSharedHome,
       resetAcquisitionMemory: result.resetAcquisitionMemory
     });

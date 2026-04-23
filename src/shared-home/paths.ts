@@ -13,12 +13,14 @@ export type ResolveLifecyclePathsInput = {
   brokerHomeOverride?: string;
   claudeDirOverride?: string;
   codexDirOverride?: string;
+  opencodeDirOverride?: string;
 };
 
 export type ResolveLifecyclePathsResult = {
   brokerHomeDirectory: string;
   claudeCodeInstallDirectory: string;
   codexInstallDirectory: string;
+  opencodeInstallDirectory: string;
 };
 
 export type DetectLifecycleHostTargetsInput = ResolveLifecyclePathsInput;
@@ -32,9 +34,11 @@ export type DetectLifecycleHostTargetsResult = {
   brokerHomeDirectory: string;
   claudeCode: DetectLifecycleHostTarget;
   codex: DetectLifecycleHostTarget;
+  opencode: DetectLifecycleHostTarget;
 };
 
 const DEFAULT_BROKER_HOME_DIRECTORY = ".skills-broker";
+const LEGACY_OPENCODE_ROOT_SEGMENTS = [".opencode"] as const;
 
 function resolveHomeDirectory(homeDirectory?: string): string {
   return resolve(homeDirectory ?? homedir());
@@ -46,10 +50,14 @@ function resolveOverride(pathname: string | undefined, fallback: string): string
 
 function buildMissingRootReason(
   hostName: BrokerHost,
-  rootDirectory: string,
+  rootDirectories: string[],
   overrideFlag: BrokerHostOverrideFlag
 ): string {
-  return `default ${hostName} root not detected at ${rootDirectory}; use ${overrideFlag} to specify a custom install directory`;
+  const renderedRoots =
+    rootDirectories.length === 1
+      ? rootDirectories[0]
+      : rootDirectories.join(" or ");
+  return `default ${hostName} root not detected at ${renderedRoots}; use ${overrideFlag} to specify a custom install directory`;
 }
 
 async function directoryExists(pathname: string): Promise<boolean> {
@@ -69,19 +77,48 @@ async function directoryExists(pathname: string): Promise<boolean> {
 
 async function resolveDefaultTarget(
   hostName: BrokerHost,
-  rootDirectory: string,
-  installDirectory: string,
+  rootDirectories: string[],
+  resolveInstallDirectory: (rootDirectory: string) => string,
   overrideFlag: BrokerHostOverrideFlag
 ): Promise<DetectLifecycleHostTarget> {
-  if (!(await directoryExists(rootDirectory))) {
-    return {
-      reason: buildMissingRootReason(hostName, rootDirectory, overrideFlag)
-    };
+  for (const rootDirectory of rootDirectories) {
+    if (await directoryExists(rootDirectory)) {
+      return {
+        installDirectory: resolveInstallDirectory(rootDirectory)
+      };
+    }
   }
 
   return {
-    installDirectory
+    reason: buildMissingRootReason(hostName, rootDirectories, overrideFlag)
   };
+}
+
+function opencodeRootDirectoryCandidates(homeDirectory: string): string[] {
+  return [
+    join(
+      homeDirectory,
+      ...brokerHostSupportSpec("opencode").defaultRootDirectorySegments
+    ),
+    join(homeDirectory, ...LEGACY_OPENCODE_ROOT_SEGMENTS)
+  ];
+}
+
+function resolveOpencodeInstallDirectory(rootDirectory: string): string {
+  return join(rootDirectory, "skills", "skills-broker");
+}
+
+function lifecycleTargetKey(
+  host: BrokerHost
+): "claudeCode" | "codex" | "opencode" {
+  switch (host) {
+    case "claude-code":
+      return "claudeCode";
+    case "codex":
+      return "codex";
+    case "opencode":
+      return "opencode";
+  }
 }
 
 export function resolveLifecyclePaths(
@@ -104,6 +141,13 @@ export function resolveLifecyclePaths(
     codexInstallDirectory: resolveOverride(
       input.codexDirOverride,
       join(homeDirectory, ...brokerHostSupportSpec("codex").defaultInstallDirectorySegments)
+    ),
+    opencodeInstallDirectory: resolveOverride(
+      input.opencodeDirOverride,
+      join(
+        homeDirectory,
+        ...brokerHostSupportSpec("opencode").defaultInstallDirectorySegments
+      )
     )
   };
 }
@@ -112,7 +156,7 @@ export function lifecycleHostTarget(
   targets: DetectLifecycleHostTargetsResult,
   host: BrokerHost
 ): DetectLifecycleHostTarget {
-  return host === "claude-code" ? targets.claudeCode : targets.codex;
+  return targets[lifecycleTargetKey(host)];
 }
 
 export async function detectLifecycleHostTargets(
@@ -127,21 +171,27 @@ export async function detectLifecycleHostTargets(
         const installDirectory =
           host === "claude-code"
             ? paths.claudeCodeInstallDirectory
-            : paths.codexInstallDirectory;
+            : host === "codex"
+              ? paths.codexInstallDirectory
+              : paths.opencodeInstallDirectory;
         const hasOverride =
           host === "claude-code"
             ? input.claudeDirOverride !== undefined
-            : input.codexDirOverride !== undefined;
-        const rootDirectory = join(
-          homeDirectory,
-          ...support.defaultRootDirectorySegments
-        );
+            : host === "codex"
+              ? input.codexDirOverride !== undefined
+              : input.opencodeDirOverride !== undefined;
+        const rootDirectories =
+          host === "opencode"
+            ? opencodeRootDirectoryCandidates(homeDirectory)
+            : [join(homeDirectory, ...support.defaultRootDirectorySegments)];
         const target = hasOverride
           ? { installDirectory }
           : await resolveDefaultTarget(
               host,
-              rootDirectory,
-              installDirectory,
+              rootDirectories,
+              host === "opencode"
+                ? resolveOpencodeInstallDirectory
+                : () => installDirectory,
               support.overrideFlag
             );
 
@@ -153,6 +203,7 @@ export async function detectLifecycleHostTargets(
   return {
     brokerHomeDirectory: paths.brokerHomeDirectory,
     claudeCode: hostTargetsByName["claude-code"],
-    codex: hostTargetsByName.codex
+    codex: hostTargetsByName.codex,
+    opencode: hostTargetsByName.opencode
   };
 }

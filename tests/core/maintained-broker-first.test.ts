@@ -22,7 +22,7 @@ describe("maintained broker-first contract", () => {
     expect(contract.maintainedFamilies.map((entry) => entry.winnerId)).toEqual([
       "requirements-analysis",
       "website-qa",
-      "investigation"
+      "investigation-to-fix"
     ]);
     expect(maintainedBrokerFirstBoundaryExamples(contract)).toContain(
       "帮我做需求分析并产出设计文档"

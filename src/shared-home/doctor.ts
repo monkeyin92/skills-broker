@@ -41,7 +41,10 @@ import type { PeerSurfaceIntegrityIssue } from "./peer-surface-audit.js";
 import type { PeerSurfaceManualRecoveryMarker } from "./peer-surface-audit.js";
 
 export type DoctorProofRailState = "present" | "missing" | "unreadable";
-export type DoctorProofFamily = "website_qa" | "web_content_to_markdown";
+export type DoctorProofFamily =
+  | "website_qa"
+  | "web_content_to_markdown"
+  | "social_post_to_markdown";
 export type DoctorFamilyProofPhase =
   | "install_required_pending"
   | "verify_pending"
@@ -140,6 +143,7 @@ export type DoctorSharedBrokerHomeOptions = {
   homeDirectory?: string;
   claudeCodeInstallDirectory?: string;
   codexInstallDirectory?: string;
+  opencodeInstallDirectory?: string;
   refreshRemote?: boolean;
   repoRootOverride?: string;
   shipRefOverride?: string;
@@ -170,6 +174,9 @@ const WEBSITE_QA_SUBSKILL_ID = "qa";
 const WEB_MARKDOWN_WINNER_ID = "web-content-to-markdown";
 const WEB_MARKDOWN_CAPABILITY_ID = "baoyu.url-to-markdown";
 const WEB_MARKDOWN_SUBSKILL_ID = "url-to-markdown";
+const SOCIAL_MARKDOWN_WINNER_ID = "social-post-to-markdown";
+const SOCIAL_MARKDOWN_CAPABILITY_ID = "baoyu.x-post-to-markdown";
+const SOCIAL_MARKDOWN_SUBSKILL_ID = "x-post-to-markdown";
 const VERIFIED_MANIFEST_FILE = ".skills-broker.json";
 
 type DoctorFamilyConfig = {
@@ -217,8 +224,31 @@ const DOCTOR_FAMILY_CONFIGS: readonly DoctorFamilyConfig[] = [
     skillNames: [WEB_MARKDOWN_SUBSKILL_ID],
     provenMessage:
       "Web Markdown loop is proven; keep this request path as the second maintained-family demo."
+  },
+  {
+    family: "social_post_to_markdown",
+    label: "Social Markdown",
+    requestLabel: "social markdown",
+    winnerIds: [SOCIAL_MARKDOWN_WINNER_ID],
+    candidateIds: [SOCIAL_MARKDOWN_WINNER_ID, SOCIAL_MARKDOWN_CAPABILITY_ID],
+    capabilityIds: [SOCIAL_MARKDOWN_CAPABILITY_ID],
+    subskillIds: [SOCIAL_MARKDOWN_SUBSKILL_ID],
+    proofFamilies: ["social_post_to_markdown"],
+    compatibilityIntents: ["social_post_to_markdown"],
+    canonicalKeyFragments: [
+      "families:content_acquisition,social_content_conversion"
+    ],
+    skillNames: [SOCIAL_MARKDOWN_SUBSKILL_ID],
+    provenMessage:
+      "Social Markdown loop is proven; keep this request path as the next maintained-family demo."
   }
 ] as const;
+
+function emptyFamilyManifestCounts(): Record<DoctorProofFamily, number> {
+  return Object.fromEntries(
+    DOCTOR_FAMILY_CONFIGS.map((config) => [config.family, 0])
+  ) as Record<DoctorProofFamily, number>;
+}
 
 type DoctorFamilyEvidence = {
   installRequiredTraces: number;
@@ -665,10 +695,7 @@ async function summarizeVerifiedDownstreamHost(
         name: host,
         state: "missing",
         manifests: 0,
-        familyManifestCounts: {
-          website_qa: 0,
-          web_content_to_markdown: 0
-        },
+        familyManifestCounts: emptyFamilyManifestCounts(),
         qualityAssuranceManifests: 0
       };
     }
@@ -679,10 +706,7 @@ async function summarizeVerifiedDownstreamHost(
       name: host,
       state: "unreadable",
       manifests: 0,
-      familyManifestCounts: {
-        website_qa: 0,
-        web_content_to_markdown: 0
-      },
+      familyManifestCounts: emptyFamilyManifestCounts(),
       qualityAssuranceManifests: 0,
       unreadableReason: `${directory}: ${reason}`
     };
@@ -975,7 +999,8 @@ export async function doctorSharedBrokerHome(
     homeDirectory: options.homeDirectory,
     brokerHomeOverride: options.brokerHomeDirectory,
     claudeDirOverride: options.claudeCodeInstallDirectory,
-    codexDirOverride: options.codexInstallDirectory
+    codexDirOverride: options.codexInstallDirectory,
+    opencodeDirOverride: options.opencodeInstallDirectory
   });
   const routingWindowDays = 7;
   const routingTraces = await readBrokerRoutingTraces(

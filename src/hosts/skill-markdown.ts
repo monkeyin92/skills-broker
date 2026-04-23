@@ -1,7 +1,7 @@
 import type { BrokerHost } from "../core/types.js";
 import {
   OPERATOR_TRUTH_CONTRACT,
-  formatDeferredHostsLine,
+  formatFullLifecycleParityLine,
   formatPublishedLifecycleCommandsLine,
   formatSupportedHostsLine,
   formatThirdHostReadinessLine
@@ -35,6 +35,11 @@ const WEB_MARKDOWN_SECOND_PROVEN_EXAMPLES = [
   "convert this webpage to markdown https://example.com/a"
 ] as const;
 
+const SOCIAL_MARKDOWN_THIRD_PROVEN_EXAMPLES = [
+  "save this X post as markdown: https://x.com/example/status/1",
+  "把这个帖子转成 markdown: https://x.com/example/status/1"
+] as const;
+
 const HANDLE_NORMALLY_EXAMPLES = [
   "总结一下这个网页讲了什么",
   "Explain this TypeScript error",
@@ -57,7 +62,8 @@ const CLARIFY_BEFORE_BROKER_EXAMPLES = [
 
 const {
   heroLane: HERO_LANE,
-  secondProvenFamily: SECOND_PROVEN_FAMILY
+  secondProvenFamily: SECOND_PROVEN_FAMILY,
+  thirdProvenFamily: THIRD_PROVEN_FAMILY
 } = OPERATOR_TRUTH_CONTRACT;
 
 function renderExamples(examples: readonly string[]): string {
@@ -100,6 +106,7 @@ function partitionExamples(
     secondaryMaintainedExamples: Array.from(
       new Set([
         ...WEB_MARKDOWN_SECOND_PROVEN_EXAMPLES,
+        ...SOCIAL_MARKDOWN_THIRD_PROVEN_EXAMPLES,
         ...secondaryMaintainedExamples
       ])
     ),
@@ -188,7 +195,7 @@ Do not decide whether the request is QA, markdown conversion, requirements analy
 ## Supported Host Truth
 
 - ${formatSupportedHostsLine()}
-- ${formatDeferredHostsLine()}
+- ${formatFullLifecycleParityLine()}
 - ${formatPublishedLifecycleCommandsLine()}
 - ${formatThirdHostReadinessLine()}
 
@@ -222,6 +229,7 @@ ${renderExamples(heroExamples)}
 ### Secondary maintained lanes
 
 The second proven family is ${SECOND_PROVEN_FAMILY}. Keep it visible here after ${HERO_LANE}, not as a competing first move.
+The next proven family is ${THIRD_PROVEN_FAMILY}. Keep it visible after ${SECOND_PROVEN_FAMILY}, not as a competing first move.
 
 Requirements analysis and investigation still stay broker-first. They are maintained lanes, but they should not be the first thing this installed shell makes you try.
 

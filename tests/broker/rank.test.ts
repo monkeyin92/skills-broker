@@ -357,4 +357,57 @@ describe("explainDecision", () => {
     expect(decision).toContain("selection basis: compatibility-assisted");
     expect(decision).toContain("compatibility lane");
   });
+
+  it("surfaces validated MCP registry transport and query coverage evidence", () => {
+    const decision = explainDecision(
+      createCard({
+        id: "io.example/website-qa",
+        kind: "mcp",
+        label: "Website QA",
+        compatibilityIntent: "capability_discovery_or_install",
+        package: {
+          packageId: "io.example/website-qa",
+          label: "Website QA",
+          installState: "available",
+          acquisition: "mcp_bundle"
+        },
+        leaf: {
+          capabilityId: "io.example/website-qa",
+          packageId: "io.example/website-qa",
+          subskillId: "website-qa"
+        },
+        implementation: {
+          id: "io.example/website-qa",
+          type: "mcp_server",
+          ownerSurface: "broker_owned_downstream"
+        },
+        sourceMetadata: {
+          registryVersion: "1.2.0",
+          registryTransport: "streamable-http",
+          registryEndpointCount: 2,
+          registryValidation: {
+            status: "validated",
+            usableRemoteCount: 2
+          },
+          registryQueryCoverage: {
+            matchedBy: "structured_query",
+            jobFamilies: ["quality_assurance"],
+            targetTypes: ["website"],
+            artifacts: ["qa_report"]
+          }
+        }
+      }),
+      {
+        currentHost: "codex",
+        requestCompatibilityIntent: "capability_discovery_or_install",
+        selectionReasonCode: "query_native"
+      }
+    );
+
+    expect(decision).toContain("validated MCP");
+    expect(decision).toContain("transport streamable-http");
+    expect(decision).toContain("query coverage");
+    expect(decision).toContain("jobFamilies=quality_assurance");
+    expect(decision).toContain("artifacts=qa_report");
+  });
 });

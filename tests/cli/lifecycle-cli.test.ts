@@ -9,6 +9,7 @@ import { resolve } from "node:path";
 import { access, chmod, mkdtemp, mkdir, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { installSharedBrokerHome } from "../../src/shared-home/install";
+import { installOpenCodeHostShell } from "../../src/hosts/opencode/install";
 import { writeManagedShellManifest } from "../../src/shared-home/ownership";
 import {
   appendPeerSurfaceLedgerEvent,
@@ -17,7 +18,6 @@ import {
   writePeerSurfaceManualRecoveryMarker
 } from "../../src/shared-home/peer-surface-audit";
 import { commitAll, initGitRepo } from "../helpers/git";
-import { execNpm } from "../helpers/npm";
 
 const execFileAsync = promisify(execFile);
 const tsNodeLoaderPath = resolve("node_modules/ts-node/esm.mjs");
@@ -46,6 +46,28 @@ function renderStatusBoard(status: string): string {
 \`\`\`
 <!-- skills-broker-status:end -->
 `;
+}
+
+async function buildPublishedCli(): Promise<void> {
+  await execFileAsync(
+    process.execPath,
+    [resolve("node_modules", "typescript", "bin", "tsc"), "-p", "tsconfig.build.json"],
+    {
+      cwd: process.cwd(),
+      encoding: "utf8"
+    }
+  );
+  await execFileAsync(
+    process.execPath,
+    [
+      "-e",
+      "const fs=require('fs');const file='dist/bin/skills-broker.js';const content=fs.readFileSync(file,'utf8');if(!content.startsWith('#!'))fs.writeFileSync(file,'#!/usr/bin/env node\\n'+content);"
+    ],
+    {
+      cwd: process.cwd(),
+      encoding: "utf8"
+    }
+  );
 }
 
 describe("lifecycle cli", () => {
@@ -79,6 +101,24 @@ describe("lifecycle cli", () => {
     expect(result.purgeSharedHome).toBe(false);
     expect(result.resetAcquisitionMemory).toBe(false);
     expect(result.outputMode).toBe("text");
+  });
+
+  it("accepts --opencode-dir on doctor and remove", async () => {
+    const doctorResult = await runLifecycleCli([
+      "doctor",
+      "--opencode-dir",
+      "/tmp/custom-opencode-shell"
+    ]);
+    const removeResult = await runLifecycleCli([
+      "remove",
+      "--opencode-dir",
+      "/tmp/custom-opencode-shell"
+    ]);
+
+    expect(doctorResult.command).toBe("doctor");
+    expect(doctorResult.opencodeDirOverride).toBe("/tmp/custom-opencode-shell");
+    expect(removeResult.command).toBe("remove");
+    expect(removeResult.opencodeDirOverride).toBe("/tmp/custom-opencode-shell");
   });
 
   it("treats --all as remove purge", async () => {
@@ -215,6 +255,56 @@ describe("lifecycle cli", () => {
           reason: expect.stringContaining("missing")
         })
       );
+    } finally {
+      await rm(runtimeDirectory, { recursive: true, force: true });
+    }
+  }, 90_000);
+
+  it("prints doctor result for a managed OpenCode shell targeted via --opencode-dir", async () => {
+    const scriptPath = resolve("src/bin/skills-broker.ts");
+    const runtimeDirectory = await mkdtemp(
+      resolve(tmpdir(), "skills-broker-cli-doctor-opencode-json-")
+    );
+    const brokerHomeDirectory = resolve(runtimeDirectory, ".skills-broker");
+    const opencodeInstallDirectory = resolve(runtimeDirectory, "custom-opencode-shell");
+
+    try {
+      await installSharedBrokerHome({
+        brokerHomeDirectory,
+        projectRoot: process.cwd()
+      });
+      await installOpenCodeHostShell({
+        installDirectory: opencodeInstallDirectory,
+        brokerHomeDirectory,
+        projectRoot: process.cwd()
+      });
+
+      const { stdout } = await execFileAsync("node", [
+        "--loader",
+        tsNodeLoaderPath,
+        scriptPath,
+        "doctor",
+        "--json",
+        "--broker-home",
+        brokerHomeDirectory,
+        "--opencode-dir",
+        opencodeInstallDirectory
+      ], {
+        env: {
+          ...process.env,
+          HOME: runtimeDirectory
+        },
+        encoding: "utf8"
+      });
+
+      const result = JSON.parse(stdout.trim());
+      expect(result.command).toBe("doctor");
+      expect(result.hosts).toContainEqual({
+        name: "opencode",
+        status: "detected",
+        reason: "managed by skills-broker"
+      });
+      expect(result.adoptionHealth.managedHosts).toContain("opencode");
     } finally {
       await rm(runtimeDirectory, { recursive: true, force: true });
     }
@@ -620,6 +710,60 @@ describe("lifecycle cli", () => {
     }
   });
 
+  it("prints remove result for a managed OpenCode shell targeted via --opencode-dir", async () => {
+    const scriptPath = resolve("src/bin/skills-broker.ts");
+    const runtimeDirectory = await mkdtemp(
+      resolve(tmpdir(), "skills-broker-cli-remove-opencode-json-")
+    );
+    const brokerHomeDirectory = resolve(runtimeDirectory, ".skills-broker");
+    const opencodeInstallDirectory = resolve(runtimeDirectory, "custom-opencode-shell");
+
+    try {
+      await installSharedBrokerHome({
+        brokerHomeDirectory,
+        projectRoot: process.cwd()
+      });
+      await installOpenCodeHostShell({
+        installDirectory: opencodeInstallDirectory,
+        brokerHomeDirectory,
+        projectRoot: process.cwd()
+      });
+
+      const { stdout } = await execFileAsync("node", [
+        "--loader",
+        tsNodeLoaderPath,
+        scriptPath,
+        "remove",
+        "--json",
+        "--broker-home",
+        brokerHomeDirectory,
+        "--opencode-dir",
+        opencodeInstallDirectory
+      ], {
+        env: {
+          ...process.env,
+          HOME: runtimeDirectory
+        },
+        encoding: "utf8"
+      });
+
+      const result = JSON.parse(stdout.trim());
+      expect(result.command).toBe("remove");
+      expect(result.sharedHome).toEqual({
+        path: brokerHomeDirectory,
+        status: "preserved",
+        acquisitionMemory: "preserved"
+      });
+      expect(result.hosts).toContainEqual({
+        name: "opencode",
+        status: "removed"
+      });
+      await expect(access(opencodeInstallDirectory)).rejects.toThrow();
+    } finally {
+      await rm(runtimeDirectory, { recursive: true, force: true });
+    }
+  });
+
   it("purges shared home when remove is executed with --purge", async () => {
     const scriptPath = resolve("src/bin/skills-broker.ts");
     const runtimeDirectory = await mkdtemp(resolve(tmpdir(), "skills-broker-cli-remove-purge-"));
@@ -718,10 +862,7 @@ describe("lifecycle cli", () => {
     const codexInstallDirectory = resolve(runtimeDirectory, ".agents", "skills", "skills-broker");
 
     try {
-      await execNpm(["run", "build"], {
-        cwd: process.cwd(),
-        encoding: "utf8"
-      });
+      await buildPublishedCli();
       await mkdir(resolve(runtimeDirectory, ".codex"), { recursive: true });
       await mkdir(codexInstallDirectory, { recursive: true });
       await writeManagedShellManifest(codexInstallDirectory, {
@@ -1343,10 +1484,7 @@ describe("lifecycle cli", () => {
   });
 
   it("finds shared-home resources when executed from a non-repo cwd", async () => {
-    await execNpm(["run", "build"], {
-      env: process.env,
-      encoding: "utf8"
-    });
+    await buildPublishedCli();
 
     const scriptPath = resolve("dist/bin/skills-broker.js");
     const runtimeDirectory = await mkdtemp(resolve(tmpdir(), "skills-broker-cli-nonrepo-"));
@@ -1502,10 +1640,7 @@ describe("lifecycle cli", () => {
   });
 
   it("runs when the published bin is executed via symlink", async () => {
-    await execNpm(["run", "build"], {
-      env: process.env,
-      encoding: "utf8"
-    });
+    await buildPublishedCli();
 
     const distBin = resolve("dist/bin/skills-broker.js");
     const binDir = await mkdtemp(resolve(tmpdir(), "skills-broker-bin-"));

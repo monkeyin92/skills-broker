@@ -324,6 +324,32 @@ describe("loadHostSkillCandidates", () => {
     ]);
   });
 
+  it("loads the investigation-to-fix workflow recipe from the real catalog", async () => {
+    const workflows = await loadHostWorkflowRecipes(
+      "capability_discovery_or_install",
+      "config/host-skills.seed.json"
+    );
+    const workflow = workflows.find(
+      (candidate) => candidate.id === "investigation-to-fix"
+    );
+
+    expect(workflow).toMatchObject({
+      id: "investigation-to-fix",
+      implementation: {
+        id: "skills_broker.investigation_to_fix",
+        type: "broker_workflow"
+      },
+      startStageId: "investigate"
+    });
+    expect(workflow?.stages.map((stage) => stage.id)).toEqual([
+      "investigate",
+      "implement-fix",
+      "review-fix",
+      "qa-fix",
+      "ship-fix"
+    ]);
+  });
+
   it("deep-merges package probe metadata instead of clobbering it", async () => {
     const runtimeDirectory = await mkdtemp(
       join(tmpdir(), "skills-broker-package-probe-merge-")

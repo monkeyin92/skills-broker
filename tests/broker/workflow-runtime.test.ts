@@ -12,6 +12,12 @@ const ideaRequest = {
   host: "codex" as const
 };
 
+const investigationRequest = {
+  requestText: "investigate this site failure with a reusable workflow",
+  host: "codex" as const,
+  urls: ["https://example.com"]
+};
+
 async function createRuntimePaths() {
   const directory = await mkdtemp(join(tmpdir(), "skills-broker-workflow-"));
 
@@ -171,6 +177,85 @@ describe("workflow runtime", () => {
         workflowId: "idea-to-ship",
         runId: firstResult.workflow.runId,
         stageId: "plan-ceo-review",
+        reasonCode: "query_native"
+      });
+    } finally {
+      await rm(runtime.directory, { recursive: true, force: true });
+    }
+  });
+
+  it("starts the investigation-to-fix workflow with the investigate stage active", async () => {
+    const runtime = await createRuntimePaths();
+    await seedHostCatalog(runtime.hostCatalogFilePath);
+
+    try {
+      const result = await runBroker(investigationRequest, {
+        ...runtime,
+        now: new Date("2026-03-31T08:10:00.000Z")
+      });
+
+      expect(result.ok).toBe(true);
+      expect(result.outcome.code).toBe("WORKFLOW_STAGE_READY");
+      expect(result.winner.id).toBe("investigation-to-fix");
+      expect(result.workflow).toMatchObject({
+        workflowId: "investigation-to-fix",
+        activeStageId: "investigate",
+        completedStageIds: []
+      });
+      expect(result.stage).toMatchObject({
+        id: "investigate",
+        kind: "capability",
+        requiresExplicitArtifacts: true
+      });
+      expect(result.stage.handoff?.chosenImplementation.id).toBe(
+        "gstack.investigate"
+      );
+      expect(result.trace).toMatchObject({
+        resultCode: "WORKFLOW_STAGE_READY",
+        workflowId: "investigation-to-fix",
+        runId: result.workflow.runId,
+        stageId: "investigate",
+        reasonCode: "query_native"
+      });
+    } finally {
+      await rm(runtime.directory, { recursive: true, force: true });
+    }
+  });
+
+  it("resumes the investigation-to-fix workflow into the host-native implementation stage", async () => {
+    const runtime = await createRuntimePaths();
+    await seedHostCatalog(runtime.hostCatalogFilePath);
+
+    try {
+      const firstResult = await runBroker(investigationRequest, {
+        ...runtime,
+        now: new Date("2026-03-31T08:10:00.000Z")
+      });
+
+      expect(firstResult.outcome.code).toBe("WORKFLOW_STAGE_READY");
+
+      const secondResult = await resumeWorkflow(
+        runtime,
+        firstResult.workflow.runId,
+        firstResult.stage.id,
+        "2026-03-31T08:15:00.000Z",
+        ["analysis", "recommendation"]
+      );
+
+      expect(secondResult.ok).toBe(true);
+      expect(secondResult.outcome.code).toBe("WORKFLOW_STAGE_READY");
+      expect(secondResult.workflow.runId).toBe(firstResult.workflow.runId);
+      expect(secondResult.workflow.completedStageIds).toContain("investigate");
+      expect(secondResult.stage).toMatchObject({
+        id: "implement-fix",
+        kind: "host_native",
+        requiresArtifacts: ["analysis", "recommendation"]
+      });
+      expect(secondResult.trace).toMatchObject({
+        resultCode: "WORKFLOW_STAGE_READY",
+        workflowId: "investigation-to-fix",
+        runId: firstResult.workflow.runId,
+        stageId: "implement-fix",
         reasonCode: "query_native"
       });
     } finally {

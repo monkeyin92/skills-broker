@@ -6,9 +6,10 @@ import { promisify } from "node:util";
 import { describe, expect, it } from "vitest";
 import { runClaudeCodeAdapter } from "../../src/hosts/claude-code/adapter";
 import { runCodexAdapter } from "../../src/hosts/codex/adapter";
+import { runOpenCodeAdapter } from "../../src/hosts/opencode/adapter";
 import { loadMaintainedBrokerFirstContract } from "../../src/core/maintained-broker-first";
 import {
-  formatDeferredHostsLine,
+  formatFullLifecycleParityLine,
   formatPublishedLifecycleCommandsLine,
   formatSupportedHostsLine,
   formatThirdHostReadinessLine
@@ -24,6 +25,28 @@ const HERO_LANE_EXAMPLES = [
   '"find a skill or MCP for website QA"',
   '"有没有现成 skill 能做这个网站 QA"'
 ] as const;
+
+async function buildPublishedCli(): Promise<void> {
+  await execFileAsync(
+    process.execPath,
+    [join(process.cwd(), "node_modules", "typescript", "bin", "tsc"), "-p", "tsconfig.build.json"],
+    {
+      cwd: process.cwd(),
+      encoding: "utf8"
+    }
+  );
+  await execFileAsync(
+    process.execPath,
+    [
+      "-e",
+      "const fs=require('fs');const file='dist/bin/skills-broker.js';const content=fs.readFileSync(file,'utf8');if(!content.startsWith('#!'))fs.writeFileSync(file,'#!/usr/bin/env node\\n'+content);"
+    ],
+    {
+      cwd: process.cwd(),
+      encoding: "utf8"
+    }
+  );
+}
 
 function expectInOrder(text: string, snippets: readonly string[]): void {
   let previousIndex = -1;
@@ -44,7 +67,7 @@ function expectCodexSkillLayout(skill: string): void {
     "The host decides only one of these boundary outcomes:",
     "## Supported Host Truth",
     formatSupportedHostsLine(),
-    formatDeferredHostsLine(),
+    formatFullLifecycleParityLine(),
     formatPublishedLifecycleCommandsLine(),
     formatThirdHostReadinessLine(),
     "## Broker-First (`broker_first`)",
@@ -54,9 +77,12 @@ function expectCodexSkillLayout(skill: string): void {
     ...HERO_LANE_EXAMPLES,
     "### Secondary maintained lanes",
     "The second proven family is web markdown. Keep it visible here after website QA, not as a competing first move.",
+    "The next proven family is social markdown. Keep it visible after web markdown, not as a competing first move.",
     "Requirements analysis and investigation still stay broker-first. They are maintained lanes, but they should not be the first thing this installed shell makes you try.",
     '"把这个页面转成 markdown: https://example.com/a"',
     '"convert this webpage to markdown https://example.com/a"',
+    '"save this X post as markdown: https://x.com/example/status/1"',
+    '"把这个帖子转成 markdown: https://x.com/example/status/1"',
     '"帮我做需求分析并产出设计文档"',
     '"帮我看看这个需求有没有漏洞"',
     '"investigate this site failure with a reusable workflow"',
@@ -118,7 +144,7 @@ BROKER_CURRENT_HOST="codex" exec "${brokerHomeDirectory}/bin/run-broker" "\${BRO
 
 describe("shared broker home smoke", () => {
   it(
-    "lets Claude Code and Codex reuse the same shared broker home",
+    "lets Claude Code, Codex, and OpenCode reuse the same shared broker home",
     async () => {
       const runtimeDirectory = await mkdtemp(
         join(tmpdir(), "skills broker awkward \"$HOME\" $(echo nope)-")
@@ -126,6 +152,13 @@ describe("shared broker home smoke", () => {
       const brokerHomeDirectory = join(runtimeDirectory, ".skills-broker");
       const claudeShellDirectory = join(runtimeDirectory, ".claude", "skills", "skills-broker");
       const codexShellDirectory = join(runtimeDirectory, ".agents", "skills", "skills-broker");
+      const opencodeShellDirectory = join(
+        runtimeDirectory,
+        ".config",
+        "opencode",
+        "skills",
+        "skills-broker"
+      );
       const buildScriptPath = join(process.cwd(), "dist", "bin", "skills-broker.js");
       const sharedRunnerPath = join(brokerHomeDirectory, "bin", "run-broker");
       const sharedDistCliPath = join(brokerHomeDirectory, "dist", "cli.js");
@@ -134,6 +167,25 @@ describe("shared broker home smoke", () => {
         "config",
         "maintained-broker-first-families.json"
       );
+      const socialProofHostCatalogPath = join(
+        runtimeDirectory,
+        "social-proof-host.json"
+      );
+      const socialProofMcpRegistryPath = join(
+        runtimeDirectory,
+        "social-proof-mcp.json"
+      );
+      const socialProofCacheFilePath = join(
+        runtimeDirectory,
+        "social-proof-cache.json"
+      );
+      const sharedInstalledSocialDirectory = join(
+        brokerHomeDirectory,
+        "downstream",
+        "claude-code",
+        "skills",
+        "baoyu-danger-x-to-markdown"
+      );
       const claudeManifestPath = join(
         claudeShellDirectory,
         ".claude-plugin",
@@ -141,9 +193,12 @@ describe("shared broker home smoke", () => {
       );
       const codexSkillPath = join(codexShellDirectory, "SKILL.md");
       const codexRunnerPath = join(codexShellDirectory, "bin", "run-broker");
+      const opencodeSkillPath = join(opencodeShellDirectory, "SKILL.md");
+      const opencodeRunnerPath = join(opencodeShellDirectory, "bin", "run-broker");
 
       try {
         const sourceContract = await loadMaintainedBrokerFirstContract();
+        await buildPublishedCli();
         await expect(access(buildScriptPath)).resolves.toBeUndefined();
         await execFileAsync("node", [
           buildScriptPath,
@@ -153,7 +208,9 @@ describe("shared broker home smoke", () => {
           "--claude-dir",
           claudeShellDirectory,
           "--codex-dir",
-          codexShellDirectory
+          codexShellDirectory,
+          "--opencode-dir",
+          opencodeShellDirectory
         ], {
           cwd: runtimeDirectory
         });
@@ -167,7 +224,9 @@ describe("shared broker home smoke", () => {
           "--claude-dir",
           claudeShellDirectory,
           "--codex-dir",
-          codexShellDirectory
+          codexShellDirectory,
+          "--opencode-dir",
+          opencodeShellDirectory
         ], {
           cwd: runtimeDirectory
         });
@@ -180,7 +239,7 @@ describe("shared broker home smoke", () => {
 
         expect(doctorResult.adoptionHealth).toMatchObject({
           status: "green",
-          managedHosts: ["claude-code", "codex"]
+          managedHosts: ["claude-code", "codex", "opencode"]
         });
 
         await expect(access(sharedRunnerPath)).resolves.toBeUndefined();
@@ -188,6 +247,7 @@ describe("shared broker home smoke", () => {
         await expect(access(sharedMaintainedFamiliesPath)).resolves.toBeUndefined();
         await expect(access(claudeManifestPath)).resolves.toBeUndefined();
         await expect(access(codexSkillPath)).resolves.toBeUndefined();
+        await expect(access(opencodeSkillPath)).resolves.toBeUndefined();
 
         const sharedContract = await loadMaintainedBrokerFirstContract(
           sharedMaintainedFamiliesPath
@@ -196,7 +256,10 @@ describe("shared broker home smoke", () => {
 
         const codexSkillContents = await readFile(codexSkillPath, "utf8");
         const codexRunnerContents = await readFile(codexRunnerPath, "utf8");
+        const opencodeSkillContents = await readFile(opencodeSkillPath, "utf8");
+        const opencodeRunnerContents = await readFile(opencodeRunnerPath, "utf8");
         expectCodexSkillLayout(codexSkillContents);
+        expectCodexSkillLayout(opencodeSkillContents);
         expect(codexSkillContents).toContain(
           "Treat the examples below as semantic anchors, not literal trigger phrases."
         );
@@ -205,6 +268,11 @@ describe("shared broker home smoke", () => {
         );
         expect(codexRunnerContents).toContain(".skills-broker.json");
         expect(codexRunnerContents).not.toContain(brokerHomeDirectory);
+        expect(opencodeSkillContents).toContain('"host":"opencode"');
+        expect(opencodeSkillContents).toContain('"invocationMode":"explicit"');
+        expect(opencodeRunnerContents).toContain(".skills-broker.json");
+        expect(opencodeRunnerContents).toContain('BROKER_CURRENT_HOST="opencode"');
+        expect(opencodeRunnerContents).not.toContain(brokerHomeDirectory);
 
         const claudeResult = await runClaudeCodeAdapter(
           {
@@ -232,14 +300,249 @@ describe("shared broker home smoke", () => {
             now: new Date("2026-03-27T12:00:00.000Z")
           }
         );
+        const opencodeResult = await runOpenCodeAdapter(
+          {
+            requestText:
+              "turn this webpage into markdown: https://example.com/article",
+            host: "opencode",
+            invocationMode: "explicit",
+            urls: ["https://example.com/article"]
+          },
+          {
+            installDirectory: opencodeShellDirectory,
+            now: new Date("2026-03-27T16:00:00.000Z")
+          }
+        );
 
         expect(claudeResult.ok).toBe(true);
         expect(codexResult.ok).toBe(true);
+        expect(opencodeResult.ok).toBe(true);
         expect(codexResult.outcome.code).toBe("HANDOFF_READY");
         expect(codexResult.handoff.context.currentHost).toBe("codex");
         expect(codexResult.debug.cacheHit).toBe(true);
         expect(codexResult.debug.cachedCandidateId).toBe(claudeResult.winner.id);
         expect(codexResult).not.toHaveProperty("trace");
+        expect(opencodeResult.outcome.code).toBe("HANDOFF_READY");
+        expect(opencodeResult.handoff.context.currentHost).toBe("opencode");
+        expect(opencodeResult.debug.cacheHit).toBe(true);
+        expect(opencodeResult.debug.cachedCandidateId).toBe(claudeResult.winner.id);
+        expect(opencodeResult).not.toHaveProperty("trace");
+
+        await writeFile(
+          socialProofHostCatalogPath,
+          JSON.stringify({
+            packages: [
+              {
+                packageId: "baoyu",
+                label: "baoyu",
+                installState: "available",
+                acquisition: "published_package",
+                probe: {
+                  layouts: ["single_skill_directory"]
+                }
+              }
+            ],
+            skills: [
+              {
+                id: "social-post-to-markdown",
+                kind: "skill",
+                label: "Social Post to Markdown",
+                intent: "social_post_to_markdown",
+                package: {
+                  packageId: "baoyu"
+                },
+                leaf: {
+                  capabilityId: "baoyu.x-post-to-markdown",
+                  packageId: "baoyu",
+                  subskillId: "x-post-to-markdown",
+                  probe: {
+                    manifestNames: ["baoyu-danger-x-to-markdown"],
+                    aliases: ["x-post-to-markdown"]
+                  }
+                },
+                query: {
+                  proofFamily: "social_post_to_markdown",
+                  jobFamilies: ["content_acquisition", "social_content_conversion"],
+                  targetTypes: ["url", "website"],
+                  artifacts: ["markdown"],
+                  examples: ["save this X post as markdown"]
+                },
+                implementation: {
+                  id: "baoyu.x_post_to_markdown",
+                  type: "local_skill",
+                  ownerSurface: "broker_owned_downstream"
+                }
+              }
+            ]
+          }),
+          "utf8"
+        );
+        await writeFile(
+          socialProofMcpRegistryPath,
+          JSON.stringify({ servers: [] }),
+          "utf8"
+        );
+
+        const socialInstallRequired = await runClaudeCodeAdapter(
+          {
+            requestText: "save this X post as markdown",
+            host: "claude-code",
+            invocationMode: "explicit",
+            urls: ["https://x.com/example/status/1"]
+          },
+          {
+            installDirectory: claudeShellDirectory,
+            includeTrace: true,
+            cacheFilePath: socialProofCacheFilePath,
+            hostCatalogFilePath: socialProofHostCatalogPath,
+            mcpRegistryFilePath: socialProofMcpRegistryPath,
+            now: new Date("2026-03-27T18:00:00.000Z")
+          }
+        );
+
+        expect(socialInstallRequired.ok).toBe(false);
+        expect(socialInstallRequired.outcome.code).toBe("INSTALL_REQUIRED");
+        expect(socialInstallRequired.trace).toMatchObject({
+          host: "claude-code",
+          resultCode: "INSTALL_REQUIRED",
+          winnerId: "social-post-to-markdown",
+          selectedCapabilityId: "baoyu.x-post-to-markdown",
+          selectedLeafCapabilityId: "x-post-to-markdown"
+        });
+
+        await mkdir(sharedInstalledSocialDirectory, { recursive: true });
+        await writeFile(
+          join(sharedInstalledSocialDirectory, "SKILL.md"),
+          "---\nname: baoyu-danger-x-to-markdown\n---\n",
+          "utf8"
+        );
+
+        const socialVerified = await runClaudeCodeAdapter(
+          {
+            requestText: "save this X post as markdown",
+            host: "claude-code",
+            invocationMode: "explicit",
+            urls: ["https://x.com/example/status/1"]
+          },
+          {
+            installDirectory: claudeShellDirectory,
+            includeTrace: true,
+            cacheFilePath: socialProofCacheFilePath,
+            hostCatalogFilePath: socialProofHostCatalogPath,
+            mcpRegistryFilePath: socialProofMcpRegistryPath,
+            now: new Date("2026-03-27T18:05:00.000Z")
+          }
+        );
+
+        expect(socialVerified.ok).toBe(true);
+        expect(socialVerified.outcome.code).toBe("HANDOFF_READY");
+        expect(socialVerified.winner.id).toBe("social-post-to-markdown");
+        expect(socialVerified.trace).toMatchObject({
+          host: "claude-code",
+          resultCode: "HANDOFF_READY",
+          winnerId: "social-post-to-markdown",
+          selectedCapabilityId: "baoyu.x-post-to-markdown",
+          selectedLeafCapabilityId: "x-post-to-markdown"
+        });
+
+        const socialReused = await runOpenCodeAdapter(
+          {
+            requestText: "save this X post as markdown",
+            host: "opencode",
+            invocationMode: "explicit",
+            urls: ["https://x.com/example/status/1"]
+          },
+          {
+            installDirectory: opencodeShellDirectory,
+            includeTrace: true,
+            cacheFilePath: socialProofCacheFilePath,
+            hostCatalogFilePath: socialProofHostCatalogPath,
+            mcpRegistryFilePath: socialProofMcpRegistryPath,
+            now: new Date("2026-03-27T18:10:00.000Z")
+          }
+        );
+
+        expect(socialReused.ok).toBe(true);
+        expect(socialReused.outcome.code).toBe("HANDOFF_READY");
+        expect(socialReused.winner.id).toBe("social-post-to-markdown");
+        expect(socialReused.trace).toMatchObject({
+          host: "opencode",
+          resultCode: "HANDOFF_READY",
+          winnerId: "social-post-to-markdown",
+          selectedCapabilityId: "baoyu.x-post-to-markdown",
+          selectedLeafCapabilityId: "x-post-to-markdown"
+        });
+
+        const { stdout: parityDoctorStdout } = await execFileAsync("node", [
+          buildScriptPath,
+          "doctor",
+          "--json",
+          "--broker-home",
+          brokerHomeDirectory,
+          "--claude-dir",
+          claudeShellDirectory,
+          "--codex-dir",
+          codexShellDirectory,
+          "--opencode-dir",
+          opencodeShellDirectory
+        ], {
+          cwd: runtimeDirectory
+        });
+        const parityDoctorResult = JSON.parse(parityDoctorStdout) as {
+          acquisitionMemory: {
+            state: string;
+            entries: number;
+            successfulRoutes: number;
+            firstReuseRecorded: number;
+            crossHostReuse: number;
+          };
+          familyProofs: {
+            web_content_to_markdown: {
+              verifyState: string;
+              crossHostReuseState: string;
+              reuseRecorded: number;
+            };
+            social_post_to_markdown: {
+              verifyState: string;
+              crossHostReuseState: string;
+              reuseRecorded: number;
+            };
+          };
+          adoptionHealth: {
+            status: string;
+            managedHosts: string[];
+          };
+        };
+
+        expect(parityDoctorResult.acquisitionMemory).toEqual(
+          expect.objectContaining({
+            state: "present",
+            entries: 2,
+            successfulRoutes: 5,
+            firstReuseRecorded: 2,
+            crossHostReuse: 2
+          })
+        );
+        expect(parityDoctorResult.familyProofs.web_content_to_markdown).toEqual(
+          expect.objectContaining({
+            verifyState: "confirmed",
+            crossHostReuseState: "confirmed",
+            reuseRecorded: 1
+          })
+        );
+        expect(parityDoctorResult.familyProofs.social_post_to_markdown).toEqual(
+          expect.objectContaining({
+            verifyState: "confirmed",
+            crossHostReuseState: "confirmed",
+            reuseRecorded: 1
+          })
+        );
+        expect(parityDoctorResult.adoptionHealth).toEqual(
+          expect.objectContaining({
+            status: "green",
+            managedHosts: ["claude-code", "codex", "opencode"]
+          })
+        );
 
         const { stdout: sharedRunnerStdout } = await execFileAsync(
           sharedRunnerPath,

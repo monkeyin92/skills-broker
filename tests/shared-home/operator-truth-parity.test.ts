@@ -3,8 +3,8 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   OPERATOR_TRUTH_CONTRACT,
-  formatDeferredHostsLine,
-  formatDeferredHostsZhLine,
+  formatFullLifecycleParityLine,
+  formatFullLifecycleParityZhLine,
   formatSupportedHostsLine,
   formatSupportedHostsZhLine,
   formatThirdHostReadinessLine,
@@ -54,10 +54,11 @@ function extractCanonicalStatusItems(markdown: string): StatusItem[] {
 describe("operator truth parity", () => {
   it("exports the canonical operator truth contract", () => {
     expect(OPERATOR_TRUTH_CONTRACT).toMatchObject({
-      supportedHosts: ["Claude Code", "Codex"],
-      deferredHosts: ["OpenCode"],
+      supportedHosts: ["Claude Code", "Codex", "OpenCode"],
+      deferredHosts: [],
       heroLane: "website QA",
       secondProvenFamily: "web markdown",
+      thirdProvenFamily: "social markdown",
       lifecycleCommands: [
         "npx skills-broker update",
         "npx skills-broker doctor",
@@ -83,9 +84,10 @@ describe("operator truth parity", () => {
       readme,
       [
         formatSupportedHostsLine(),
-        formatDeferredHostsLine(),
+        formatFullLifecycleParityLine(),
         OPERATOR_TRUTH_CONTRACT.heroLane,
         OPERATOR_TRUTH_CONTRACT.secondProvenFamily,
+        OPERATOR_TRUTH_CONTRACT.thirdProvenFamily,
         ...OPERATOR_TRUTH_CONTRACT.lifecycleCommands
       ],
       "README.md"
@@ -94,9 +96,10 @@ describe("operator truth parity", () => {
       readmeZh,
       [
         formatSupportedHostsZhLine(),
-        formatDeferredHostsZhLine(),
+        formatFullLifecycleParityZhLine(),
         OPERATOR_TRUTH_CONTRACT.heroLane,
         OPERATOR_TRUTH_CONTRACT.secondProvenFamily,
+        OPERATOR_TRUTH_CONTRACT.thirdProvenFamily,
         ...OPERATOR_TRUTH_CONTRACT.lifecycleCommands
       ],
       "README.zh-CN.md"
@@ -105,9 +108,10 @@ describe("operator truth parity", () => {
       todos,
       [
         formatSupportedHostsLine(),
-        formatDeferredHostsLine(),
+        formatFullLifecycleParityLine(),
         OPERATOR_TRUTH_CONTRACT.heroLane,
         OPERATOR_TRUTH_CONTRACT.secondProvenFamily,
+        OPERATOR_TRUTH_CONTRACT.thirdProvenFamily,
         ...OPERATOR_TRUTH_CONTRACT.lifecycleCommands
       ],
       "TODOS.md"
@@ -116,16 +120,17 @@ describe("operator truth parity", () => {
       status,
       [
         formatSupportedHostsLine(),
-        formatDeferredHostsLine(),
+        formatFullLifecycleParityLine(),
         OPERATOR_TRUTH_CONTRACT.heroLane,
         OPERATOR_TRUTH_CONTRACT.secondProvenFamily,
+        OPERATOR_TRUTH_CONTRACT.thirdProvenFamily,
         ...OPERATOR_TRUTH_CONTRACT.lifecycleCommands
       ],
       "STATUS.md"
     );
   });
 
-  it("keeps third-host readiness explicit without claiming OpenCode support", async () => {
+  it("keeps post-Phase-6 full parity explicit and removes the stale caveat", async () => {
     const [spec, readme, readmeZh, todos, status] = await Promise.all([
       readRepoFile(
         "docs/superpowers/specs/2026-04-22-third-host-thin-shell-readiness.md"
@@ -150,42 +155,85 @@ describe("operator truth parity", () => {
     );
     expectContainsAll(
       readme,
-      [formatThirdHostReadinessLine(), ...OPERATOR_TRUTH_CONTRACT.thirdHostReadinessTokens],
+      [
+        formatFullLifecycleParityLine(),
+        formatThirdHostReadinessLine(),
+        ...OPERATOR_TRUTH_CONTRACT.thirdHostReadinessTokens
+      ],
       "README.md"
     );
     expectContainsAll(
       readmeZh,
-      [formatThirdHostReadinessZhLine(), ...OPERATOR_TRUTH_CONTRACT.thirdHostReadinessTokens],
+      [
+        formatFullLifecycleParityZhLine(),
+        formatThirdHostReadinessZhLine(),
+        ...OPERATOR_TRUTH_CONTRACT.thirdHostReadinessTokens
+      ],
       "README.zh-CN.md"
     );
     expectContainsAll(
       todos,
-      [formatThirdHostReadinessLine(), ...OPERATOR_TRUTH_CONTRACT.thirdHostReadinessTokens],
+      [
+        formatFullLifecycleParityLine(),
+        formatThirdHostReadinessLine(),
+        ...OPERATOR_TRUTH_CONTRACT.thirdHostReadinessTokens
+      ],
       "TODOS.md"
     );
     expectContainsAll(
       status,
-      [formatThirdHostReadinessLine(), ...OPERATOR_TRUTH_CONTRACT.thirdHostReadinessTokens],
+      [
+        formatFullLifecycleParityLine(),
+        formatThirdHostReadinessLine(),
+        ...OPERATOR_TRUTH_CONTRACT.thirdHostReadinessTokens
+      ],
       "STATUS.md"
     );
+
+    for (const text of [readme, readmeZh, todos, status]) {
+      expect(text).not.toContain(
+        [
+          `OpenCode thin host shell is shipping in ${["Phase", "5"].join(" ")};`,
+          `lifecycle / proof${" "}parity continues in ${["Phase", "6"].join(" ")}.`
+        ].join(" ")
+      );
+      expect(text).not.toContain(
+        [
+          `OpenCode 薄宿主壳已在 ${["Phase", "5"].join(" ")} 交付；`,
+          `完整 lifecycle / proof${" "}parity 继续在 ${["Phase", "6"].join(" ")} 补齐。`
+        ].join("")
+      );
+      expect(text).not.toContain(
+        [
+          `${["Phase", "6"].join(" ")} keeps the${" "}same shared broker home, thin host shell, proof/reuse state,`,
+          "and published lifecycle parity contract in scope."
+        ].join(" ")
+      );
+      expect(text).not.toContain(
+        [
+          `${["Phase", "6"].join(" ")} 继续沿用同一套 shared broker home、thin host shell、proof/reuse state`,
+          "与 published lifecycle parity contract。"
+        ].join(" ")
+      );
+    }
   });
 
-  it("records the Phase 4 packet in the canonical STATUS board", async () => {
+  it("records the Phase 5 packet in the canonical STATUS board", async () => {
     const status = await readRepoFile("STATUS.md");
     const items = extractCanonicalStatusItems(status);
-    const phase4Item = items.find(
-      (item) => item.id === "phase4-operator-truth-readiness"
+    const phase5Item = items.find(
+      (item) => item.id === "phase5-opencode-thin-host-shell"
     );
 
-    expect(phase4Item).toBeDefined();
-    expect(phase4Item).toMatchObject({
-      id: "phase4-operator-truth-readiness",
+    expect(phase5Item).toBeDefined();
+    expect(phase5Item).toMatchObject({
+      id: "phase5-opencode-thin-host-shell",
       status: "shipped_local"
     });
-    expect(phase4Item!.summary).toContain(formatSupportedHostsLine());
-    expect(phase4Item!.summary).toContain(formatDeferredHostsLine());
-    expect(phase4Item!.summary).toContain(formatThirdHostReadinessLine());
-    expect(phase4Item!.proofs).toEqual(
+    expect(phase5Item!.summary).toContain(formatSupportedHostsLine());
+    expect(phase5Item!.summary).toContain(formatFullLifecycleParityLine());
+    expect(phase5Item!.summary).toContain(formatThirdHostReadinessLine());
+    expect(phase5Item!.proofs).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
           type: "file",
@@ -193,11 +241,15 @@ describe("operator truth parity", () => {
         }),
         expect.objectContaining({
           type: "file",
-          path: "docs/superpowers/specs/2026-04-22-third-host-thin-shell-readiness.md"
+          path: "src/hosts/opencode/install.ts"
         }),
         expect.objectContaining({
           type: "test",
           path: "tests/shared-home/operator-truth-parity.test.ts"
+        }),
+        expect.objectContaining({
+          type: "test",
+          path: "tests/e2e/shared-home-smoke.test.ts"
         })
       ])
     );

@@ -282,7 +282,8 @@ test("cli includes a downstream local skill path when broker-owned skills are re
         cacheFilePath: join(runtimeDirectory, "cache.json"),
         hostCatalogFilePath: hostCatalogPath,
         mcpRegistryFilePath: mcpRegistryPath,
-        brokerHomeDirectory
+        brokerHomeDirectory,
+        packageSearchRoots: []
       }
     );
 
@@ -742,7 +743,7 @@ test("cli routes raw requirements-analysis requests through discovery", async ()
   });
 });
 
-test("cli routes raw investigation requests through discovery", async () => {
+test("cli routes raw investigation requests into the investigation-to-fix workflow", async () => {
   const runtimeDirectory = await mkdtemp(
     join(tmpdir(), "skills-broker-cli-raw-investigation-")
   );
@@ -760,12 +761,34 @@ test("cli routes raw investigation requests through discovery", async () => {
     await writeFile(
       hostCatalogPath,
       JSON.stringify({
-        skills: [
+        packages: [
           {
-            id: "investigation",
+            packageId: "skills_broker",
+            label: "skills_broker",
+            installState: "installed",
+            acquisition: "broker_native"
+          },
+          {
+            packageId: "gstack",
+            label: "gstack",
+            installState: "installed",
+            acquisition: "local_skill_bundle"
+          }
+        ],
+        workflows: [
+          {
+            id: "investigation-to-fix",
             kind: "skill",
-            label: "Investigation",
+            label: "Investigation to Fix",
             intent: "capability_discovery_or_install",
+            package: {
+              packageId: "skills_broker"
+            },
+            leaf: {
+              capabilityId: "skills_broker.investigation-to-fix",
+              packageId: "skills_broker",
+              subskillId: "investigation-to-fix"
+            },
             query: {
               jobFamilies: ["investigation"],
               targetTypes: ["website", "url", "codebase", "problem_statement", "text"],
@@ -773,10 +796,37 @@ test("cli routes raw investigation requests through discovery", async () => {
               examples: ["investigate this site failure with a reusable workflow"]
             },
             implementation: {
-              id: "gstack.investigate",
-              type: "local_skill",
+              id: "skills_broker.investigation_to_fix",
+              type: "broker_workflow",
               ownerSurface: "broker_owned_downstream"
-            }
+            },
+            startStageId: "investigate",
+            stages: [
+              {
+                id: "investigate",
+                label: "Investigate the issue",
+                kind: "capability",
+                capability: {
+                  packageId: "gstack",
+                  capabilityId: "gstack.investigate",
+                  subskillId: "investigate",
+                  implementationId: "gstack.investigate"
+                },
+                producesArtifacts: ["analysis", "recommendation"],
+                nextStageId: "implement-fix",
+                requiresConfirmation: true
+              },
+              {
+                id: "implement-fix",
+                label: "Implement the fix",
+                kind: "host_native",
+                instructions: "Implement the approved fix in the current workspace.",
+                requiresArtifacts: ["analysis", "recommendation"],
+                producesArtifacts: ["code_change"],
+                nextStageId: null,
+                requiresConfirmation: true
+              }
+            ]
           }
         ]
       }),
@@ -805,8 +855,57 @@ test("cli routes raw investigation requests through discovery", async () => {
     expect(result).toMatchObject({
       ok: true,
       outcome: {
-        code: "HANDOFF_READY"
+        code: "WORKFLOW_STAGE_READY"
       },
+      workflow: {
+        workflowId: "investigation-to-fix",
+        activeStageId: "investigate"
+      },
+      stage: {
+        id: "investigate",
+        handoff: {
+          chosenPackage: {
+            packageId: "gstack"
+          },
+          chosenLeafCapability: {
+            subskillId: "investigate"
+          },
+          chosenImplementation: {
+            id: "gstack.investigate"
+          },
+          request: {
+            capabilityQuery: {
+              jobFamilies: ["investigation"],
+              targets: [
+                {
+                  type: "website",
+                  value: "https://example.com"
+                }
+              ],
+              artifacts: ["analysis", "recommendation"]
+            }
+          }
+        }
+      }
+    });
+    expectQueryNativeRequest(result.stage.handoff!.request);
+  } finally {
+    writeSpy.mockRestore();
+    await rm(runtimeDirectory, { recursive: true, force: true });
+  }
+
+  expect(writes).toHaveLength(1);
+  expect(JSON.parse(writes[0])).toMatchObject({
+    ok: true,
+    outcome: {
+      code: "WORKFLOW_STAGE_READY"
+    },
+    workflow: {
+      workflowId: "investigation-to-fix",
+      activeStageId: "investigate"
+    },
+    stage: {
+      id: "investigate",
       handoff: {
         chosenPackage: {
           packageId: "gstack"
@@ -816,22 +915,159 @@ test("cli routes raw investigation requests through discovery", async () => {
         },
         chosenImplementation: {
           id: "gstack.investigate"
-        },
-        request: {
-          capabilityQuery: {
-            jobFamilies: ["investigation"],
-            targets: [
+        }
+      }
+    }
+  });
+});
+
+test("cli routes raw product-idea requests into the idea-to-ship workflow", async () => {
+  const runtimeDirectory = await mkdtemp(
+    join(tmpdir(), "skills-broker-cli-raw-idea-workflow-")
+  );
+  const hostCatalogPath = join(runtimeDirectory, "host-skills.seed.json");
+  const mcpRegistryPath = join(runtimeDirectory, "mcp-registry.seed.json");
+  const writes: string[] = [];
+  const writeSpy = vi.spyOn(process.stdout, "write").mockImplementation(
+    (chunk: string) => {
+      writes.push(String(chunk));
+      return true;
+    }
+  );
+
+  try {
+    await writeFile(
+      hostCatalogPath,
+      JSON.stringify({
+        packages: [
+          {
+            packageId: "skills_broker",
+            label: "skills_broker",
+            installState: "installed",
+            acquisition: "broker_native"
+          },
+          {
+            packageId: "gstack",
+            label: "gstack",
+            installState: "installed",
+            acquisition: "local_skill_bundle"
+          }
+        ],
+        workflows: [
+          {
+            id: "idea-to-ship",
+            kind: "skill",
+            label: "Idea to Ship",
+            intent: "capability_discovery_or_install",
+            package: {
+              packageId: "skills_broker"
+            },
+            leaf: {
+              capabilityId: "skills_broker.idea-to-ship",
+              packageId: "skills_broker",
+              subskillId: "idea-to-ship"
+            },
+            query: {
+              jobFamilies: [
+                "idea_brainstorming",
+                "strategy_review",
+                "engineering_review"
+              ],
+              targetTypes: ["text", "problem_statement"],
+              artifacts: ["design_doc", "analysis", "execution_plan", "qa_report"],
+              examples: ["I have an idea: turn this product idea into a shipped plan"]
+            },
+            implementation: {
+              id: "skills_broker.idea_to_ship",
+              type: "broker_workflow",
+              ownerSurface: "broker_owned_downstream"
+            },
+            startStageId: "office-hours",
+            stages: [
               {
-                type: "website",
-                value: "https://example.com"
+                id: "office-hours",
+                label: "Shape the idea",
+                kind: "capability",
+                capability: {
+                  packageId: "gstack",
+                  capabilityId: "gstack.office-hours",
+                  subskillId: "office-hours",
+                  implementationId: "gstack.office_hours"
+                },
+                producesArtifacts: ["design_doc", "analysis"],
+                nextStageId: "coding",
+                requiresConfirmation: true
+              },
+              {
+                id: "coding",
+                label: "Implement in the host",
+                kind: "host_native",
+                instructions: "Implement the approved execution plan in the current workspace.",
+                requiresArtifacts: ["design_doc", "analysis"],
+                producesArtifacts: ["code_change"],
+                nextStageId: null,
+                requiresConfirmation: true
               }
-            ],
-            artifacts: ["analysis", "recommendation"]
+            ]
+          }
+        ]
+      }),
+      "utf8"
+    );
+    await writeFile(
+      mcpRegistryPath,
+      JSON.stringify({ servers: [] }),
+      "utf8"
+    );
+
+    const result = await runBrokerCli(
+      {
+        requestText: "I have an idea: turn this product idea into a shipped plan",
+        host: "codex",
+        invocationMode: "explicit"
+      },
+      {
+        cacheFilePath: join(runtimeDirectory, "cache.json"),
+        hostCatalogFilePath: hostCatalogPath,
+        mcpRegistryFilePath: mcpRegistryPath
+      }
+    );
+
+    expect(result).toMatchObject({
+      ok: true,
+      outcome: {
+        code: "WORKFLOW_STAGE_READY"
+      },
+      workflow: {
+        workflowId: "idea-to-ship",
+        activeStageId: "office-hours"
+      },
+      stage: {
+        id: "office-hours",
+        handoff: {
+          chosenPackage: {
+            packageId: "gstack"
+          },
+          chosenLeafCapability: {
+            subskillId: "office-hours"
+          },
+          chosenImplementation: {
+            id: "gstack.office_hours"
+          },
+          request: {
+            capabilityQuery: {
+              jobFamilies: expect.arrayContaining([
+                "requirements_analysis",
+                "strategy_review",
+                "engineering_review"
+              ]),
+              artifacts: expect.arrayContaining(["design_doc", "analysis"])
+            }
           }
         }
       }
     });
-    expectQueryNativeRequest(result.handoff.request);
+    expectQueryNativeRequest(result.stage.handoff!.request);
   } finally {
     writeSpy.mockRestore();
     await rm(runtimeDirectory, { recursive: true, force: true });
@@ -840,15 +1076,25 @@ test("cli routes raw investigation requests through discovery", async () => {
   expect(writes).toHaveLength(1);
   expect(JSON.parse(writes[0])).toMatchObject({
     ok: true,
-    handoff: {
-      chosenPackage: {
-        packageId: "gstack"
-      },
-      chosenLeafCapability: {
-        subskillId: "investigate"
-      },
-      chosenImplementation: {
-        id: "gstack.investigate"
+    outcome: {
+      code: "WORKFLOW_STAGE_READY"
+    },
+    workflow: {
+      workflowId: "idea-to-ship",
+      activeStageId: "office-hours"
+    },
+    stage: {
+      id: "office-hours",
+      handoff: {
+        chosenPackage: {
+          packageId: "gstack"
+        },
+        chosenLeafCapability: {
+          subskillId: "office-hours"
+        },
+        chosenImplementation: {
+          id: "gstack.office_hours"
+        }
       }
     }
   });
@@ -1041,7 +1287,7 @@ test("cli rejects invalid host values before host conflict handling", async () =
       }
     )
   ).rejects.toThrow(
-    /Expected broker envelope.host to be one of claude-code, codex\./
+    /Expected broker envelope.host to be one of claude-code, codex, opencode\./
   );
 });
 
@@ -1054,12 +1300,88 @@ test("cli rejects invalid currentHost overrides before host conflict handling", 
         urls: ["https://example.com/post"]
       },
       {
-        currentHost: "opencode" as never
+        currentHost: "open-code" as never
       }
     )
   ).rejects.toThrow(
-    /Expected broker currentHost to be one of claude-code, codex\./
+    /Expected broker currentHost to be one of claude-code, codex, opencode\./
   );
+});
+
+test("cli accepts opencode as a currentHost override when it matches the envelope", async () => {
+  const runtimeDirectory = await mkdtemp(join(tmpdir(), "skills-broker-cli-opencode-"));
+  const hostCatalogPath = join(runtimeDirectory, "host-skills.seed.json");
+  const mcpRegistryPath = join(runtimeDirectory, "mcp-registry.seed.json");
+  const writes: string[] = [];
+  const writeSpy = vi.spyOn(process.stdout, "write").mockImplementation(
+    (chunk: string) => {
+      writes.push(String(chunk));
+      return true;
+    }
+  );
+
+  try {
+    await writeFile(
+      hostCatalogPath,
+      JSON.stringify({
+        skills: [
+          {
+            id: "web-content-to-markdown",
+            kind: "skill",
+            label: "Web Content to Markdown",
+            intent: "web_content_to_markdown",
+            implementation: {
+              id: "baoyu.url_to_markdown",
+              type: "local_skill",
+              ownerSurface: "broker_owned_downstream"
+            }
+          }
+        ]
+      }),
+      "utf8"
+    );
+    await writeFile(
+      mcpRegistryPath,
+      JSON.stringify({ servers: [] }),
+      "utf8"
+    );
+
+    const result = await runBrokerCli(
+      {
+        requestText: "turn this webpage into markdown: https://example.com/post",
+        host: "opencode",
+        invocationMode: "explicit",
+        urls: ["https://example.com/post"]
+      },
+      {
+        cacheFilePath: join(runtimeDirectory, "cache.json"),
+        hostCatalogFilePath: hostCatalogPath,
+        mcpRegistryFilePath: mcpRegistryPath,
+        currentHost: "opencode"
+      }
+    );
+
+    expect(result).toMatchObject({
+      ok: true,
+      handoff: {
+        context: {
+          currentHost: "opencode"
+        }
+      }
+    });
+  } finally {
+    writeSpy.mockRestore();
+    await rm(runtimeDirectory, { recursive: true, force: true });
+  }
+
+  expect(writes).toHaveLength(1);
+  expect(JSON.parse(writes[0])).toMatchObject({
+    handoff: {
+      context: {
+        currentHost: "opencode"
+      }
+    }
+  });
 });
 
 test("cli rejects conflicting currentHost overrides", async () => {

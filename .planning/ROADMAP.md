@@ -1,23 +1,110 @@
 # Roadmap: skills-broker
 
-**Last archived milestone:** `v1.0`
-**Archive root:** `.planning/milestones/`
+**Created:** 2026-04-23
+**Source Requirements:** 9 v1.3 requirements from `.planning/REQUIREMENTS.md`
+**Granularity:** coarse
+**Project Type:** brownfield
 
-## Milestones
+## Roadmap Summary
 
-- [x] [v1.0 Default-Entry Trust And Growth Readiness](/Users/monkeyin/projects/skills-broker/.planning/milestones/v1.0-ROADMAP.md) — shipped 2026-04-23. 4 phases, 13 plans, 26 tasks. Audit: [v1.0-MILESTONE-AUDIT.md](/Users/monkeyin/projects/skills-broker/.planning/milestones/v1.0-MILESTONE-AUDIT.md).
+**3 phases** | **9 requirements mapped** | All v1.3 requirements covered ✓
 
-## Current Status
+| # | Phase | Goal | Requirements | Success Criteria | UI Hint |
+|---|-------|------|--------------|------------------|---------|
+| 12 | Harden Website QA Broker-First Hit Rate | 让明显的 `website QA` 请求在真实宿主里更稳定地跨过 coarse broker-first boundary，同时减少误路由与无意义 fallback | ROUTE-01, ROUTE-02, ROUTE-03 | 4 | no |
+| 13 | Prove Website QA Repeat Usage Loop | 把 `INSTALL_REQUIRED -> install -> rerun -> cross-host reuse -> repeat usage` 收成更强的默认入口 proof loop | REUSE-01, REUSE-02, REUSE-03 | 4 | no |
+| 14 | Lock QA-First Operator Truth | 锁住 QA-first hero lane、coarse boundary 解释与多表面 proof/wording drift guardrails | TRUTH-01, TRUTH-02, TRUTH-03 | 4 | no |
 
-- 没有 active milestone roadmap。
-- 下一轮从新的 requirements 定义开始，而不是继续在 v1.0 scope 上叠加。
-- 使用 `$gsd-new-milestone` 开启下一轮 questioning → requirements → roadmap。
+## Phase Details
 
-## Next-Milestone Candidates
+### Phase 12: Harden Website QA Broker-First Hit Rate
 
-- 把 OpenCode readiness contract 推进成真正的第三个 thin host shell，但不能拆分 shared broker home 或 proof/reuse state。
-- 在 `website QA` 与 `web markdown` 之外，继续增加更多被证据证明的 default-entry families 与 broker-owned workflows。
-- 把 narrative-doc parity 与 verification blind-spot reporting 提升到 CI 级 guardrail。
+**Goal:** 让明显的 `website QA` 请求在 Claude Code、Codex、OpenCode 这些支持宿主里更稳定地进入 `broker_first`，并让 broker 对相邻非 QA 表达的拒绝/回退继续保持可预测。
+
+**Requirements:** `ROUTE-01`, `ROUTE-02`, `ROUTE-03`
+
+**Status:** pending
+
+**Verification:** —
+
+**UI hint**: no
+
+Plans:
+
+- [ ] `12-01-PLAN.md` — Tighten coarse host decision examples and request normalization so obvious website QA asks cross the broker-first boundary more consistently
+- [ ] `12-02-PLAN.md` — Reduce website QA misroutes/fallbacks and expose repo-owned hit / misroute / fallback evidence for the maintained hero lane
+
+**Success criteria:**
+1. 明显的 `website QA` 请求在支持宿主里更常被判断为 `broker_first`，而宿主仍然只做 coarse boundary 决策
+2. 临近但并非 QA 的表达不会被粗暴吞进 hero lane，而是继续落到 clean reject、clarify、或正常处理
+3. repo 有可重复的 hit / misroute / fallback 证据面，不需要靠一次性的手工会话截图解释“是不是更稳了”
+4. 对 coarse boundary、QA hit rate 或 refusal/fallback contract 的回归会在测试、eval、或 proof rail 中 fail closed
+
+**Depends on:** v1.2 已经把 canonical release truth 闭环完成，当前三宿主 thin-shell / shared-home parity 继续成立
+
+### Phase 13: Prove Website QA Repeat Usage Loop
+
+**Goal:** 把 `website QA` 的 `INSTALL_REQUIRED -> install -> rerun -> cross-host reuse -> repeat usage` 收成更强的 repo-owned proof loop，避免默认入口只剩“一次 demo 成功”。
+
+**Requirements:** `REUSE-01`, `REUSE-02`, `REUSE-03`
+
+**Status:** pending
+
+**Verification:** —
+
+**UI hint**: no
+
+Plans:
+
+- [ ] `13-01-PLAN.md` — Strengthen the canonical website QA install / verify / cross-host reuse proof on the three-host surface
+- [ ] `13-02-PLAN.md` — Add repeat-usage evidence beyond the first reuse and keep doctor/advisory proof surfaces aligned on what is still missing
+
+**Success criteria:**
+1. repo 可以证明 `website QA` 的 `INSTALL_REQUIRED -> install -> rerun -> cross-host reuse` 闭环在当前三宿主表面上可靠成立
+2. proof loop 继续往前推进到 repeat usage，而不是只停在第一次 install 完成后的单次 handoff
+3. `doctor`、acquisition memory 与 verified downstream manifests 会对齐同一份 QA verify/reuse truth，并在不完整时指出下一个缺口
+4. maintainer 能判断“这条默认入口是持续可复用的”，而不是从零拼接一次 smoke log
+
+**Depends on:** Phase 12 已经先把 QA-first entry 命中率与 refusal/fallback contract 收得更稳
+
+### Phase 14: Lock QA-First Operator Truth
+
+**Goal:** 让 README、README.zh-CN、generated host shell、`STATUS.md`、`TODOS.md` 与 repo-native guardrails 继续讲同一份 QA-first truth，同时明确 coarse broker-first boundary 不被破坏。
+
+**Requirements:** `TRUTH-01`, `TRUTH-02`, `TRUTH-03`
+
+**Status:** pending
+
+**Verification:** —
+
+**UI hint**: no
+
+Plans:
+
+- [ ] `14-01-PLAN.md` — Align QA-first hero-lane wording across README, README.zh-CN, generated host shell, STATUS, and TODOS
+- [ ] `14-02-PLAN.md` — Add parity and drift guardrails so QA-first wording and coarse-boundary truth fail closed instead of relying on manual review
+
+**Success criteria:**
+1. QA-first hero lane、second proven family、next proven family 的层级在英文、中文、host shell 与 repo truth surfaces 上保持一致
+2. operator-facing 文案会明确解释“宿主只决定边界，具体 QA winner 仍由 broker 选”，不会偷偷退回细粒度 host logic
+3. bilingual/operator truth 漂移会被 repo-native guardrails 抓到，而不是只能靠人工巡检
+4. 默认入口 story 会建立在 Phase 12-13 的 runtime evidence 之上，而不是重新变成单纯的文案调整
+
+**Depends on:** Phase 13 先把 QA repeat-usage proof 做实，再锁 operator wording 与 drift guardrails
+
+## Milestone View
+
+### Milestone 4: Website QA Default-Entry Confidence
+
+Deliver Phases 12-14 to make `website QA` a more credible default-entry lane: better real-host hit rate first, stronger repeat-usage proof second, and tighter QA-first operator truth last.
+
+## Notes
+
+- This roadmap continues numbering from milestone v1.2; no phase renumber reset was used.
+- Research was skipped for this milestone because `workflow.research` is currently disabled and repo-native product truth is already specific enough to scope the work.
+- Previous milestone artifacts are already archived under `.planning/milestones/v1.2-phases/`, so the active planning workspace is clean before Phase 12.
+- The roadmap intentionally sequences hit-rate hardening before repeat-usage proof, and repeat-usage proof before operator-truth lock, so the QA-first story follows runtime evidence instead of outrunning it.
 
 ---
-*Roadmap archived after v1.0 close on 2026-04-23*
+*Roadmap created: 2026-04-23*
+*Last updated: 2026-04-23 after creating the v1.3 roadmap*

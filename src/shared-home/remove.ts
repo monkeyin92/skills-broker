@@ -31,6 +31,7 @@ export type RemoveSharedBrokerHomeOptions = {
   homeDirectory?: string;
   claudeCodeInstallDirectory?: string;
   codexInstallDirectory?: string;
+  opencodeInstallDirectory?: string;
   purgeSharedHome?: boolean;
   resetAcquisitionMemory?: boolean;
 };
@@ -222,7 +223,8 @@ export async function removeSharedBrokerHome(
     homeDirectory: options.homeDirectory,
     brokerHomeOverride: options.brokerHomeDirectory,
     claudeDirOverride: options.claudeCodeInstallDirectory,
-    codexDirOverride: options.codexInstallDirectory
+    codexDirOverride: options.codexInstallDirectory,
+    opencodeDirOverride: options.opencodeInstallDirectory
   });
   const warnings: string[] = [];
   const hosts: RemoveLifecycleResult["hosts"] = await Promise.all(

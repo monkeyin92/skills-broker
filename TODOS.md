@@ -1,24 +1,37 @@
 # TODOS
 
-## Host Expansion
+## Current Focus
 
-### Add OpenCode as the third thin host shell
+### Milestone v1.2 shipped; next milestone not yet defined
 
-**What:** Extend the same shared broker contract to OpenCode without splitting the runtime or capability memory.
+**What:** Keep the new repo-owned release truth surface stable: `release:gate` stays the canonical pre-publish verdict, `release:promote` stays the only shipped-proof promotion path, and publish automation continues to close out on the same truth.
 
-**Why:** This validates that the current host-agnostic design is real, not just "Claude plus Codex with some duplication."
+**Why:** v1.2 has already closed the old manual release bookkeeping gap. The next leverage point is choosing what to expand next, not reopening ship/proof drift.
 
-**Context:** Supported now: Claude Code, Codex. Deferred but planned: OpenCode thin host shell. Keep website QA as the hero lane, web markdown as the second proven family, and keep published lifecycle commands on `npx skills-broker update`, `npx skills-broker doctor`, and `npx skills-broker remove`.
+**Context:** Supported now: Claude Code, Codex, OpenCode. Claude Code, Codex, and OpenCode now share full published lifecycle and proof/reuse parity. Published lifecycle commands: npx skills-broker update / npx skills-broker doctor / npx skills-broker remove. Repo-local release truth now uses `npm run release:gate` plus `npm run release:promote`, while publish automation reuses those same commands to keep canonical `STATUS.md` aligned with shipped-local versus shipped-remote truth.
 
 **Readiness contract:** `docs/superpowers/specs/2026-04-22-third-host-thin-shell-readiness.md`
 
-**Readiness gate:** Third-host readiness stays gated on the same shared broker home, thin host shell, proof/reuse state, and published lifecycle parity.
+**Readiness gate:** All supported hosts now share the same shared broker home, thin host shell, proof/reuse state, and published lifecycle contract. Canonical release truth now closes on that same shared surface.
 
-**Effort:** M
+**Effort:** S
 **Priority:** P2
 **Depends on:** the current host shell contract staying thin and stable
 
 ## Completed
+
+### Shipped OpenCode as the third thin host shell
+
+**What:** Move OpenCode from deferred readiness into the real shared-home attach path without splitting runtime, cache, or broker-owned capability state.
+
+**Why:** This proves the third-host story is real at the product surface, not just a roadmap note.
+
+**Shipped locally:** Supported now: Claude Code, Codex, OpenCode. `npx skills-broker update` can attach an OpenCode thin shell, `doctor` inventories it on the same shared surface, and the follow-on parity pass has now closed full lifecycle / proof parity across all three hosts without forking runtime or operator truth.
+
+**Effort:** M
+**Priority:** P2
+**Depends on:** canonical host truth, shared-home lifecycle plumbing, and three-host no-regression smoke
+**Completed:** shipped_local (2026-04-23)
 
 ### Generalized family proofs after the QA default-entry proof landed
 
@@ -32,6 +45,97 @@
 **Priority:** P2
 **Depends on:** website QA default-entry conversion hardening landing first
 **Completed:** shipped_local (2026-04-22)
+
+### Promote social markdown into the next proven family
+
+**What:** Extend the same install -> verify -> cross-host reuse proof rail to `social_post_to_markdown`, and publish it as the next proven family after web markdown.
+
+**Why:** This proves capability-surface expansion is still riding the same deterministic, shared-home, doctor-visible contract instead of reopening special-case routing.
+
+**Shipped locally:** `doctor` now exposes canonical `familyProofs.social_post_to_markdown`, integration and installed-shell smoke prove the social markdown install -> verify -> cross-host reuse loop, and repo docs plus installed shells now describe the three-step hierarchy honestly: website QA hero lane, web markdown second proven family, social markdown next proven family.
+
+**Effort:** M
+**Priority:** P1
+**Depends on:** Phase 6 three-host lifecycle/proof parity and existing familyProofs rails
+**Completed:** shipped_local (2026-04-23)
+
+### Ship investigation as the second broker-owned workflow
+
+**What:** Turn the maintained investigation lane into a real broker-owned workflow instead of a one-shot downstream handoff.
+
+**Why:** `idea-to-ship` alone was not enough proof that broker-owned workflows can expand without collapsing other maintained lanes or weakening the thin-shell boundary.
+
+**Shipped locally:** `investigation-to-fix` now starts as a broker-owned workflow, resume moves it into host-native implementation with explicit artifact gates, Claude Code / Codex / OpenCode share the same stage truth, and the workflow query surface is narrow enough to preserve `website-qa` as a separate maintained winner.
+
+**Effort:** M
+**Priority:** P1
+**Depends on:** the maintained-family contract, existing workflow runtime, and three-host installed-shell parity
+**Completed:** shipped_local (2026-04-23)
+
+### Make MCP discovery registry-ready and explainable
+
+**What:** Upgrade the MCP discovery source from a demo-like seed reader into a registry-ready metadata source with validated transport and query-coverage evidence.
+
+**Why:** MCP-backed routing is only operator-trustable if the broker can explain why an MCP matched and what validated registry facts it is relying on.
+
+**Shipped locally:** MCP candidates now fail closed when version/remotes/usable endpoints are missing, source metadata carries registry version + transport + endpoint count + query coverage, broker explanations surface that evidence, and advisory MCP suggestions still stay behind installed/local winners.
+
+**Effort:** M
+**Priority:** P1
+**Depends on:** capability-query-led discovery, existing MCP proof rails, and the current precedence contract that keeps registry candidates advisory
+**Completed:** shipped_local (2026-04-23)
+
+### Install CI trust guardrails
+
+**What:** Turn blind-spot reporting and narrative parity into explicit CI gates instead of phase-end spot checks.
+
+**Why:** Once three-host parity, three proven families, two broker-owned workflows, and registry-ready MCP explainability exist, drift has to fail closed before ship rather than being noticed only in milestone wrap-up.
+
+**Shipped locally:** `npm run ci:blind-spot` now reads the live repo inventory and budgets support-matrix, maintained/proven family, workflow, and repo-proof surfaces. `npm run test:ci:narrative-parity` now makes README / README.zh-CN / STATUS / TODOS plus installed shell truth a focused CI gate. `.github/workflows/ci.yml` runs both before the broader build/test/status jobs, and `verify:local` stays a local preflight instead of masquerading as repo-truth CI.
+
+**Effort:** M
+**Priority:** P1
+**Depends on:** Phase 7 product surface expansion and the existing operator-truth / strict-doctor contracts
+**Completed:** shipped_local (2026-04-23)
+
+### Lock release gate verdicts
+
+**What:** Turn the blind-spot report, focused narrative parity suite, and strict repo-scoped doctor gate into one canonical repo-owned release verdict.
+
+**Why:** Once CI trust rails were live, the next leverage point was to let ship/release automation consume the same truth directly instead of reassembling three separate signals by hand.
+
+**Shipped locally:** `npm run release:gate` now replays `npm run ci:blind-spot`, `npm run test:ci:narrative-parity`, and strict repo-scoped `doctor` as one repo-local verdict. The output names the failing rail, evaluated shipping ref, and remote freshness, and `verify:local` remains explicitly local-only.
+
+**Effort:** M
+**Priority:** P1
+**Depends on:** Phase 8 CI trust guardrails and the existing repo-scoped doctor/status contract
+**Completed:** shipped_local (2026-04-23)
+
+### Ship repo-owned proof promotion
+
+**What:** Add an explicit repo-owned flow that upgrades only eligible canonical `STATUS.md` items from `shipped_local` to `shipped_remote`.
+
+**Why:** The canonical status board already knew the difference between local and remote truth, but maintainers still had to close that gap manually at release time.
+
+**Shipped locally:** `npm run release:promote` now re-evaluates canonical `STATUS.md` truth against the shipping ref, promotes only eligible items, and fail-closes on unresolved ship refs, remote refresh failures, invalid proofs, or non-promotion mismatches without partially rewriting the board.
+
+**Effort:** M
+**Priority:** P1
+**Depends on:** Phase 9 canonical release gate and the existing `evaluateStatusBoard()` shipping-ref logic
+**Completed:** shipped_local (2026-04-23)
+
+### Close publish flow on canonical release truth
+
+**What:** Wire npm publish automation directly onto the repo-owned release truth surface and keep repo docs aligned with that one story.
+
+**Why:** Release truth is only closed if publish itself consumes the same gate/promotion contract instead of reintroducing a release-only seam.
+
+**Shipped locally:** `.github/workflows/publish-npm.yml` now runs `npm run release:gate` before publish, `npm run release:promote` after publish, pushes promoted `STATUS.md` truth back to the default branch, and finishes on the same canonical release gate. README / README.zh-CN now explain that these repo-local release commands do not widen the published lifecycle CLI surface.
+
+**Effort:** M
+**Priority:** P1
+**Depends on:** Phase 10 proof promotion and the existing published lifecycle / operator-truth contract
+**Completed:** shipped_local (2026-04-23)
 
 ### Turn discovery and install into a real flywheel
 

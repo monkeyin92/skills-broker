@@ -7,13 +7,14 @@ import {
   maintainedBrokerFirstBoundaryExamples
 } from "../../src/core/maintained-broker-first";
 import {
-  formatDeferredHostsLine,
+  formatFullLifecycleParityLine,
   formatPublishedLifecycleCommandsLine,
   formatSupportedHostsLine,
   formatThirdHostReadinessLine
 } from "../../src/core/operator-truth";
 import { installClaudeCodeHostShell } from "../../src/hosts/claude-code/install";
 import { installCodexHostShell } from "../../src/hosts/codex/install";
+import { installOpenCodeHostShell } from "../../src/hosts/opencode/install";
 
 const HERO_LANE_EXAMPLES = [
   '"测下这个网站的质量：https://www.baidu.com"',
@@ -38,7 +39,7 @@ function expectInOrder(text: string, snippets: readonly string[]): void {
 
 function expectHostSkillLayout(
   skill: string,
-  host: "claude-code" | "codex",
+  host: "claude-code" | "codex" | "opencode",
   maintainedBoundaryExamples: readonly string[]
 ): void {
   const secondaryMaintainedExamples = maintainedBoundaryExamples
@@ -52,7 +53,7 @@ function expectHostSkillLayout(
     "Do not decide whether the request is QA, markdown conversion, requirements analysis, investigation, or capability discovery at the host layer.",
     "## Supported Host Truth",
     formatSupportedHostsLine(),
-    formatDeferredHostsLine(),
+    formatFullLifecycleParityLine(),
     formatPublishedLifecycleCommandsLine(),
     formatThirdHostReadinessLine(),
     "## Broker-First (`broker_first`)",
@@ -63,9 +64,12 @@ function expectHostSkillLayout(
     ...HERO_LANE_EXAMPLES,
     "### Secondary maintained lanes",
     "The second proven family is web markdown. Keep it visible here after website QA, not as a competing first move.",
+    "The next proven family is social markdown. Keep it visible after web markdown, not as a competing first move.",
     "Requirements analysis and investigation still stay broker-first. They are maintained lanes, but they should not be the first thing this installed shell makes you try.",
     '"把这个页面转成 markdown: https://example.com/a"',
     '"convert this webpage to markdown https://example.com/a"',
+    '"save this X post as markdown: https://x.com/example/status/1"',
+    '"把这个帖子转成 markdown: https://x.com/example/status/1"',
     ...secondaryMaintainedExamples,
     "### Other broker-first lanes",
     '"我有一个想法：做一个自动串起评审和发版的工具"',
@@ -105,7 +109,16 @@ function expectHostSkillLayout(
   expect(skill).toContain("structured `capabilityQuery`");
   expect(skill).toContain('"jobFamilies":["requirements_analysis"]');
   expect(skill).toContain(
-    host === "codex" ? '"host":"codex"' : '"host":"claude-code"'
+    host === "codex"
+      ? '"host":"codex"'
+      : host === "opencode"
+        ? '"host":"opencode"'
+        : '"host":"claude-code"'
+  );
+  expect(skill).toContain(
+    host === "claude-code"
+      ? '"invocationMode":"auto"'
+      : '"invocationMode":"explicit"'
   );
   expect(skill).not.toContain("maintainedFamilies");
 }
@@ -115,6 +128,7 @@ describe("host shell installers", () => {
     const runtimeDirectory = await mkdtemp(join(tmpdir(), "skills-broker-host-shell-"));
     const claudeShellDirectory = join(runtimeDirectory, "claude-code-plugin");
     const codexShellDirectory = join(runtimeDirectory, "codex-skill");
+    const opencodeShellDirectory = join(runtimeDirectory, "opencode-skill");
     const relativeBrokerHomeDirectory = "relative-broker-home";
     const maintainedContract = await loadMaintainedBrokerFirstContract(
       join(process.cwd(), "config", "maintained-broker-first-families.json")
@@ -132,27 +146,41 @@ describe("host shell installers", () => {
         installDirectory: codexShellDirectory,
         brokerHomeDirectory: relativeBrokerHomeDirectory
       });
+      const opencodeResult = await installOpenCodeHostShell({
+        installDirectory: opencodeShellDirectory,
+        brokerHomeDirectory: relativeBrokerHomeDirectory
+      });
 
       const claudeRunner = await readFile(claudeResult.runnerPath, "utf8");
       const codexRunner = await readFile(codexResult.runnerPath, "utf8");
+      const opencodeRunner = await readFile(opencodeResult.runnerPath, "utf8");
       const claudeSkill = await readFile(claudeResult.skillPath, "utf8");
       const codexSkill = await readFile(codexResult.skillPath, "utf8");
+      const opencodeSkill = await readFile(opencodeResult.skillPath, "utf8");
       const claudeManifest = JSON.parse(
         await readFile(join(claudeResult.installDirectory, ".skills-broker.json"), "utf8")
-      ) as { managedBy?: string };
+      ) as { managedBy?: string; host?: string };
 
       expect(claudeRunner).not.toContain(resolve(relativeBrokerHomeDirectory));
       expect(codexRunner).not.toContain(resolve(relativeBrokerHomeDirectory));
+      expect(opencodeRunner).not.toContain(resolve(relativeBrokerHomeDirectory));
       expect(claudeRunner).toContain(".skills-broker.json");
       expect(codexRunner).toContain(".skills-broker.json");
+      expect(opencodeRunner).toContain(".skills-broker.json");
       expect(claudeRunner).toContain("managed manifest");
       expect(codexRunner).toContain("managed manifest");
+      expect(opencodeRunner).toContain("managed manifest");
       expect(claudeRunner).toContain("[--debug] '<broker-envelope-json>'");
       expect(codexRunner).toContain("[--debug] '<broker-envelope-json>'");
+      expect(opencodeRunner).toContain("[--debug] '<broker-envelope-json>'");
+      expect(opencodeRunner).toContain('BROKER_CURRENT_HOST="opencode"');
       expect(claudeSkill).toContain(
         "Route coarse capability-boundary decisions through skills-broker"
       );
       expect(codexSkill).toContain(
+        "Route coarse capability-boundary decisions through skills-broker"
+      );
+      expect(opencodeSkill).toContain(
         "Route coarse capability-boundary decisions through skills-broker"
       );
       expectHostSkillLayout(
@@ -161,13 +189,23 @@ describe("host shell installers", () => {
         maintainedBoundaryExamples
       );
       expectHostSkillLayout(codexSkill, "codex", maintainedBoundaryExamples);
+      expectHostSkillLayout(opencodeSkill, "opencode", maintainedBoundaryExamples);
       expect(claudeManifest.managedBy).toBe("skills-broker");
+      expect(claudeManifest.host).toBe("claude-code");
 
       const codexManifest = JSON.parse(
         await readFile(join(codexResult.installDirectory, ".skills-broker.json"), "utf8")
-      ) as { managedBy?: string };
+      ) as { managedBy?: string; host?: string };
 
       expect(codexManifest.managedBy).toBe("skills-broker");
+      expect(codexManifest.host).toBe("codex");
+
+      const opencodeManifest = JSON.parse(
+        await readFile(join(opencodeResult.installDirectory, ".skills-broker.json"), "utf8")
+      ) as { managedBy?: string; host?: string };
+
+      expect(opencodeManifest.managedBy).toBe("skills-broker");
+      expect(opencodeManifest.host).toBe("opencode");
     } finally {
       await rm(runtimeDirectory, { recursive: true, force: true });
     }

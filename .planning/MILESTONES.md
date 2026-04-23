@@ -1,5 +1,35 @@
 # Project Milestones: skills-broker
 
+## v1.2 Release Truth And Shipping Closure (Shipped: 2026-04-23)
+
+**Delivered:** `skills-broker` 现在已经把 CI trust rails 收口成 canonical release truth，具备显式 shipped-proof promotion flow，并且 publish automation 会直接闭环到同一份 `STATUS.md` truth。
+
+**Phases completed:** 9-11 (7 plans total)
+
+**Key accomplishments:**
+
+- 把 `ci:blind-spot`、focused narrative parity 与 strict repo-scoped doctor 收成 repo-owned `release:gate`，让 ship/publish 直接消费一条 canonical verdict。
+- 新增 `release:promote`，把 canonical `STATUS.md` 的 shipped-local versus shipped-remote 升级动作做成显式、可审计、fail-closed 的 contract。
+- 让 `.github/workflows/publish-npm.yml` 在 publish 前后都复用 canonical release truth，并把 promoted `STATUS.md` truth 回写到默认分支。
+- README / README.zh-CN / STATUS / TODOS 现在都清楚区分 published lifecycle commands 与 repo-local release truth helpers，不再把 release bookkeeping 混进 shared-home maintenance story。
+
+**What's next:** 用 `$gsd-new-milestone` 定义下一轮 requirements，优先决定是继续扩 capability surface / host templating，还是开始补 v1.2 之后的 shipping summary / release audit automation。
+
+## v1.1 Third-Host Expansion And Trust Scaling (Shipped: 2026-04-23)
+
+**Delivered:** `skills-broker` 现在已经是一个三宿主、三条 proven family、两条 broker-owned workflow、并带显式 CI trust guardrails 的运行时能力 broker。
+
+**Phases completed:** 5-8 (12 plans total)
+
+**Key accomplishments:**
+
+- 把 OpenCode 从 readiness contract 推进成真实 shipping 的第三宿主，并收口成与 Claude Code / Codex 对等的 lifecycle / doctor / proof / reuse truth。
+- 把 `social_post_to_markdown` 升格成第三条 proven family，把 `investigation-to-fix` 升格成第二条 broker-owned workflow，并继续守住 website QA hero lane 与 web markdown second proven family。
+- 把 MCP discovery source 升级成 registry-ready metadata + explainability surface，同时不打破 installed/local winner precedence。
+- 把 blind-spot reporting、focused narrative parity 与 strict repo proof gate 接进 CI，让支持矩阵、family/workflow surface 与 operator docs drift 能 fail closed。
+
+**What's next:** 用 `$gsd-new-milestone` 定义下一轮 requirements，把 CI truth 接入 ship/release、继续扩展 template-friendly host onboarding 与更真实的 registry/trust scoring。
+
 ## v1.0 Default-Entry Trust And Growth Readiness (Shipped: 2026-04-23)
 
 **Delivered:** `skills-broker` 现在有一条被 docs、host shell、runtime、doctor 和 cross-host proof 一起锁住的默认入口，同时把 runtime hardening 与未来第三宿主扩展边界收口成可验证真相。

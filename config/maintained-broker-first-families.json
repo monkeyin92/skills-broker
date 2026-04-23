@@ -24,8 +24,8 @@
     },
     {
       "family": "investigation",
-      "winnerId": "investigation",
-      "capabilityId": "gstack.investigate",
+      "winnerId": "investigation-to-fix",
+      "capabilityId": "skills_broker.investigation-to-fix",
       "expectedIntent": "capability_discovery_or_install",
       "boundaryExamples": [
         "investigate this site failure with a reusable workflow"

@@ -1,7 +1,11 @@
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import type { CapabilityCard } from "../core/capability-card.js";
-import type { BrokerHost, BrokerIntent } from "../core/types.js";
+import {
+  isBrokerHost as isKnownBrokerHost,
+  type BrokerHost,
+  type BrokerIntent
+} from "../core/types.js";
 import type { RoutingHistory } from "./rank.js";
 
 export const ACQUISITION_MEMORY_VERSION = "2026-04-16" as const;
@@ -54,7 +58,7 @@ function isBrokerIntent(value: unknown): value is BrokerIntent {
 }
 
 function isBrokerHost(value: unknown): value is BrokerHost {
-  return value === "claude-code" || value === "codex";
+  return typeof value === "string" && isKnownBrokerHost(value);
 }
 
 function isStringArray(value: unknown): value is string[] {

@@ -9,7 +9,7 @@
 > Stop making users remember skill names.  
 > Let them ask for outcomes. Let the broker find the right capability.
 
-`skills-broker` is an open-source **skill router**, **MCP router**, and **agent capability broker** for code-native agent hosts such as **Claude Code** and **Codex**. **OpenCode** remains deferred until the thin-host contract is actually implemented.
+`skills-broker` is an open-source **skill router**, **MCP router**, and **agent capability broker** for code-native agent hosts such as **Claude Code**, **Codex**, and **OpenCode**. **Claude Code, Codex, and OpenCode now share full published lifecycle and proof/reuse parity.**
 
 Instead of forcing users to browse catalogs, memorize tool names, or manually decide which capability to install next, `skills-broker` sits in front of the host and handles the capability decision at runtime.
 
@@ -17,7 +17,7 @@ The clearest first-use path today is **website QA**:
 
 - ask the host to QA a website
 - let the broker surface `INSTALL_REQUIRED` if the winner is missing
-- retry after install and watch the same path verify and reuse across Claude Code and Codex
+- retry after install and watch the same path verify and reuse across Claude Code, Codex, and OpenCode
 
 If this problem resonates with you, a star helps more people discover the project.
 
@@ -98,6 +98,7 @@ Current scope is intentionally narrow:
 Within that lake, **website QA is the clearest default-entry lane today**. Requirements analysis and investigation remain supported maintained families, but QA is the first workflow the docs should teach people to try.
 
 The second proven family is **web markdown**. It is the next operator loop to run after website QA, not a competing first move.
+The next proven family is **social markdown**. It should show up after web markdown as another maintained loop, not as a new first move.
 
 v0 currently includes:
 
@@ -125,23 +126,24 @@ v0 currently includes:
 - relocatable Claude Code plugin package
 - published `npx skills-broker` lifecycle CLI
 - shared broker home install/update/remove/doctor flow
-- Claude Code and Codex thin host shell support
-- cross-host cache reuse between Claude Code and Codex
+- Claude Code, Codex, and OpenCode thin host shell support
+- cross-host cache reuse across Claude Code, Codex, and OpenCode
 - verified downstream manifests as an advisory discovery source for already-proven broker-owned downstream winners
 - CI and live discovery smoke coverage
 - capability-query-led host-catalog, MCP, and workflow discovery, so structured broker requests are less tightly coupled to exact legacy `intent` equality
+- validated MCP registry metadata plus query-coverage evidence, so MCP candidates can explain version, transport, endpoint count, and why they matched without outranking installed/local winners
 - query-first normalization for modern web, social, and capability-discovery requests, so `capabilityQuery` now carries the primary broker semantics and `intent` mainly remains as a compatibility lane
 - shared-home routing trace persistence plus `skills-broker doctor` rollups for hit / misroute / fallback rates across `structured_query`, `raw_envelope`, and `legacy_task` request surfaces
 - repo-scoped canonical `STATUS.md` proof checks in `skills-broker doctor`, including strict shipped-local versus shipped-remote evaluation for CI or release gates
 
 This slice now also catches more free-form product-idea phrasing, so a natural sentence is more likely to start the broker-owned `idea-to-ship` workflow instead of falling through as unsupported.
 
-Important truth in this packet: the catalog still carries a `capability-discovery` helper identity, but today that path is a broker-guided discovery/install helper contract implemented as a local helper skill, not a full broker-owned acquisition workflow. In v0, the only complete broker-owned workflow is still `idea-to-ship`.
+Important truth in this packet: the catalog still carries a `capability-discovery` helper identity, but today that path is a broker-guided discovery/install helper contract implemented as a local helper skill, not a full broker-owned acquisition workflow. In v0, the shipped broker-owned workflows are now `idea-to-ship` and `investigation-to-fix`.
 
 This is deliberately not "solve everything."  
 The point of v0 is to prove that a broker can pick and prepare the right capability better than a human manually browsing skills.
 
-**Current product phase:** keep adoption health green while turning discovery/install into a stronger reuse flywheel, so Claude Code and Codex visibly keep `skills-broker` on the hot path and the broker compounds reachable capability surface over time without reopening the identity migration work that just shipped. The first default-entry habit this packet wants to make obvious is website QA.
+**Current product phase:** keep adoption health green while turning discovery/install into a stronger reuse flywheel, expanding the evidence-backed capability surface, and protecting the now-full-parity Claude Code / Codex / OpenCode runtime with explicit CI trust guardrails. The first default-entry habit this packet still wants to make obvious is website QA.
 
 **Migration note:** `capabilityQuery` is now the only public request contract the broker wants callers to depend on. `intent` still exists, but it now survives only as an internal compatibility lane label for supplier adapters, explicit late tie-breaks, maintained-family proof rails, and legacy workflow/session continuity.
 
@@ -168,12 +170,12 @@ The shared-home architecture is now actively implemented in this repository:
 
 - install `skills-broker` once
 - keep the shared broker home at `~/.skills-broker/`
-- let Claude Code, Codex, and future hosts attach through thin host shells
+- let Claude Code, Codex, and OpenCode attach through thin host shells
 - share capability cards, routing history, cache, and runtime state across hosts
 
 That means switching hosts should not reset discovery quality.
 
-If a user first proves a strong winner in Claude Code and later starts using Codex, the broker should reuse the same shared knowledge instead of rediscovering from zero.
+If a user first proves a strong winner in Claude Code and later starts using Codex or OpenCode, the broker should reuse the same shared knowledge instead of rediscovering from zero.
 
 The product-level maintenance command for this model is:
 
@@ -191,13 +193,13 @@ Its job is meant to be:
 
 ## Current Support Matrix
 
-- Supported now: Claude Code, Codex
-- Deferred but planned: OpenCode thin host shell
+- Supported now: Claude Code, Codex, OpenCode
+- Claude Code, Codex, and OpenCode now share full published lifecycle and proof/reuse parity.
 - Published lifecycle commands: npx skills-broker update / npx skills-broker doctor / npx skills-broker remove
-- Third-host readiness stays gated on the same shared broker home, thin host shell, proof/reuse state, and published lifecycle parity.
+- All supported hosts now share the same shared broker home, thin host shell, proof/reuse state, and published lifecycle contract.
 - Not supported in v0: other hosts
 
-OpenCode stays deferred until the explicit third-host readiness contract in `docs/superpowers/specs/2026-04-22-third-host-thin-shell-readiness.md` is satisfied.
+The explicit third-host readiness contract in `docs/superpowers/specs/2026-04-22-third-host-thin-shell-readiness.md` now serves as the historical record of the parity work that landed, plus a guardrail for future host expansion.
 
 ## Why It Is Different
 
@@ -224,7 +226,7 @@ This packet treats website QA as the QA default-entry loop and the fastest opera
 npx skills-broker update
 ```
 
-Use `npx skills-broker update` to initialize or refresh the shared broker home, attach thin host shells, and reuse the same routing cache across Claude Code and Codex. Today the published lifecycle CLI manages Claude Code and Codex only. Bare `npx skills-broker` currently behaves the same as `npx skills-broker update`, so scripts and docs should spell the subcommand explicitly. `update` and `doctor` now also emit a first-class `adoptionHealth` verdict:
+Use `npx skills-broker update` to initialize or refresh the shared broker home, attach thin host shells, and reuse the same routing cache across Claude Code, Codex, and OpenCode. The published lifecycle CLI now manages all three supported hosts. Bare `npx skills-broker` currently behaves the same as `npx skills-broker update`, so scripts and docs should spell the subcommand explicitly. `update` and `doctor` now also emit a first-class `adoptionHealth` verdict:
 
 - `green`: at least one managed host is clean and the known proof surfaces are not red
 - `blocked`: the install is present but a named blocker exists, such as competing peers, manual recovery, gate drift, or an explicit missing host shell
@@ -236,14 +238,15 @@ By default, `update` detects official host roots before it writes anything:
 
 - Claude Code: `~/.claude`, then installs the thin shell at `~/.claude/skills/skills-broker`
 - Codex: `~/.codex`, then installs the thin shell at `~/.agents/skills/skills-broker`
+- OpenCode: `~/.config/opencode` or `~/.opencode`, then installs the thin shell at `<detected-root>/skills/skills-broker`
 
-If a host root is not found, the CLI will explain that and tell you to use `--claude-dir` or `--codex-dir` for custom layouts. A missing default root keeps adoption health `inactive`; an explicitly targeted shell path that is missing shows up as a named `blocked` verdict.
+If a host root is not found, the CLI will explain that and tell you to use `--claude-dir`, `--codex-dir`, or `--opencode-dir` for custom layouts. A missing default root keeps adoption health `inactive`; an explicitly targeted shell path that is missing shows up as a named `blocked` verdict.
 
 ### 2. Try the website QA install-required -> verify -> reuse loop
 
 This is the published host-shell path where the discovery/install flywheel is supposed to prove itself.
 
-1. In Claude Code or Codex, start with a website QA request such as `QA this website https://example.com`.
+1. In Claude Code, Codex, or OpenCode, start with a website QA request such as `QA this website https://example.com`.
 2. If the best package is not installed yet, the host should receive an `INSTALL_REQUIRED` outcome with `hostAction=offer_package_install`. That is different from a true `NO_CANDIDATE`: the broker found a winner and is asking the host to install it.
 3. Approve the install, then send the same request again. The broker should verify the installed winner and hand off instead of falling back.
 4. Run `npx skills-broker doctor` to confirm the shared-home state is recording reuse and any verified downstream manifests that can be replayed later.
@@ -253,6 +256,8 @@ Requirements analysis and investigation are still supported maintained families.
 Web markdown is still a proven next lane, but only after the QA default-entry loop and doctor truth already feel clear.
 
 Once that default-entry loop feels clear, the second proven family is **web markdown**: ask for something like `turn this webpage into markdown https://example.com/post`, approve the install if needed, rerun the same request, then repeat it from the other host to prove cross-host reuse.
+
+The next proven family is **social markdown**: ask for something like `save this X post as markdown https://x.com/example/status/1`, approve the install if needed, rerun the same request, then repeat it from another supported host to prove the same cross-host reuse contract.
 
 On the first blocked pass, the host-side outcome should look like:
 
@@ -289,7 +294,7 @@ npx skills-broker doctor --strict
 This is the fastest way to confirm the shared-home install is real after the QA loop. For this packet, the success bar is simple:
 
 - you can tell in one command whether adoption health is `green`, `blocked`, or `inactive`
-- the support matrix only claims Claude Code and Codex
+- the support matrix now claims Claude Code, Codex, and OpenCode with full lifecycle / proof parity, and the operator-facing docs say the same thing
 - operator-facing failures tell you what broke and what to inspect next
 
 ### 4. Try explicit shared-home directories
@@ -298,7 +303,8 @@ This is the fastest way to confirm the shared-home install is real after the QA 
 npx skills-broker update \
   --broker-home /tmp/.skills-broker \
   --claude-dir /tmp/.claude/skills/skills-broker \
-  --codex-dir /tmp/.agents/skills/skills-broker
+  --codex-dir /tmp/.agents/skills/skills-broker \
+  --opencode-dir /tmp/.config/opencode/skills/skills-broker
 ```
 
 This will:
@@ -306,6 +312,7 @@ This will:
 - build the shared broker runtime into `/tmp/.skills-broker`
 - attach a Claude Code thin shell
 - attach a Codex thin shell
+- attach an OpenCode thin shell
 - let both hosts reuse the same broker cache and routing history
 
 For automation or CI, every lifecycle command also supports `--json`. For the published family-proof loops, prefer reading `familyProofs.website_qa.verdict` for the default-entry lane and `familyProofs.web_content_to_markdown.verdict` for the second proven lane:
@@ -332,6 +339,10 @@ npm run verify:local
 ```
 
 Use `npm run verify:local -- --check-only` when you want the deterministic preflight without starting the suite. If the preflight reports a broken npm / Rollup / Vitest state, run `npm ci`, rerun `npm run verify:local -- --check-only`, and then rerun `npm run verify:local` once the health check is green.
+
+`verify:local` intentionally answers a different question than the CI trust guards. `npm run verify:local` checks whether this machine is healthy enough to run the baseline Node 22 + build + test loop. CI then runs `npm run ci:blind-spot`, `npm run test:ci:narrative-parity`, and the strict repo-scoped doctor gate to catch drift in supported hosts, maintained/proven lanes, workflow coverage, and operator-facing narrative truth.
+
+For repo-owned shipping truth, run `npm run release:gate -- --json` before publish. It replays the blind-spot report, the focused narrative parity suite, and the strict repo-scoped doctor gate as one canonical verdict with the failing rail, evaluated shipping ref, and remote-freshness diagnostics. After the shipping ref contains `HEAD`, run `npm run release:promote -- --ship-ref origin/main --json` to upgrade only the eligible canonical `STATUS.md` items from `shipped_local` to `shipped_remote`. Both commands stay repo-local on purpose; they do not widen the published lifecycle CLI beyond `npx skills-broker update / doctor / remove`.
 
 ### 7. Install the repo-local Claude Code package
 
@@ -390,7 +401,7 @@ Expected output: a JSON payload containing the selected winner, handoff envelope
 
 This project is especially relevant if you are:
 
-- building agent tooling on top of Claude Code or Codex today, or planning future hosts such as OpenCode
+- building agent tooling on top of Claude Code, Codex, or OpenCode today
 - frustrated by skill sprawl and context bloat
 - experimenting with MCP-backed capability ecosystems
 - trying to make agents feel more outcome-driven than tool-driven
@@ -401,7 +412,7 @@ This project is especially relevant if you are:
 This repository currently optimizes for:
 
 - a small first routed lake instead of broad open-domain coverage
-- two attached hosts first: Claude Code and Codex
+- three supported thin hosts today: Claude Code, Codex, and OpenCode
 - one clean default-entry habit inside that lake: website QA first
 - a handful of explicit broker-first lanes: markdown conversion, requirements / QA / investigation, and the first workflow recipe
 - explicit fixture-backed local tests
@@ -409,7 +420,7 @@ This repository currently optimizes for:
 
 It does **not** yet provide:
 
-- OpenCode host-shell support
+- full parity for hosts beyond Claude Code, Codex, and OpenCode
 - broad auto-routing beyond clearly external capability requests
 - broad open-domain task coverage
 - live network discovery as the default runtime path
@@ -421,7 +432,8 @@ Likely next:
 
 - stronger broker-first hit rate in real Claude Code and Codex sessions
 - more proof that website QA-first positioning turns into real repeat usage
-- broader host support such as OpenCode
+- CI guardrails that keep shipped lifecycle / proof truth from drifting
+- broader host support beyond the current three-host set
 - richer host-side observability around broker first-refusal decisions
 - more task families beyond the current markdown + requirements / QA / investigation lake
 - more broker-owned workflow recipes beyond the first `idea-to-ship` path
@@ -436,6 +448,7 @@ src/
   core/                   request types, capability cards, cache policy
   hosts/claude-code/      Claude Code adapter and installer
   hosts/codex/            Codex thin-shell adapter and installer
+  hosts/opencode/         OpenCode thin-shell adapter and installer
   shared-home/            shared broker home install/update flow
   sources/                skill and MCP discovery adapters
 tests/
@@ -443,7 +456,7 @@ tests/
   core/                   request and cache tests
   broker/                 ranking, prepare, handoff tests
   integration/            end-to-end broker pipeline tests
-  e2e/                    Claude Code and shared-home smoke tests
+  e2e/                    shared-home and cross-host smoke tests
 config/
   host-skills.seed.json
   mcp-registry.seed.json
@@ -458,7 +471,8 @@ Contributions are welcome.
 
 Strong contribution areas:
 
-- broader host shells such as OpenCode
+- CI guardrails for lifecycle / proof truth
+- broader host shells beyond OpenCode
 - live discovery integrations
 - new task families
 - richer ranking signals
@@ -492,15 +506,15 @@ No. It is a broker and routing layer.
 
 ### Is this production-ready?
 
-Not yet. It is still a focused v0, but it now includes a shared broker home, published lifecycle CLI, Claude Code and Codex thin shells, a shipped adoption-proof rail, and a small first routed lake. The current phase is keeping real host auto-routing green while turning discovery/install into a stronger reuse flywheel, now that both the query-native and package-vs-leaf migration tails are shipped. If you want the clearest first-use path today, start with website QA.
+Not yet. It is still a focused v0, but it now includes a shared broker home, published lifecycle CLI, full-parity thin shells for Claude Code, Codex, and OpenCode, a shipped adoption-proof rail, and a small first routed lake. The current phase is keeping real host auto-routing green while expanding the capability surface and CI trust rails. If you want the clearest first-use path today, start with website QA.
 
-### Why Claude Code and Codex first?
+### Why did Claude Code and Codex come first, and where does OpenCode fit now?
 
-Because the product first had to prove one shared broker contract across real code-native hosts before expanding further. Claude Code and Codex are the first two hosts on that path.
+Because the product first had to prove one shared broker contract across real code-native hosts before expanding further. Claude Code and Codex were the first two hosts on that path; OpenCode is now the shipped third thin host shell under the same full lifecycle / proof parity contract.
 
-### Will Claude Code and Codex share the same capability knowledge?
+### Will Claude Code, Codex, and OpenCode share the same capability knowledge?
 
-Yes. The repository now includes an experimental shared-home flow so that Claude Code and Codex can reuse the same capability cache, history, and runtime instead of each building their own isolated copy.
+Yes. The repository now includes a shared-home flow so that Claude Code, Codex, and OpenCode can reuse the same capability cache, history, and runtime instead of each building their own isolated copy.
 
 ### What is `npx skills-broker update` supposed to do?
 
@@ -512,7 +526,7 @@ Because more installed skills usually increase selection cost, context cost, and
 
 ### How is this different from an MCP registry?
 
-A registry tells you what exists. `skills-broker` decides what should be used right now for the current host and task.
+A registry tells you what exists. `skills-broker` decides what should be used right now for the current host and task, and its MCP source now carries validated version / transport / query-coverage metadata so the broker can explain MCP picks without letting advisory registry candidates outrank installed local winners.
 
 ### Can it work without live network discovery?
 
