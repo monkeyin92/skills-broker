@@ -4,6 +4,14 @@ export type OperatorTruthContract = {
   heroLane: "website QA";
   secondProvenFamily: "web markdown";
   thirdProvenFamily: "social markdown";
+  qaFirstFamilyLoop: {
+    en: string;
+    zh: string;
+  };
+  postQaNextLoop: {
+    en: string;
+    zh: string;
+  };
   lifecycleCommands: readonly string[];
   thirdHostReadinessTokens: readonly string[];
   coarseBoundary: {
@@ -26,6 +34,14 @@ export const OPERATOR_TRUTH_CONTRACT = {
   heroLane: "website QA",
   secondProvenFamily: "web markdown",
   thirdProvenFamily: "social markdown",
+  qaFirstFamilyLoop: {
+    en: "QA-first family loop: website QA first, web markdown second, social markdown third.",
+    zh: "QA-first family loop：先 website QA，再 web markdown，最后 social markdown。"
+  },
+  postQaNextLoop: {
+    en: "After a successful website QA proof, the next proven loop to run is web markdown. After web markdown, social markdown is the next proven loop.",
+    zh: "当 website QA proof 已成立后，下一条该跑的 proven loop 是 web markdown；完成之后，social markdown 是再下一条。"
+  },
   lifecycleCommands: [
     "npx skills-broker update",
     "npx skills-broker doctor",
@@ -66,6 +82,14 @@ export function formatPublishedLifecycleCommandsLine(): string {
   return `Published lifecycle commands: ${OPERATOR_TRUTH_CONTRACT.lifecycleCommands.join(" / ")}`;
 }
 
+export function formatQaFirstFamilyLoopLine(): string {
+  return OPERATOR_TRUTH_CONTRACT.qaFirstFamilyLoop.en;
+}
+
+export function formatPostQaNextLoopLine(): string {
+  return OPERATOR_TRUTH_CONTRACT.postQaNextLoop.en;
+}
+
 export function formatCoarseBoundaryLine(): string {
   return OPERATOR_TRUTH_CONTRACT.coarseBoundary.en;
 }
@@ -96,6 +120,14 @@ export function formatDeferredHostsZhLine(): string {
 
 export function formatPublishedLifecycleCommandsZhLine(): string {
   return `发布态 lifecycle 命令统一为：${OPERATOR_TRUTH_CONTRACT.lifecycleCommands.join(" / ")}`;
+}
+
+export function formatQaFirstFamilyLoopZhLine(): string {
+  return OPERATOR_TRUTH_CONTRACT.qaFirstFamilyLoop.zh;
+}
+
+export function formatPostQaNextLoopZhLine(): string {
+  return OPERATOR_TRUTH_CONTRACT.postQaNextLoop.zh;
 }
 
 export function formatCoarseBoundaryZhLine(): string {

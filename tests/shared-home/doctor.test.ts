@@ -6,6 +6,10 @@ import { acquisitionMemoryFilePath } from "../../src/broker/acquisition-memory";
 import { routingTraceLogFilePath } from "../../src/broker/trace-store";
 import { loadMaintainedBrokerFirstContract } from "../../src/core/maintained-broker-first";
 import {
+  formatPostQaNextLoopLine,
+  formatQaFirstFamilyLoopLine
+} from "../../src/core/operator-truth";
+import {
   brokerFirstGateArtifactPath,
   type BrokerFirstGateArtifact
 } from "../../src/shared-home/broker-first-gate";
@@ -1756,6 +1760,8 @@ describe("doctor shared broker home", () => {
       expect(rendered).toContain(
         "Website QA verdict: in_progress (phase=repeat_usage_pending)"
       );
+      expect(rendered).toContain(formatQaFirstFamilyLoopLine());
+      expect(rendered).toContain(formatPostQaNextLoopLine());
       expect(rendered.indexOf("Website QA adoption (last 7d): active")).toBeLessThan(
         rendered.indexOf("Website QA verdict: in_progress")
       );

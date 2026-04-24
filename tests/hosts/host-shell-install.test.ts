@@ -9,7 +9,9 @@ import {
 import {
   formatCoarseBoundaryLine,
   formatFullLifecycleParityLine,
+  formatPostQaNextLoopLine,
   formatPublishedLifecycleCommandsLine,
+  formatQaFirstFamilyLoopLine,
   formatSupportedHostsLine,
   formatThirdHostReadinessLine
 } from "../../src/core/operator-truth";
@@ -60,6 +62,8 @@ function expectHostSkillLayout(
     formatThirdHostReadinessLine(),
     "## Broker-First (`broker_first`)",
     "If you need one concrete broker-first example to calibrate the boundary, start with website QA.",
+    formatQaFirstFamilyLoopLine(),
+    formatPostQaNextLoopLine(),
     "Treat the examples below as semantic anchors, not literal trigger phrases.",
     "### Hero lane: website QA",
     "Keep website QA visually first. It is the QA default-entry lane and the calibration lane. Other maintained lanes are still valid, but secondary.",

@@ -3,6 +3,10 @@ import { join } from "node:path";
 import {
   formatCoarseBoundaryLine,
   formatCoarseBoundaryZhLine,
+  formatPostQaNextLoopLine,
+  formatPostQaNextLoopZhLine,
+  formatQaFirstFamilyLoopLine,
+  formatQaFirstFamilyLoopZhLine,
   OPERATOR_TRUTH_CONTRACT,
   formatFullLifecycleParityLine,
   formatFullLifecycleParityZhLine,
@@ -248,6 +252,8 @@ export function buildCiTrustSurfaceSpecs(
     formatThirdHostReadinessLine(),
     formatCoarseBoundaryLine(),
     formatWebsiteQaProofSurfaceLine(),
+    formatQaFirstFamilyLoopLine(),
+    formatPostQaNextLoopLine(),
     OPERATOR_TRUTH_CONTRACT.heroLane,
     OPERATOR_TRUTH_CONTRACT.secondProvenFamily,
     OPERATOR_TRUTH_CONTRACT.thirdProvenFamily,
@@ -260,6 +266,8 @@ export function buildCiTrustSurfaceSpecs(
     formatThirdHostReadinessZhLine(),
     formatCoarseBoundaryZhLine(),
     formatWebsiteQaProofSurfaceZhLine(),
+    formatQaFirstFamilyLoopZhLine(),
+    formatPostQaNextLoopZhLine(),
     OPERATOR_TRUTH_CONTRACT.heroLane,
     OPERATOR_TRUTH_CONTRACT.secondProvenFamily,
     OPERATOR_TRUTH_CONTRACT.thirdProvenFamily,
@@ -309,6 +317,8 @@ export function buildCiTrustSurfaceSpecs(
           path: "tests/hosts/host-shell-install.test.ts",
           label: "installed shell truth parity",
           containsAll: [
+            "formatQaFirstFamilyLoopLine",
+            "formatPostQaNextLoopLine",
             "### Hero lane: website QA",
             "The second proven family is web markdown. Keep it visible here after website QA, not as a competing first move.",
             "The next proven family is social markdown. Keep it visible after web markdown, not as a competing first move."

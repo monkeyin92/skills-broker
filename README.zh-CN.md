@@ -105,6 +105,8 @@ broker 决定：
 
 第二条已经证明的 family 是 **web markdown**。它应该排在 website QA 之后作为下一条 operator loop，而不是和 QA 并列抢第一步。
 下一条已经证明的 family 是 **social markdown**。它应该排在 web markdown 之后作为另一条 maintained loop，而不是重新变成一个新的第一步。
+QA-first family loop：先 website QA，再 web markdown，最后 social markdown。
+当 website QA proof 已成立后，下一条该跑的 proven loop 是 web markdown；完成之后，social markdown 是再下一条。
 
 v0 当前包含：
 
@@ -269,6 +271,7 @@ web markdown 仍然是下一条已经被证明的 lane，但前提是 QA default
 当这条默认入口闭环已经清楚之后，第二条已经证明 install / verify / reuse 的 family 是 **web markdown**：可以直接发 `turn this webpage into markdown https://example.com/post` 这类请求，需要安装时同意安装，然后重跑同一个请求，再从另一个 host 重复一次，确认 cross-host reuse 也成立。
 
 下一条已经证明的 family 是 **social markdown**：可以直接发 `save this X post as markdown https://x.com/example/status/1` 这类请求，需要安装时同意安装，然后重跑同一个请求，再从另一个支持宿主重复一次，确认同样的 cross-host reuse 合同也成立。
+当 website QA proof 已成立后，下一条该跑的 proven loop 是 web markdown；完成之后，social markdown 是再下一条。
 
 第一次被 install 挡住时，宿主侧 outcome 应该类似：
 

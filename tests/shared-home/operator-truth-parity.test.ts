@@ -4,6 +4,10 @@ import { describe, expect, it } from "vitest";
 import {
   formatCoarseBoundaryLine,
   formatCoarseBoundaryZhLine,
+  formatPostQaNextLoopLine,
+  formatPostQaNextLoopZhLine,
+  formatQaFirstFamilyLoopLine,
+  formatQaFirstFamilyLoopZhLine,
   OPERATOR_TRUTH_CONTRACT,
   formatFullLifecycleParityLine,
   formatFullLifecycleParityZhLine,
@@ -63,6 +67,14 @@ describe("operator truth parity", () => {
       heroLane: "website QA",
       secondProvenFamily: "web markdown",
       thirdProvenFamily: "social markdown",
+      qaFirstFamilyLoop: {
+        en: formatQaFirstFamilyLoopLine(),
+        zh: formatQaFirstFamilyLoopZhLine()
+      },
+      postQaNextLoop: {
+        en: formatPostQaNextLoopLine(),
+        zh: formatPostQaNextLoopZhLine()
+      },
       lifecycleCommands: [
         "npx skills-broker update",
         "npx skills-broker doctor",
@@ -99,6 +111,8 @@ describe("operator truth parity", () => {
         formatFullLifecycleParityLine(),
         formatCoarseBoundaryLine(),
         formatWebsiteQaProofSurfaceLine(),
+        formatQaFirstFamilyLoopLine(),
+        formatPostQaNextLoopLine(),
         OPERATOR_TRUTH_CONTRACT.heroLane,
         OPERATOR_TRUTH_CONTRACT.secondProvenFamily,
         OPERATOR_TRUTH_CONTRACT.thirdProvenFamily,
@@ -113,6 +127,8 @@ describe("operator truth parity", () => {
         formatFullLifecycleParityZhLine(),
         formatCoarseBoundaryZhLine(),
         formatWebsiteQaProofSurfaceZhLine(),
+        formatQaFirstFamilyLoopZhLine(),
+        formatPostQaNextLoopZhLine(),
         OPERATOR_TRUTH_CONTRACT.heroLane,
         OPERATOR_TRUTH_CONTRACT.secondProvenFamily,
         OPERATOR_TRUTH_CONTRACT.thirdProvenFamily,

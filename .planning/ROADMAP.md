@@ -23,7 +23,9 @@
 
 **Requirements:** `LOOP-01`, `LOOP-02`, `LOOP-03`
 
-**Status:** pending
+**Status:** completed
+
+**Verification:** `.planning/phases/18-encode-qa-first-family-hierarchy/18-VERIFICATION.md`
 
 **UI hint**: no
 
@@ -100,4 +102,4 @@ Deliver Phases 18-20 to turn the current `website QA` hero lane into a clearer Q
 
 ---
 *Roadmap created: 2026-04-24*
-*Last updated: 2026-04-24 after creating milestone v1.5 roadmap*
+*Last updated: 2026-04-24 after completing Phase 18*

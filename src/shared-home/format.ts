@@ -3,6 +3,10 @@ import type {
   DoctorLifecycleResult,
   DoctorProofFamily
 } from "./doctor.js";
+import {
+  formatPostQaNextLoopLine,
+  formatQaFirstFamilyLoopLine
+} from "../core/operator-truth.js";
 import type { RemoveLifecycleResult } from "./remove.js";
 import type { UpdateLifecycleResult } from "./update.js";
 
@@ -326,6 +330,8 @@ export function formatLifecycleResult(
     lines.push(formatWebsiteQaAdoptionNextActionLine(result));
     lines.push(formatWebsiteQaVerdictLine(result));
     lines.push(formatWebsiteQaNextActionLine(result));
+    lines.push(formatQaFirstFamilyLoopLine());
+    lines.push(formatPostQaNextLoopLine());
 
     if (
       result.routingMetrics.observed === 0 &&

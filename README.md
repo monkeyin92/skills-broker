@@ -99,6 +99,8 @@ Within that lake, **website QA is the clearest default-entry lane today**. Requi
 
 The second proven family is **web markdown**. It is the next operator loop to run after website QA, not a competing first move.
 The next proven family is **social markdown**. It should show up after web markdown as another maintained loop, not as a new first move.
+QA-first family loop: website QA first, web markdown second, social markdown third.
+After a successful website QA proof, the next proven loop to run is web markdown. After web markdown, social markdown is the next proven loop.
 
 v0 currently includes:
 
@@ -262,6 +264,7 @@ Web markdown is still a proven next lane, but only after the QA default-entry lo
 Once that default-entry loop feels clear, the second proven family is **web markdown**: ask for something like `turn this webpage into markdown https://example.com/post`, approve the install if needed, rerun the same request, then repeat it from the other host to prove cross-host reuse.
 
 The next proven family is **social markdown**: ask for something like `save this X post as markdown https://x.com/example/status/1`, approve the install if needed, rerun the same request, then repeat it from another supported host to prove the same cross-host reuse contract.
+After a successful website QA proof, the next proven loop to run is web markdown. After web markdown, social markdown is the next proven loop.
 
 On the first blocked pass, the host-side outcome should look like:
 

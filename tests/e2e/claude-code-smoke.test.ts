@@ -64,6 +64,12 @@ describe("Claude Code smoke", () => {
         expect(skillContents).toContain("The host decides only one of these boundary outcomes:");
         expect(skillContents).toContain("## Broker-First (`broker_first`)");
         expect(skillContents).toContain("If you need one concrete broker-first example to calibrate the boundary, start with website QA.");
+        expect(skillContents).toContain(
+          "QA-first family loop: website QA first, web markdown second, social markdown third."
+        );
+        expect(skillContents).toContain(
+          "After a successful website QA proof, the next proven loop to run is web markdown. After web markdown, social markdown is the next proven loop."
+        );
         expect(skillContents).toContain("### Hero lane: website QA");
         expect(skillContents).toContain("Keep website QA visually first. It is the QA default-entry lane and the calibration lane. Other maintained lanes are still valid, but secondary.");
         expect(skillContents).toContain("Treat the examples below as semantic anchors, not literal trigger phrases.");

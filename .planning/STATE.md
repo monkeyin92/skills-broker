@@ -1,14 +1,14 @@
 # State
 
 **Initialized:** 2026-04-22
-**Status:** executing_phase
+**Status:** ready_for_planning
 
 ## Project Reference
 
 See: `.planning/PROJECT.md` (updated 2026-04-24)
 
 **Core value:** 用户只需要描述想达成的结果，broker 就能在当前宿主里找到、准备并复用合适的能力，而不用让用户记住工具名、重新发现赢家、或自己判断安装路径。
-**Current focus:** Milestone v1.5 active — Phase 18 is executing to encode the QA-first family hierarchy across docs, doctor, and host-shell surfaces
+**Current focus:** Milestone v1.5 active — Phase 19 is next to prove family-loop freshness and reuse across shared-home surfaces
 
 ## Current Milestone
 
@@ -19,25 +19,25 @@ See: `.planning/PROJECT.md` (updated 2026-04-24)
 
 ## Current Position
 
-- **Phase:** 18
-- **Plan:** 18-01-PLAN.md
-- **Status:** Executing plans
-- **Last activity:** 2026-04-24 — Phase 18 plans created and execution started
+- **Phase:** 19
+- **Plan:** —
+- **Status:** Ready for phase planning
+- **Last activity:** 2026-04-24 — Phase 18 completed and verified
 
 ## Current Phase
 
-- **Phase:** 18
-- **Goal:** Encode the QA-first family hierarchy across repo-owned surfaces
-- **Status:** executing
-- **Primary requirements:** LOOP-01, LOOP-02, LOOP-03
-- **Plan count:** 2
-- **Wave count:** 2
+- **Phase:** 19
+- **Goal:** Prove family-loop freshness and reuse across shared-home surfaces
+- **Status:** pending_planning
+- **Primary requirements:** FRESH-01, FRESH-02, FRESH-03
+- **Plan count:** 0
+- **Wave count:** 0
 
 ## Phase Status
 
 | Phase | Name | Status | Notes |
 |-------|------|--------|-------|
-| 18 | Encode QA-First Family Hierarchy | In Progress | Context and plans created; execution running |
+| 18 | Encode QA-First Family Hierarchy | Completed | Verified at `.planning/phases/18-encode-qa-first-family-hierarchy/18-VERIFICATION.md` |
 | 19 | Prove Family-Loop Freshness And Reuse | Pending | Depends on Phase 18 |
 | 20 | Lock Family-Loop Truth Rails | Pending | Depends on Phase 19 |
 
@@ -52,9 +52,10 @@ See: `.planning/PROJECT.md` (updated 2026-04-24)
 - 当前 bottleneck 已从“一次性证明 website QA 默认入口可行”收束为 repo-owned adoption packet / health / audit truth，v1.4 已经把这一层闭环
 - host shell 仍然只能判断 `broker_first` / `handle_normally` / `clarify_before_broker`，不能在入口处选择具体 QA winner
 - routing traces、acquisition memory、verified downstream manifests、`doctor`、canonical `STATUS.md`、milestone audit 与 CI trust report 都是 v1.4 可复用的 adoption-signal rail
-- `.planning/milestones/v1.3-phases/` 已承载上一轮 phase archive；`.planning/phases/` 当前为空，适合启动新 phase
+- `.planning/milestones/v1.3-phases/` 已承载上一轮 phase archive；当前 active artifacts 位于 `.planning/phases/18-encode-qa-first-family-hierarchy/`
 - v1.5 当前目标是把 `website QA`、`web markdown`、`social markdown` 收成一条 QA-first family proof loop，同时不把 `website QA` hero lane 打平成并列入口
 - v1.5 roadmap 现已定义为 phases 18-20，顺序为 hierarchy → freshness/reuse → truth rails
+- Phase 18 已把 QA-first family hierarchy 与 post-QA next-loop guidance 对齐到 docs、doctor text、generated host shell、STATUS 与 TODOS
 
 ## Session History
 
@@ -77,6 +78,7 @@ See: `.planning/PROJECT.md` (updated 2026-04-24)
 - 2026-04-24: Milestone v1.5 started — defining the QA-first family proof loop requirements and roadmap
 - 2026-04-24: Milestone v1.5 roadmap created — Phase 18 is next
 - 2026-04-24: Phase 18 context and plans created — execution in progress
+- 2026-04-24: Phase 18 executed and verified — see `.planning/phases/18-encode-qa-first-family-hierarchy/18-VERIFICATION.md`
 
 ## Workflow Settings
 
@@ -91,9 +93,9 @@ See: `.planning/PROJECT.md` (updated 2026-04-24)
 
 ## Next Up
 
-Current phase is executing:
+Start planning the active milestone:
 
-`$gsd-execute-phase 18`
+`$gsd-plan-phase 19`
 
 Also available:
 - `cat .planning/milestones/v1.4-MILESTONE-AUDIT.md`

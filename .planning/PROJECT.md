@@ -63,12 +63,12 @@ v1.2 已经把 canonical shipping truth 收口到 repo-owned `release:gate` / `r
 - ✓ `website QA` 的 recent broker-first hits、repeat usage、cross-host reuse 与 host coverage 已被收成 repo-owned adoption signal，而不是只剩历史成功痕迹 — v1.4 Phase 15
 - ✓ shared-home adoption health、`doctor` 与 `STATUS.md` 现在能区分 active / stale / missing，并指出下一步 refresh action — v1.4 Phase 16
 - ✓ canonical `STATUS.md`、milestone audit 与 CI trust rails 现在消费同一份 website QA adoption packet，并对 wording / counts / freshness drift fail closed — v1.4 Phase 17
+- ✓ QA-first family hierarchy 与 post-QA next-loop guidance 现在已在 README、README.zh-CN、generated host shell、`doctor` text、`STATUS.md` 与 `TODOS.md` 上使用同一份 canonical wording — v1.5 Phase 18
 
 ### Active
 
-- [ ] `website QA` 继续作为唯一默认第一步，而 `web markdown` 与 `social markdown` 被 operator 明确理解为后续已证明 loop，而不是并列入口
 - [ ] QA-first family loop 的 freshness、reuse 与 next-step guidance 能在 shared broker home 与 repo-owned proof surfaces 上被直接读取
-- [ ] README、README.zh-CN、installed host shell、`STATUS.md`、`TODOS.md` 与 canonical broker surfaces 必须继续讲同一份 QA-first family-loop truth
+- [ ] CI、parity、audit 与 canonical broker surfaces 必须继续把 README、README.zh-CN、installed host shell、`STATUS.md`、`TODOS.md` 与 `doctor` 锁在同一份 QA-first family-loop truth 上
 
 ### Out of Scope
 
@@ -116,7 +116,8 @@ v1.5 不打算把三条 proven family 打平成一个新的 generic maintained-f
 | repeat usage 与 cross-host reuse 必须在 acquisition memory / doctor surface 上被明确拆开 | 否则 maintainer 看不出默认入口缺的是“再跑一次”还是“换个宿主再跑一次” | ✓ Good |
 | QA-first wording 必须跟 coarse broker-first boundary 一起被证明，而不是靠 README 单点表述维持 | 否则文案会漂移回“功能列表”，宿主也容易偷做细粒度判断 | ✓ Good |
 | v1.4 优先把 QA-first proof 升级成 adoption signal，而不是先扩 capability surface 或重开 shipping truth | 当前剩余产品风险是 freshness / auditability，而不是 breadth / ship mechanics | ✓ Good |
-| v1.5 继续保持 `website QA` 为唯一第一步，并把 `web markdown`、`social markdown` 收成后续 family proof loop | 现在要补的是默认入口的延伸 story，而不是把三条 family 打平或重开泛化迁移 | — Pending |
+| v1.5 继续保持 `website QA` 为唯一第一步，并把 `web markdown`、`social markdown` 收成后续 family proof loop | 现在要补的是默认入口的延伸 story，而不是把三条 family 打平或重开泛化迁移 | ✓ Good |
+| QA-first hierarchy 与 post-QA next-loop guidance 必须复用同一份 canonical phrasing 跨 docs、doctor、installed shells 和 trust rails | 否则 operator 仍要靠多份 surface 自己拼 hierarchy | ✓ Good |
 
 ## Current Milestone Goals
 
@@ -142,4 +143,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-24 after starting milestone v1.5*
+*Last updated: 2026-04-24 after completing Phase 18*
