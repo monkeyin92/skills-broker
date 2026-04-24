@@ -57,12 +57,12 @@
 | CAP-01 | Phase 21 | completed |
 | CAP-02 | Phase 21 | completed |
 | CAP-03 | Phase 21 | completed |
-| ACQ-01 | Phase 22 | planned |
-| ACQ-02 | Phase 22 | planned |
-| ACQ-03 | Phase 22 | planned |
+| ACQ-01 | Phase 22 | completed |
+| ACQ-02 | Phase 22 | completed |
+| ACQ-03 | Phase 22 | completed |
 | TRUST-01 | Phase 23 | planned |
 | TRUST-02 | Phase 23 | planned |
 | TRUST-03 | Phase 23 | planned |
 
 ---
-*Last updated: 2026-04-24 after completing Phase 21*
+*Last updated: 2026-04-24 after completing Phase 22*

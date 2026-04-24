@@ -435,7 +435,7 @@ export function formatLifecycleResult(
       lines.push(formatWebsiteQaRoutingNextActionLine(result));
     }
     lines.push(
-      `Acquisition memory: ${result.acquisitionMemory.state}, entries=${result.acquisitionMemory.entries}, successful_routes=${result.acquisitionMemory.successfulRoutes}, first_reuse_after_install=${result.acquisitionMemory.firstReuseRecorded}, cross_host_reuse=${result.acquisitionMemory.crossHostReuse}, website_qa_successful_reruns=${result.acquisitionMemory.qualityAssuranceSuccessfulRoutes}, website_qa_repeat_usage=${result.acquisitionMemory.qualityAssuranceFirstReuseRecorded}`
+      `Acquisition memory: ${result.acquisitionMemory.state}, entries=${result.acquisitionMemory.entries}, successful_routes=${result.acquisitionMemory.successfulRoutes}, verification_successes=${result.acquisitionMemory.verificationSuccesses}, first_reuse_after_install=${result.acquisitionMemory.firstReuseRecorded}, repeat_usage=${result.acquisitionMemory.repeatUsages}, cross_host_reuse=${result.acquisitionMemory.crossHostReuse}, degraded=${result.acquisitionMemory.degradedAcquisitions}, failed=${result.acquisitionMemory.failedAcquisitions}, next_action=${result.acquisitionMemory.nextAction}, website_qa_successful_reruns=${result.acquisitionMemory.qualityAssuranceSuccessfulRoutes}, website_qa_repeat_usage=${result.acquisitionMemory.qualityAssuranceFirstReuseRecorded}`
     );
     lines.push(
       `Website QA acquisition proof: repeat_usage=${result.acquisitionMemory.qualityAssuranceFirstReuseRecorded}, cross_host_reuse=${result.acquisitionMemory.qualityAssuranceCrossHostReuse}`

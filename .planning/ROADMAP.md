@@ -22,14 +22,14 @@ Let `skills-broker` grow capability coverage through registry/downstream manifes
 | # | Phase | Goal | Requirements | Success Criteria |
 |---|-------|------|--------------|------------------|
 | 21 | Normalize Capability Trust Surface | Make candidate provenance, registry/downstream metadata, and fail-closed trust eligibility inspectable. | CAP-01, CAP-02, CAP-03 | Complete |
-| 22 | Prove Capability Acquisition Loop | Turn advisory → install-required → verified → reused capability growth into shared-home proof. | ACQ-01, ACQ-02, ACQ-03 | 4 |
+| 22 | Prove Capability Acquisition Loop | Turn advisory → install-required → verified → reused capability growth into shared-home proof. | ACQ-01, ACQ-02, ACQ-03 | Complete |
 | 23 | Lock Capability Growth Operator Truth | Align docs, host shell, `doctor`, status, and CI/parity rails around one coarse-boundary capability growth story. | TRUST-01, TRUST-02, TRUST-03 | 4 |
 
 
 ## Phase Completion Checklist
 
 - [x] Phase 21: Normalize Capability Trust Surface
-- [ ] Phase 22: Prove Capability Acquisition Loop
+- [x] Phase 22: Prove Capability Acquisition Loop
 - [ ] Phase 23: Lock Capability Growth Operator Truth
 
 ## Phase Details
@@ -57,6 +57,10 @@ Let `skills-broker` grow capability coverage through registry/downstream manifes
 **Goal:** Convert capability growth from a routing result into an auditable shared-home loop that shows install, verification, repeat usage, cross-host reuse, and degraded acquisition outcomes.
 
 **Requirements:** ACQ-01, ACQ-02, ACQ-03
+
+**Status:** completed
+
+**Verification:** `.planning/phases/22-prove-capability-acquisition-loop/22-VERIFICATION.md`
 
 **Success criteria:**
 1. Operator can follow one capability growth story from advisory candidate to `INSTALL_REQUIRED`, install/verify, and later reuse without reading raw routing traces.
@@ -98,15 +102,15 @@ Let `skills-broker` grow capability coverage through registry/downstream manifes
 
 ## Next Up
 
-**Phase 22: Prove Capability Acquisition Loop** — Turn advisory → install-required → verified → reused capability growth into shared-home proof.
+**Phase 23: Lock Capability Growth Operator Truth** — Align docs, host shell, `doctor`, status, and CI/parity rails around one coarse-boundary capability growth story.
 
 Run:
 
-`$gsd-discuss-phase 22`
+`$gsd-discuss-phase 23`
 
 Also available:
 
-`$gsd-plan-phase 22`
+`$gsd-plan-phase 23`
 
 ---
-*Last updated: 2026-04-24 after completing Phase 21*
+*Last updated: 2026-04-24 after completing Phase 22*

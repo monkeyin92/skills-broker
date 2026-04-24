@@ -3,8 +3,14 @@ import { tmpdir } from "node:os";
 import { discoverCandidates } from "./discover.js";
 import { buildPackageAcquisitionHint } from "./acquisition.js";
 import {
+  capabilityGrowthForDegraded,
+  capabilityGrowthForInstallRequired,
+  capabilityGrowthForVerifiedHandoff
+} from "./capability-growth.js";
+import {
   AcquisitionMemoryStore,
-  acquisitionMemoryFilePath
+  acquisitionMemoryFilePath,
+  type AcquisitionMemoryEntry
 } from "./acquisition-memory.js";
 import {
   loadVerifiedDownstreamCandidates,
@@ -335,23 +341,25 @@ async function persistAcquisitionMemoryIfConfigured(
     currentHost: BrokerHost;
     now: Date;
   }
-): Promise<BrokerAdvisory | undefined> {
+): Promise<{ advisory?: BrokerAdvisory; entry?: AcquisitionMemoryEntry }> {
   if (store === undefined) {
-    return undefined;
+    return {};
   }
 
   try {
-    await store.recordVerifiedWinner(input);
-    return undefined;
+    const entry = await store.recordVerifiedWinner(input);
+    return { entry };
   } catch (error) {
     const detail =
       error instanceof Error ? error.message : "unknown acquisition memory failure";
 
     return {
-      code: "acquisition_memory_write_failed",
-      message:
-        "Routing succeeded, but acquisition memory could not be updated. Verify/reuse proof may remain incomplete until repaired.",
-      detail
+      advisory: {
+        code: "acquisition_memory_write_failed",
+        message:
+          "Routing succeeded, but acquisition memory could not be updated. Verify/reuse proof may remain incomplete until repaired.",
+        detail
+      }
     };
   }
 }
@@ -438,6 +446,10 @@ function createPackageInstallRequiredResult(
   debug: BrokerDebug,
   trace: BrokerRoutingTrace
 ): BrokerFailureResult {
+  const acquisition = buildPackageAcquisitionHint(winner, {
+    retryMode: "rerun_request"
+  });
+
   return {
     ok: false,
     outcome: {
@@ -449,9 +461,8 @@ function createPackageInstallRequiredResult(
       code: "INSTALL_REQUIRED",
       message: `Package "${winner.package.packageId}" is not installed for capability "${winner.leaf.capabilityId}".`
     },
-    acquisition: buildPackageAcquisitionHint(winner, {
-      retryMode: "rerun_request"
-    }),
+    acquisition,
+    capabilityGrowth: capabilityGrowthForInstallRequired(winner, acquisition),
     debug,
     trace
   };
@@ -1221,7 +1232,10 @@ async function runSingleStep(
         "PREPARE_FAILED",
         prepareFailureUserMessage(error),
         "show_graceful_failure",
-        debug,
+        {
+          ...debug,
+          decision: `${debug.decision}; capability growth degraded: ${capabilityGrowthForDegraded(winner).nextAction}`
+        },
         createBrokerRoutingTrace({
           input,
           currentHost,
@@ -1278,7 +1292,7 @@ async function runSingleStep(
     now
   );
   const advisories: BrokerAdvisory[] = [];
-  const acquisitionAdvisory = await persistAcquisitionMemoryIfConfigured(
+  const acquisitionPersistence = await persistAcquisitionMemoryIfConfigured(
     acquisitionMemoryStore,
     {
       canonicalKey: resolvedRequest.requestQueryIdentity,
@@ -1288,8 +1302,8 @@ async function runSingleStep(
       now
     }
   );
-  if (acquisitionAdvisory !== undefined) {
-    advisories.push(acquisitionAdvisory);
+  if (acquisitionPersistence.advisory !== undefined) {
+    advisories.push(acquisitionPersistence.advisory);
   }
   const verifiedManifestAdvisory =
     await persistVerifiedDownstreamManifestIfConfigured({
@@ -1310,6 +1324,10 @@ async function runSingleStep(
       message: `Winner ${winner.id} is ready for handoff.`
     },
     handoff,
+    capabilityGrowth: capabilityGrowthForVerifiedHandoff(
+      winner,
+      acquisitionPersistence.entry
+    ),
     ...(advisories.length > 0 ? { advisories } : {}),
     debug,
     trace: createBrokerRoutingTrace({

@@ -1355,14 +1355,19 @@ describe("doctor shared broker home", () => {
         state: "present",
         entries: 2,
         successfulRoutes: 3,
+        verificationSuccesses: 3,
         firstReuseRecorded: 1,
+        repeatUsages: 1,
         crossHostReuse: 1,
+        degradedAcquisitions: 0,
+        failedAcquisitions: 0,
+        nextAction: "prefer_verified_winner",
         qualityAssuranceSuccessfulRoutes: 1,
         qualityAssuranceFirstReuseRecorded: 0,
         qualityAssuranceCrossHostReuse: 0
       });
       expect(rendered).toContain(
-        "Acquisition memory: present, entries=2, successful_routes=3, first_reuse_after_install=1, cross_host_reuse=1, website_qa_successful_reruns=1, website_qa_repeat_usage=0"
+        "Acquisition memory: present, entries=2, successful_routes=3, verification_successes=3, first_reuse_after_install=1, repeat_usage=1, cross_host_reuse=1, degraded=0, failed=0, next_action=prefer_verified_winner, website_qa_successful_reruns=1, website_qa_repeat_usage=0"
       );
       expect(rendered).toContain(
         "Website QA acquisition proof: repeat_usage=0, cross_host_reuse=0"
@@ -1375,8 +1380,13 @@ describe("doctor shared broker home", () => {
         state: "present",
         entries: 2,
         successfulRoutes: 3,
+        verificationSuccesses: 3,
         firstReuseRecorded: 1,
+        repeatUsages: 1,
         crossHostReuse: 1,
+        degradedAcquisitions: 0,
+        failedAcquisitions: 0,
+        nextAction: "prefer_verified_winner",
         qualityAssuranceSuccessfulRoutes: 1,
         qualityAssuranceFirstReuseRecorded: 0,
         qualityAssuranceCrossHostReuse: 0
