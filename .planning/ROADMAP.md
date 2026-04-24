@@ -23,7 +23,7 @@
 
 - v1.5 已完成 phases 18-20，并把 hierarchy、family-loop freshness/reuse 与 truth rails 固化为 canonical history。
 - 当前 milestone requirement truth 已归档到 `.planning/milestones/v1.5-REQUIREMENTS.md`；下一轮 milestone 会重新生成新的 `.planning/REQUIREMENTS.md`。
-- 下一轮 active milestone 开始前，v1.5 phase artifacts 应归档到 `.planning/milestones/v1.5-phases/`，避免 `.planning/phases/` 与历史 milestone 混放。
+- v1.5 phase artifacts 已归档到 `.planning/milestones/v1.5-phases/`，避免 `.planning/phases/` 与历史 milestone 混放。
 
 ---
 *Last updated: 2026-04-24 after archiving milestone v1.5*
