@@ -807,7 +807,7 @@ Demand-guided capability growth health shows real demand, stale or blocked acqui
       "id": "phase26-demand-guided-growth-truth",
       "title": "Phase 26 demand-guided capability growth truth",
       "summary": "Demand-guided capability growth health shows real demand, stale or blocked acquisitions, promotion readiness, and satisfied local winners without moving winner selection into host shells. Doctor JSON/text, docs, installed shells, and CI trust now consume the same capabilityGrowthHealth truth.",
-      "status": "shipped_local",
+      "status": "shipped_remote",
       "proofs": [
         {
           "type": "file",
