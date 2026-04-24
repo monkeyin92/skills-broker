@@ -4,7 +4,7 @@
 
 `skills-broker` 是一个安装一次、跨宿主复用的共享 broker runtime，当前已在 Claude Code、Codex、OpenCode 三个薄宿主壳上完成 published lifecycle 与 proof/reuse parity。它让用户只表达结果，由 broker 负责归一化请求、发现并排序能力候选、准备赢家，并把已验证的能力、proof rail 与 reuse state 跨宿主复用起来。
 
-v1.2 已经把 canonical shipping truth 收口到 repo-owned `release:gate` / `release:promote` 与 publish automation 上，v1.3 把 `website QA` 的 route confidence、repeat-usage proof 与 operator truth 收成一条可信的 default-entry story，v1.4 再把这条 QA-first story 推进到 freshness-aware adoption signal。v1.5 则继续把这条默认入口往后延伸成可审计的 family proof loop：operator 不但知道先做 `website QA`，还能直接看见 `web markdown` 与 `social markdown` 作为后续已证明 loop 的 freshness、reuse 与下一步 guidance。v1.6 已经把 CAP-05 的 registry/downstream provenance、installability、verification 与 reuse proof 收成 operator-visible capability growth loop，同时继续守住 QA-first 默认入口与 host coarse broker-first boundary。
+v1.2 已经把 canonical shipping truth 收口到 repo-owned `release:gate` / `release:promote` 与 publish automation 上，v1.3 把 `website QA` 的 route confidence、repeat-usage proof 与 operator truth 收成一条可信的 default-entry story，v1.4 再把这条 QA-first story 推进到 freshness-aware adoption signal。v1.5 则继续把这条默认入口往后延伸成可审计的 family proof loop：operator 不但知道先做 `website QA`，还能直接看见 `web markdown` 与 `social markdown` 作为后续已证明 loop 的 freshness、reuse 与下一步 guidance。v1.6 已经把 CAP-05 的 registry/downstream provenance、installability、verification 与 reuse proof 收成 operator-visible capability growth loop，同时继续守住 QA-first 默认入口与 host coarse broker-first boundary。v1.7 的建议方向是在不扩宿主、不重开迁移的前提下，把 capability growth 从“可信候选/安装闭环”推进到“需求驱动的 backlog、refresh 与 promote readiness 信号”。
 
 ## Core Value
 
@@ -13,16 +13,21 @@ v1.2 已经把 canonical shipping truth 收口到 repo-owned `release:gate` / `r
 ## Current State
 
 - **Latest shipped milestone:** `v1.6 Registry-Ready Capability Growth Loop`（2026-04-24）
-- **Current milestone:** none — ready for `$gsd-new-milestone`
+- **Current milestone:** `v1.7 Demand-Guided Capability Growth Health`
 - **Supported hosts:** Claude Code、Codex、OpenCode
 - **Hero lane:** `website QA`
 - **Proven families:** `web markdown`（second）、`social markdown`（next）
 - **Broker-owned workflows:** `idea-to-ship`、`investigation-to-fix`
-- **Trust posture:** canonical release truth、QA-first adoption signal、QA-first family proof loop 与 registry-ready capability growth loop 都已 shipped，并由 docs、doctor、host shell、status 与 CI/parity rails 共同锁定
+- **Trust posture:** canonical release truth、QA-first adoption signal、QA-first family proof loop 与 registry-ready capability growth loop 都已 shipped；v1.7 正在把 capability growth 的真实需求、staleness、blocked next action 与 promotion readiness 收成同一套 repo-owned truth
 
-## Current Milestone
+## Current Milestone: v1.7 Demand-Guided Capability Growth Health
 
-无 active milestone。下一步使用 `$gsd-new-milestone` 定义 v1.7 或下一轮 requirements。
+**Goal:** 让 operator 不只看懂 capability candidates 是否可信，还能看懂哪些增长机会正在被真实请求、哪些已经 stale 或 blocked、以及哪些已经 ready for promotion。
+
+**Target features:**
+- Demand signal: 从 routing traces、`INSTALL_REQUIRED`、acquisition memory 与 verified manifest misses 汇总 capability growth backlog，不让 maintainer 只看候选清单。
+- Refresh and readiness health: 对 registry/downstream metadata、installability、verification 与 reuse state 给出 stale / blocked / ready next action。
+- Operator truth rails: 把 demand-guided growth health 同步到 `doctor`、`STATUS.md`、docs、generated host shell wording 与 CI/parity checks，同时继续证明 host shell 不选择具体 winner。
 
 ## Latest Completed Milestone: v1.6 Registry-Ready Capability Growth Loop
 
@@ -67,12 +72,20 @@ v1.2 已经把 canonical shipping truth 收口到 repo-owned `release:gate` / `r
 
 ### Active
 
-- 无 active milestone requirements。下一轮应通过 `$gsd-new-milestone` 明确新的 product bottleneck。
+- **DEMAND-01**: Operator can see which capability growth opportunities are backed by recent user demand across routing traces, `INSTALL_REQUIRED` outcomes, acquisition memory, and verified manifest misses.
+- **DEMAND-02**: Broker can distinguish proven demand, speculative/advisory candidates, blocked acquisitions, stale registry metadata, and already-satisfied local winners without changing host shell boundaries.
+- **DEMAND-03**: Demand aggregation stays deterministic and repo-owned, with tests covering missing, stale, contradictory, and duplicate demand evidence.
+- **HEALTH-01**: `doctor` exposes a capability growth health packet that reports freshness, blocked next actions, promotion readiness, and reuse status for demanded capabilities.
+- **HEALTH-02**: Refresh guidance reuses existing acquisition memory, verified manifests, routing traces, and registry/downstream metadata instead of inventing a parallel telemetry model.
+- **HEALTH-03**: Capability health can prove stale-to-fresh and blocked-to-ready transitions on the shared broker home while keeping `website QA` and family-loop health green.
+- **TRUST-01**: README, README.zh-CN, generated host shell wording, `STATUS.md`, and `TODOS.md` share one demand-guided capability growth story.
+- **TRUST-02**: CI/parity rails fail closed on drift in demand counts, health states, readiness wording, or host-boundary wording.
+- **TRUST-03**: Release gate consumes the same demand-guided capability growth truth without reopening release-promotion mechanics or adding fourth-host scope.
 
 ### Out of Scope
 
-- 重新打开 release truth / shipped-proof promotion 主题 — v1.2 已经闭环，当前更值钱的是 QA-first adoption signal
-- 在 adoption signal packet 稳定前重新开启第四宿主或新增 proven family / workflow 扩展 — 会稀释当前最值钱的默认入口信号
+- 重新打开 release truth / shipped-proof promotion 主题 — v1.2 已经闭环，v1.7 只允许消费 release gate，不重做 release mechanics
+- 第四宿主或新增 proven family / workflow 扩展 — 当前更值钱的是证明 v1.6 的 capability growth loop 能被真实 demand 驱动，而不是继续扩 breadth
 - 重新打开 query-native migration、package-vs-leaf identity migration、或 maintained-family schema 泛化 — 当前 sequencing 仍然成立，除非 QA-first 方案被证明显著失效
 - 让安装后的 host shell 在入口处细粒度选择具体 skill / package / MCP winner — 它只能判断 `broker_first` / `handle_normally` / `clarify_before_broker`
 - 引入 embeddings、语义搜索或模型驱动分类来替换当前 deterministic / metadata-driven 方向 — 不符合当前产品约束
@@ -117,10 +130,11 @@ v1.3 已经把 `website QA` 这条默认入口的三层真相都补齐了：Phas
 | v1.5 继续保持 `website QA` 为唯一第一步，并把 `web markdown`、`social markdown` 收成后续 family proof loop | 现在要补的是默认入口的延伸 story，而不是把三条 family 打平或重开泛化迁移 | ✓ Good |
 | QA-first hierarchy 与 post-QA next-loop guidance 必须复用同一份 canonical phrasing 跨 docs、doctor、installed shells 和 trust rails | 否则 operator 仍要靠多份 surface 自己拼 hierarchy | ✓ Good |
 | v1.6 优先做 CAP-05 capability growth loop，而不是 HOST-04 / LOOP-04 / SHIP-03 | 默认入口与 family proof 已经可信，当前更高杠杆是让 broker 的下一批能力发现、安装、验证和复用同样可解释、可审计 | ✓ Good |
+| v1.7 优先做 demand-guided capability growth health，而不是第四宿主或更多 family | v1.6 已证明候选与 acquisition loop 可信，下一步瓶颈是让 maintainer 知道哪些能力增长机会有真实需求、是否 stale/blocked、以及何时 ready to promote | ✓ Pending |
 
 ## Next Milestone Direction
 
-1. 用 `$gsd-new-milestone` 重新选择下一轮 bottleneck；当前没有 active requirements。
+1. 执行 v1.7：Demand-Guided Capability Growth Health。
 2. 继续保持 coarse broker-first boundary、shared broker home reuse 与 `website QA` 作为唯一第一步的 sequencing，直到新的 repo-owned proof 明确要求调整。
 3. 除非现有 sequencing 被证明失效，否则不重开 query-native migration、package-vs-leaf identity migration、maintained-family schema 泛化或第四宿主扩展。
 
@@ -142,4 +156,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-24 after archiving milestone v1.6*
+*Last updated: 2026-04-24 after starting milestone v1.7*

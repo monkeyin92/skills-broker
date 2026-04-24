@@ -1,41 +1,46 @@
 # State
 
 **Initialized:** 2026-04-22
-**Status:** no_active_milestone
+**Status:** active_milestone
 
 ## Project Reference
 
 See: `.planning/PROJECT.md` (updated 2026-04-24)
 
 **Core value:** 用户只需要描述想达成的结果，broker 就能在当前宿主里找到、准备并复用合适的能力，而不用让用户记住工具名、重新发现赢家、或自己判断安装路径。
-**Current focus:** Milestone v1.6 archived; ready for `$gsd-new-milestone`
+**Current focus:** Milestone v1.7 Demand-Guided Capability Growth Health
 
 ## Current Milestone
 
-- **Milestone:** —
-- **Status:** no_active_milestone
-- **Started:** —
-- **Archive:** `.planning/milestones/v1.6-ROADMAP.md`
+- **Milestone:** v1.7 Demand-Guided Capability Growth Health
+- **Status:** active
+- **Started:** 2026-04-24
+- **Requirements:** `.planning/REQUIREMENTS.md`
+- **Roadmap:** `.planning/ROADMAP.md`
 
 ## Current Position
 
-- **Phase:** —
+- **Phase:** Not started (next: 24)
 - **Plan:** —
-- **Status:** Milestone v1.6 audited, archived, and cleaned up
-- **Last activity:** 2026-04-24 — v1.6 milestone lifecycle completed
+- **Status:** Roadmap created; ready to plan Phase 24
+- **Last activity:** 2026-04-24 — Milestone v1.7 started
 
 ## Current Phase
 
-- **Phase:** —
-- **Goal:** —
-- **Status:** —
-- **Primary requirements:** —
+- **Phase:** 24 — Surface Demand-Backed Growth Backlog
+- **Goal:** Aggregate real demand for capability growth from existing proof rails and classify demand states deterministically.
+- **Status:** pending planning
+- **Primary requirements:** DEMAND-01, DEMAND-02, DEMAND-03
 - **Plan count:** 0
 - **Wave count:** 0
 
 ## Phase Status
 
-No active phases. Next phase number is 24.
+| Phase | Name | Status | Requirements |
+|-------|------|--------|--------------|
+| 24 | Surface Demand-Backed Growth Backlog | Pending planning | DEMAND-01, DEMAND-02, DEMAND-03 |
+| 25 | Prove Capability Health And Readiness | Pending | HEALTH-01, HEALTH-02, HEALTH-03 |
+| 26 | Lock Demand-Guided Operator Truth | Pending | TRUST-01, TRUST-02, TRUST-03 |
 
 ## Latest Archived Milestone
 
@@ -56,6 +61,7 @@ No active phases. Next phase number is 24.
 - routing traces、acquisition memory、verified downstream manifests、MCP registry advisory metadata、`doctor`、canonical `STATUS.md`、milestone audit 与 CI trust report 都是当前 repo-owned proof rail
 - v1.5 已把 `website QA -> web markdown -> social markdown` 收成一条 QA-first family proof loop，并把 hierarchy、freshness/reuse 与 truth rails 一起锁成 canonical history
 - v1.6 已把 verified downstream manifests、MCP registry advisory 与 acquisition memory 推进成 operator-visible capability growth loop
+- v1.7 选择的下一轮瓶颈是 demand-guided capability growth health：证明哪些能力增长机会有真实需求、是否 stale/blocked、以及何时 ready for promotion
 
 ## Session History
 
@@ -69,6 +75,7 @@ No active phases. Next phase number is 24.
 - 2026-04-23: Milestone v1.4 executed, audited, and archived — see `.planning/milestones/v1.4-MILESTONE-AUDIT.md`
 - 2026-04-24: Milestone v1.5 executed, audited, archived, and shipped in PR #33 — see `.planning/milestones/v1.5-MILESTONE-AUDIT.md`
 - 2026-04-24: Milestone v1.6 executed, audited, archived, and cleaned up — see `.planning/milestones/v1.6-MILESTONE-AUDIT.md`
+- 2026-04-24: Milestone v1.7 started — see `.planning/REQUIREMENTS.md` and `.planning/ROADMAP.md`
 
 ## Workflow Settings
 
@@ -83,7 +90,7 @@ No active phases. Next phase number is 24.
 
 ## Next Up
 
-Run `$gsd-new-milestone` to define the next milestone.
+Run `$gsd-plan-phase 24` to plan the demand-backed capability growth backlog.
 
 ---
-*State initialized: 2026-04-22*
+*State updated: 2026-04-24 after starting milestone v1.7*
