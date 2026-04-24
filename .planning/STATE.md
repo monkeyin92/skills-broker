@@ -1,14 +1,14 @@
 # State
 
 **Initialized:** 2026-04-22
-**Status:** ready_for_planning
+**Status:** executing_phase
 
 ## Project Reference
 
 See: `.planning/PROJECT.md` (updated 2026-04-24)
 
 **Core value:** 用户只需要描述想达成的结果，broker 就能在当前宿主里找到、准备并复用合适的能力，而不用让用户记住工具名、重新发现赢家、或自己判断安装路径。
-**Current focus:** Milestone v1.5 active — roadmap ready for Phase 18 to encode the QA-first family hierarchy without flattening the hero lane
+**Current focus:** Milestone v1.5 active — Phase 18 is executing to encode the QA-first family hierarchy across docs, doctor, and host-shell surfaces
 
 ## Current Milestone
 
@@ -20,24 +20,24 @@ See: `.planning/PROJECT.md` (updated 2026-04-24)
 ## Current Position
 
 - **Phase:** 18
-- **Plan:** —
-- **Status:** Ready for phase planning
-- **Last activity:** 2026-04-24 — Roadmap created for phases 18-20
+- **Plan:** 18-01-PLAN.md
+- **Status:** Executing plans
+- **Last activity:** 2026-04-24 — Phase 18 plans created and execution started
 
 ## Current Phase
 
 - **Phase:** 18
 - **Goal:** Encode the QA-first family hierarchy across repo-owned surfaces
-- **Status:** pending_planning
+- **Status:** executing
 - **Primary requirements:** LOOP-01, LOOP-02, LOOP-03
-- **Plan count:** 0
-- **Wave count:** 0
+- **Plan count:** 2
+- **Wave count:** 2
 
 ## Phase Status
 
 | Phase | Name | Status | Notes |
 |-------|------|--------|-------|
-| 18 | Encode QA-First Family Hierarchy | Pending | Ready for `$gsd-plan-phase 18` |
+| 18 | Encode QA-First Family Hierarchy | In Progress | Context and plans created; execution running |
 | 19 | Prove Family-Loop Freshness And Reuse | Pending | Depends on Phase 18 |
 | 20 | Lock Family-Loop Truth Rails | Pending | Depends on Phase 19 |
 
@@ -76,6 +76,7 @@ See: `.planning/PROJECT.md` (updated 2026-04-24)
 - 2026-04-23: Milestone v1.4 audited and archived — see `.planning/milestones/v1.4-MILESTONE-AUDIT.md`
 - 2026-04-24: Milestone v1.5 started — defining the QA-first family proof loop requirements and roadmap
 - 2026-04-24: Milestone v1.5 roadmap created — Phase 18 is next
+- 2026-04-24: Phase 18 context and plans created — execution in progress
 
 ## Workflow Settings
 
@@ -90,9 +91,9 @@ See: `.planning/PROJECT.md` (updated 2026-04-24)
 
 ## Next Up
 
-Start planning the active milestone:
+Current phase is executing:
 
-`$gsd-plan-phase 18`
+`$gsd-execute-phase 18`
 
 Also available:
 - `cat .planning/milestones/v1.4-MILESTONE-AUDIT.md`
