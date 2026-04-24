@@ -1,5 +1,19 @@
 # Project Milestones: skills-broker
 
+## v1.5 QA-First Family Proof Loop (Shipped: 2026-04-24)
+
+**Delivered:** `skills-broker` 现在已经把 `website QA` hero lane 延伸成一条可审计、可刷新、可复用的 QA-first family proof loop，并把 hierarchy、freshness/reuse 与 truth rails 一起收成 repo-owned 默认入口历史。
+
+**Phases completed:** 18-20 (6 plans total)
+
+**Key accomplishments:**
+
+- 把 `website QA -> web markdown -> social markdown` 的层级与 next-loop guidance 收成 README、README.zh-CN、generated host shell、`doctor`、`STATUS.md` 与 `TODOS.md` 共享的一份 canonical operator truth。
+- 让 shared-home / `doctor` 直接输出 `familyLoopSignals`，让 maintainer 不用翻 raw trace 就能看懂三段 loop 的 freshness、reuse 与 sequence-aware refresh action。
+- 把 docs、installed host shell、`STATUS.md`、parity suite 与 CI trust rails 锁到同一份 QA-first family-loop packet wording，并在 drift 时 fail closed。
+
+**What's next:** 用 `$gsd-new-milestone` 在 `HOST-04`、`CAP-05`、`LOOP-04`、`SHIP-03` 中选择下一条主线；在现有 sequencing 被证明失效前，不重开 query-native migration、package-vs-leaf identity migration 或 maintained-family schema 泛化。
+
 ## v1.3 Website QA Default-Entry Confidence (Shipped: 2026-04-23)
 
 **Delivered:** `skills-broker` 现在已经把 `website QA` 默认入口的 route confidence、repeat-usage proof 与 operator truth 都 shipped 到 `main`，并把这条 QA-first story 收成 repo-owned、可审计、可 fail-close 的 default-entry packet。
