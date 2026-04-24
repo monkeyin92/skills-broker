@@ -434,6 +434,7 @@ function toCapabilityCandidate(
       ownerSurface: "broker_owned_downstream"
     },
     sourceMetadata: {
+      discoverySource: "mcp_registry",
       registryName: server.name,
       registryTitle: server.title,
       registryVersion: server.version,

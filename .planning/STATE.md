@@ -8,7 +8,7 @@
 See: `.planning/PROJECT.md` (updated 2026-04-24)
 
 **Core value:** 用户只需要描述想达成的结果，broker 就能在当前宿主里找到、准备并复用合适的能力，而不用让用户记住工具名、重新发现赢家、或自己判断安装路径。
-**Current focus:** Milestone v1.6 — Registry-Ready Capability Growth Loop; next up Phase 21
+**Current focus:** Milestone v1.6 — Registry-Ready Capability Growth Loop; next up Phase 22
 
 ## Current Milestone
 
@@ -19,17 +19,17 @@ See: `.planning/PROJECT.md` (updated 2026-04-24)
 
 ## Current Position
 
-- **Phase:** 21 — Normalize Capability Trust Surface
+- **Phase:** 22 — Prove Capability Acquisition Loop
 - **Plan:** —
 - **Status:** Ready for phase discussion/planning
-- **Last activity:** 2026-04-24 — Milestone v1.6 roadmap created with phases 21-23
+- **Last activity:** 2026-04-24 — Phase 21 completed and verified
 
 ## Current Phase
 
-- **Phase:** 21 — Normalize Capability Trust Surface
-- **Goal:** Make candidate provenance, registry/downstream metadata, and fail-closed trust eligibility inspectable
+- **Phase:** 22 — Prove Capability Acquisition Loop
+- **Goal:** Turn advisory → install-required → verified → reused capability growth into shared-home proof
 - **Status:** ready_for_discussion
-- **Primary requirements:** CAP-01, CAP-02, CAP-03
+- **Primary requirements:** ACQ-01, ACQ-02, ACQ-03
 - **Plan count:** 0
 - **Wave count:** 0
 
@@ -37,7 +37,7 @@ See: `.planning/PROJECT.md` (updated 2026-04-24)
 
 | Phase | Name | Status | Notes |
 |-------|------|--------|-------|
-| 21 | Normalize Capability Trust Surface | Ready | Requirements CAP-01, CAP-02, CAP-03 |
+| 21 | Normalize Capability Trust Surface | Completed | Requirements CAP-01, CAP-02, CAP-03; verified 2026-04-24 |
 | 22 | Prove Capability Acquisition Loop | Planned | Requirements ACQ-01, ACQ-02, ACQ-03 |
 | 23 | Lock Capability Growth Operator Truth | Planned | Requirements TRUST-01, TRUST-02, TRUST-03 |
 
@@ -79,11 +79,11 @@ See: `.planning/PROJECT.md` (updated 2026-04-24)
 
 ## Next Up
 
-Start Phase 21 discussion or planning.
+Start Phase 22 discussion or planning.
 
-`$gsd-discuss-phase 21`
+`$gsd-discuss-phase 22`
 
-Also available: `$gsd-plan-phase 21`
+Also available: `$gsd-plan-phase 22`
 
 ---
 *State initialized: 2026-04-22*

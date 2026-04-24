@@ -54,9 +54,9 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| CAP-01 | Phase 21 | planned |
-| CAP-02 | Phase 21 | planned |
-| CAP-03 | Phase 21 | planned |
+| CAP-01 | Phase 21 | completed |
+| CAP-02 | Phase 21 | completed |
+| CAP-03 | Phase 21 | completed |
 | ACQ-01 | Phase 22 | planned |
 | ACQ-02 | Phase 22 | planned |
 | ACQ-03 | Phase 22 | planned |
@@ -65,4 +65,4 @@
 | TRUST-03 | Phase 23 | planned |
 
 ---
-*Last updated: 2026-04-24 after roadmap traceability mapping*
+*Last updated: 2026-04-24 after completing Phase 21*

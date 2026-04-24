@@ -79,7 +79,8 @@ function candidateFromCard(card: CapabilityCard): CapabilityCandidate {
 
 function advisoryReplayCard(
   candidate: CapabilityCandidate,
-  host: BrokerHost
+  host: BrokerHost,
+  verifiedAt: string
 ): CapabilityCard {
   const advisoryCandidate = cloneCandidate(candidate);
   const advisoryCard = toCapabilityCard({
@@ -87,7 +88,8 @@ function advisoryReplayCard(
     sourceMetadata: {
       ...(advisoryCandidate.sourceMetadata ?? {}),
       discoverySource: "downstream_manifest",
-      verifiedDownstreamHost: host
+      verifiedDownstreamHost: host,
+      verifiedDownstreamManifestAt: verifiedAt
     }
   });
 
@@ -160,7 +162,9 @@ async function collectVerifiedManifestCandidates(
         continue;
       }
 
-      candidates.push(advisoryReplayCard(manifest.verifiedCandidate, host));
+      candidates.push(
+        advisoryReplayCard(manifest.verifiedCandidate, host, manifest.verifiedAt)
+      );
     }
 
     return candidates;

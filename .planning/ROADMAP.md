@@ -21,9 +21,16 @@ Let `skills-broker` grow capability coverage through registry/downstream manifes
 
 | # | Phase | Goal | Requirements | Success Criteria |
 |---|-------|------|--------------|------------------|
-| 21 | Normalize Capability Trust Surface | Make candidate provenance, registry/downstream metadata, and fail-closed trust eligibility inspectable. | CAP-01, CAP-02, CAP-03 | 4 |
+| 21 | Normalize Capability Trust Surface | Make candidate provenance, registry/downstream metadata, and fail-closed trust eligibility inspectable. | CAP-01, CAP-02, CAP-03 | Complete |
 | 22 | Prove Capability Acquisition Loop | Turn advisory → install-required → verified → reused capability growth into shared-home proof. | ACQ-01, ACQ-02, ACQ-03 | 4 |
 | 23 | Lock Capability Growth Operator Truth | Align docs, host shell, `doctor`, status, and CI/parity rails around one coarse-boundary capability growth story. | TRUST-01, TRUST-02, TRUST-03 | 4 |
+
+
+## Phase Completion Checklist
+
+- [x] Phase 21: Normalize Capability Trust Surface
+- [ ] Phase 22: Prove Capability Acquisition Loop
+- [ ] Phase 23: Lock Capability Growth Operator Truth
 
 ## Phase Details
 
@@ -32,6 +39,10 @@ Let `skills-broker` grow capability coverage through registry/downstream manifes
 **Goal:** Make the broker's candidate trust surface explicit enough that operators can understand source provenance, eligibility, degradation, and precedence before any acquisition loop is promoted.
 
 **Requirements:** CAP-01, CAP-02, CAP-03
+
+**Status:** completed
+
+**Verification:** `.planning/phases/21-normalize-capability-trust-surface/21-VERIFICATION.md`
 
 **Success criteria:**
 1. Candidate explanation output distinguishes installed local skills, verified downstream manifests, MCP registry advisory candidates, and broker-owned workflows using stable provenance labels.
@@ -87,15 +98,15 @@ Let `skills-broker` grow capability coverage through registry/downstream manifes
 
 ## Next Up
 
-**Phase 21: Normalize Capability Trust Surface** — Make candidate provenance, registry/downstream metadata, and fail-closed trust eligibility inspectable.
+**Phase 22: Prove Capability Acquisition Loop** — Turn advisory → install-required → verified → reused capability growth into shared-home proof.
 
 Run:
 
-`$gsd-discuss-phase 21`
+`$gsd-discuss-phase 22`
 
 Also available:
 
-`$gsd-plan-phase 21`
+`$gsd-plan-phase 22`
 
 ---
-*Last updated: 2026-04-24 while creating milestone v1.6 roadmap*
+*Last updated: 2026-04-24 after completing Phase 21*
