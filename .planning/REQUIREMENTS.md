@@ -1,25 +1,26 @@
 # Requirements: skills-broker
 
-**Defined:** 2026-04-23
+**Defined:** 2026-04-24
 **Core Value:** 用户只需要描述想达成的结果，broker 就能在当前宿主里找到、准备并复用合适的能力，而不用让用户记住工具名、重新发现赢家、或自己判断安装路径。
 
-## v1.4 Requirements
+## v1.5 Requirements
 
-### Adoption Signals
+### QA-First Hierarchy
 
-- [x] **ADOPT-01**: Maintainer can inspect recent website QA default-entry signal from repo-owned surfaces, including broker-first hits, repeat usage, and per-host coverage, without reading raw traces
-- [x] **ADOPT-02**: Repo can distinguish active website QA adoption from stale historical proof, so one successful demo does not masquerade as a healthy current default-entry habit forever
-- [x] **ADOPT-03**: When website QA adoption signal is incomplete or stale, operator surfaces point to the next concrete refresh action instead of leaving maintainers to infer it from low-level counters
+- [ ] **LOOP-01**: Operator can see from repo-owned surfaces that `website QA` is the single first step, with `web markdown` and `social markdown` presented as the second and third proven loops in that order
+- [ ] **LOOP-02**: Installed host shells and repo docs can direct the operator from `website QA` into the next proven loop without telling the host to choose a concrete downstream winner
+- [ ] **LOOP-03**: Operator can tell what the recommended next loop is after a successful `website QA` proof without reconstructing the hierarchy from multiple docs or traces
 
-### Shared-Home Health
+### Family Loop Proof
 
-- [x] **HEALTH-01**: Shared-home adoption health stays aligned with the website QA default-entry signal and does not report a misleading green/default-ready posture when the hero-lane signal is stale, missing, or contradicted
-- [x] **HEALTH-02**: Maintainer can prove website QA signal freshness and refresh transitions on the canonical Claude Code / Codex / OpenCode shared-home surface with repo-owned tests or fixtures
+- [ ] **FRESH-01**: `doctor` and shared-home surfaces can show freshness for `web markdown` and `social markdown` alongside the existing `website QA` packet, so maintainers can verify that the full QA-first family loop is currently alive
+- [ ] **FRESH-02**: Maintainer can distinguish which segment of the family loop is stale or missing (`website QA`, `web markdown`, or `social markdown`) and what concrete refresh action should run next
+- [ ] **FRESH-03**: Shared-home proof surfaces can show reuse state for the post-QA family loop across Claude Code, Codex, and OpenCode without flattening the hero-lane sequence
 
-### Audit Truth
+### Cross-Surface Trust
 
-- [x] **TRUST-01**: `doctor`、canonical `STATUS.md`、and CI trust surfaces summarize the same website QA adoption packet and fail closed when counts, freshness semantics, or wording drift
-- [x] **TRUST-02**: Milestone audit output can reuse the current website QA adoption packet directly instead of reconstructing freshness / repeat-usage truth from raw traces after ship
+- [ ] **TRUST-03**: README, README.zh-CN, installed host shell, `STATUS.md`, `TODOS.md`, and `doctor` consume the same QA-first family-loop wording and hierarchy
+- [ ] **TRUST-04**: CI, parity, and audit rails fail closed when family-loop hierarchy, freshness semantics, or next-step guidance drift across repo-owned surfaces
 
 ## Future Requirements
 
@@ -31,6 +32,7 @@
 
 - **CAP-04**: 新 proven families 的接入不应要求重写 routing core，而应继续依赖 metadata-driven、可解释的 broker contract
 - **CAP-05**: MCP registry readiness 需要继续向真实生态集成推进，包括 freshness、health 与 trust scoring
+- **LOOP-04**: 新的 proven family 只有在当前 `website QA -> web markdown -> social markdown` 三段 hierarchy 被 operator 稳定理解并且 freshness-aware 之后，才应加入 post-QA sequence
 
 ### Shipping Summary
 
@@ -40,31 +42,24 @@
 
 | Feature | Reason |
 |---------|--------|
-| 重新打开 release truth / shipped-proof promotion 主题 | v1.2 已经闭环，当前更值钱的是 QA-first adoption signal |
-| 在本 milestone 里重新开启第四宿主或新增 proven family / workflow 扩展 | 当前 bottleneck 是默认入口 freshness / habit proof，不是 capability breadth |
-| 重新打开 query-native migration、package-vs-leaf identity migration 或 maintained-family schema 泛化 | 当前 sequencing 仍然成立，除非 QA-first adoption signal 方案被证明显著失效 |
-| 让安装后的 host shell 直接选择具体 QA skill / package / MCP winner | 这会打破 coarse broker-first boundary |
-| 引入 embeddings、语义搜索或模型分类来替换当前 deterministic / metadata-driven routing | 不符合当前产品方向与 proof-first 可解释性约束 |
-| 把 broker 变成 marketplace 或直接执行下游能力的平台 | 产品定位仍然是运行时能力决策层与 handoff 协调层 |
+| 把 `website QA`、`web markdown`、`social markdown` 打平成并列默认入口 | 当前 milestone 要守住 QA-first hero-lane sequencing，而不是抹平层级 |
+| 重新打开 query-native migration、package-vs-leaf identity migration 或 maintained-family schema 泛化 | 当前 sequencing 仍然成立，这轮工作不足以证明它失效 |
+| 在本 milestone 里新增第四宿主、proven family 或 broker-owned workflow | 当前 bottleneck 是把已有三段 family loop 讲清楚并锁成可信默认入口延伸 story |
+| 让安装后的 host shell 直接选择具体 QA / markdown winner | 这会打破 coarse broker-first boundary |
+| 用 embeddings、语义搜索或模型分类替换当前 deterministic / metadata-driven routing | 不符合当前产品方向与 proof-first explainability 约束 |
+| 重开 release truth 或 shipping-summary-heavy 主题作为主线 | v1.2 已闭环 canonical shipping truth，这轮更值钱的是 QA-first family loop |
 
 ## Traceability
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| ADOPT-01 | Phase 15 | Completed |
-| ADOPT-02 | Phase 15 | Completed |
-| ADOPT-03 | Phase 16 | Completed |
-| HEALTH-01 | Phase 16 | Completed |
-| HEALTH-02 | Phase 16 | Completed |
-| TRUST-01 | Phase 17 | Completed |
-| TRUST-02 | Phase 17 | Completed |
 
 **Coverage:**
 
-- v1.4 requirements: 7 total
-- Mapped to phases: 7
-- Unmapped: 0 ✓
+- v1.5 requirements: 8 total
+- Mapped to phases: 0
+- Unmapped: 8 ⚠️
 
 ---
-*Requirements defined: 2026-04-23*
-*Last updated: 2026-04-23 after completing milestone v1.4*
+*Requirements defined: 2026-04-24*
+*Last updated: 2026-04-24 after defining milestone v1.5 requirements*
