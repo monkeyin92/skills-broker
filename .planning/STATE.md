@@ -1,34 +1,34 @@
 # State
 
 **Initialized:** 2026-04-22
-**Status:** milestone_completed
+**Status:** defining_requirements
 
 ## Project Reference
 
-See: `.planning/PROJECT.md` (updated 2026-04-23)
+See: `.planning/PROJECT.md` (updated 2026-04-24)
 
 **Core value:** 用户只需要描述想达成的结果，broker 就能在当前宿主里找到、准备并复用合适的能力，而不用让用户记住工具名、重新发现赢家、或自己判断安装路径。
-**Current focus:** Milestone v1.4 completed and archived — website QA now has a repo-owned adoption packet, freshness-aware adoption health, and fail-closed audit truth
+**Current focus:** Milestone v1.5 active — define the QA-first family proof loop requirements and roadmap without flattening the hero lane
 
 ## Current Milestone
 
-- **Milestone:** v1.4 Website QA Adoption Signals
-- **Status:** completed
-- **Started:** 2026-04-23
-- **Archive:** `.planning/milestones/v1.4-ROADMAP.md`
+- **Milestone:** v1.5 QA-First Family Proof Loop
+- **Status:** active
+- **Started:** 2026-04-24
+- **Archive:** —
 
 ## Current Position
 
 - **Phase:** —
 - **Plan:** —
-- **Status:** Milestone v1.4 completed, audited, and archived
-- **Last activity:** 2026-04-23 — Phases 15-17 executed, verified, and archived under `.planning/milestones/v1.4-phases/`
+- **Status:** Defining requirements
+- **Last activity:** 2026-04-24 — Milestone v1.5 started
 
 ## Current Phase
 
 - **Phase:** —
-- **Goal:** —
-- **Status:** no_active_phase
+- **Goal:** Define milestone v1.5 requirements and roadmap
+- **Status:** defining_requirements
 - **Primary requirements:** —
 - **Plan count:** 6
 - **Wave count:** 3
@@ -37,9 +37,7 @@ See: `.planning/PROJECT.md` (updated 2026-04-23)
 
 | Phase | Name | Status | Notes |
 |-------|------|--------|-------|
-| 15 | Quantify Website QA Adoption Signals | Completed | Archived at `.planning/milestones/v1.4-phases/15-quantify-website-qa-adoption-signals/15-VERIFICATION.md` |
-| 16 | Align Shared-Home Health With QA Signal Freshness | Completed | Archived at `.planning/milestones/v1.4-phases/16-align-shared-home-health-with-qa-signal-freshness/16-VERIFICATION.md` |
-| 17 | Lock Adoption-Signal Audit Truth | Completed | Archived at `.planning/milestones/v1.4-phases/17-lock-adoption-signal-audit-truth/17-VERIFICATION.md` |
+| — | Not yet defined | Pending | Requirements and roadmap for milestone v1.5 are being defined |
 
 ## Known Context
 
@@ -53,6 +51,7 @@ See: `.planning/PROJECT.md` (updated 2026-04-23)
 - host shell 仍然只能判断 `broker_first` / `handle_normally` / `clarify_before_broker`，不能在入口处选择具体 QA winner
 - routing traces、acquisition memory、verified downstream manifests、`doctor`、canonical `STATUS.md`、milestone audit 与 CI trust report 都是 v1.4 可复用的 adoption-signal rail
 - `.planning/milestones/v1.3-phases/` 已承载上一轮 phase archive；`.planning/phases/` 当前为空，适合启动新 phase
+- v1.5 当前目标是把 `website QA`、`web markdown`、`social markdown` 收成一条 QA-first family proof loop，同时不把 `website QA` hero lane 打平成并列入口
 
 ## Session History
 
@@ -72,6 +71,7 @@ See: `.planning/PROJECT.md` (updated 2026-04-23)
 - 2026-04-23: Phase 16 executed and verified — see `.planning/milestones/v1.4-phases/16-align-shared-home-health-with-qa-signal-freshness/16-VERIFICATION.md`
 - 2026-04-23: Phase 17 executed and verified — see `.planning/milestones/v1.4-phases/17-lock-adoption-signal-audit-truth/17-VERIFICATION.md`
 - 2026-04-23: Milestone v1.4 audited and archived — see `.planning/milestones/v1.4-MILESTONE-AUDIT.md`
+- 2026-04-24: Milestone v1.5 started — defining the QA-first family proof loop requirements and roadmap
 
 ## Workflow Settings
 
@@ -86,14 +86,14 @@ See: `.planning/PROJECT.md` (updated 2026-04-23)
 
 ## Next Up
 
-Start the next milestone when ready:
+Define the active milestone artifacts:
 
 `$gsd-new-milestone`
 
 Also available:
 - `cat .planning/milestones/v1.4-MILESTONE-AUDIT.md`
+- `cat .planning/PROJECT.md`
 - `cat .planning/REQUIREMENTS.md`
-- `cat .planning/ROADMAP.md`
 
 ---
 *State initialized: 2026-04-22*

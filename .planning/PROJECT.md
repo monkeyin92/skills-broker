@@ -12,12 +12,22 @@ v1.2 已经把 canonical shipping truth 收口到 repo-owned `release:gate` / `r
 
 ## Current State
 
-- **Latest shipped milestone:** `v1.3 Website QA Default-Entry Confidence`（2026-04-23）
+- **Latest shipped milestone:** `v1.4 Website QA Adoption Signals`（2026-04-23）
 - **Supported hosts:** Claude Code、Codex、OpenCode
 - **Hero lane:** `website QA`
 - **Proven families:** `web markdown`（second）、`social markdown`（next）
 - **Broker-owned workflows:** `idea-to-ship`、`investigation-to-fix`
 - **Trust posture:** canonical release truth 与 QA-first default-entry confidence 都已 shipped；v1.4 又把 `website QA` adoption packet、freshness-aware adoption health 与 fail-closed audit truth 收成 repo-owned product truth
+
+## Current Milestone: v1.5 QA-First Family Proof Loop
+
+**Goal:** 把 `website QA` 这条 hero lane 延伸成一个可审计、可刷新、可复用的 family proof loop，让 operator 先看到 QA-first 默认入口，再自然看到 `web markdown` 与 `social markdown` 作为下一步已证明路径。
+
+**Target features:**
+
+- 把 `website QA -> web markdown -> social markdown` 的层级关系收成 repo-owned 默认入口故事，同时继续坚持 `website QA` 是唯一第一步
+- 让 `doctor`、README、README.zh-CN、installed host shell、`STATUS.md` 与 `TODOS.md` 继续复用同一份 QA-first + next-loop operator truth
+- 在 shared broker home 上证明这条 family loop 的 freshness、reuse 与 next-step guidance 仍然可读、可复用、可 fail-close
 
 ## Latest Completed Milestone: v1.4 Website QA Adoption Signals
 
@@ -56,7 +66,9 @@ v1.2 已经把 canonical shipping truth 收口到 repo-owned `release:gate` / `r
 
 ### Active
 
-- 暂无新的 active milestone requirement；v1.4 已完成，下一轮需通过 `$gsd-new-milestone` 重新定义。
+- [ ] `website QA` 继续作为唯一默认第一步，而 `web markdown` 与 `social markdown` 被 operator 明确理解为后续已证明 loop，而不是并列入口
+- [ ] QA-first family loop 的 freshness、reuse 与 next-step guidance 能在 shared broker home 与 repo-owned proof surfaces 上被直接读取
+- [ ] README、README.zh-CN、installed host shell、`STATUS.md`、`TODOS.md` 与 canonical broker surfaces 必须继续讲同一份 QA-first family-loop truth
 
 ### Out of Scope
 
@@ -76,6 +88,8 @@ v1.3 已经把 `website QA` 这条默认入口的三层真相都补齐了：Phas
 现成可复用的 rail 已经很多：routing traces、acquisition memory、verified downstream manifests、`doctor`、canonical `STATUS.md`、milestone audit、CI trust report、three-host shared-home smoke。v1.4 已经优先复用这些 surface 把 QA-first story 升级成 adoption signal，而不是急着扩更多 capability surface、宿主模板化，或重开 release truth 的新抽象。
 
 因此当前 repo truth 已经把 freshness / adoption / auditability 这一层闭环：`website QA` 作为默认入口是否仍然在真实宿主里工作、被重复使用、跨宿主复用，以及 maintainer 能否不翻 raw trace 就看懂这件事，现在都有 repo-owned surface 可读。
+
+v1.5 不打算把三条 proven family 打平成一个新的 generic maintained-family schema，也不打算重开 query-native migration、package-vs-leaf identity migration 或 capability breadth 扩展。当前更高价值的下一步，是把 `website QA` 作为唯一第一步的默认入口故事继续向下延伸，让 operator 在不重新学习产品的前提下，看懂 “先 QA、再 web markdown、再 social markdown” 这条 family proof loop 是否仍然新鲜、可复用、且由 shared broker home truth 支撑。
 
 ## Constraints
 
@@ -102,12 +116,13 @@ v1.3 已经把 `website QA` 这条默认入口的三层真相都补齐了：Phas
 | repeat usage 与 cross-host reuse 必须在 acquisition memory / doctor surface 上被明确拆开 | 否则 maintainer 看不出默认入口缺的是“再跑一次”还是“换个宿主再跑一次” | ✓ Good |
 | QA-first wording 必须跟 coarse broker-first boundary 一起被证明，而不是靠 README 单点表述维持 | 否则文案会漂移回“功能列表”，宿主也容易偷做细粒度判断 | ✓ Good |
 | v1.4 优先把 QA-first proof 升级成 adoption signal，而不是先扩 capability surface 或重开 shipping truth | 当前剩余产品风险是 freshness / auditability，而不是 breadth / ship mechanics | ✓ Good |
+| v1.5 继续保持 `website QA` 为唯一第一步，并把 `web markdown`、`social markdown` 收成后续 family proof loop | 现在要补的是默认入口的延伸 story，而不是把三条 family 打平或重开泛化迁移 | — Pending |
 
-## Next Milestone Goals
+## Current Milestone Goals
 
-1. 通过 `$gsd-new-milestone` 基于 v1.4 已完成的 adoption packet / health / audit truth 重新选择最高价值 bottleneck。
-2. 继续保持 coarse broker-first boundary、shared broker home reuse 与 QA-first default-entry story 为硬约束。
-3. 除非现有 sequencing 被证明失效，否则不重开 capability breadth、shipping truth、第四宿主、query-native migration 或 maintained-family schema 泛化。
+1. 把 `website QA -> web markdown -> social markdown` 收成一条 QA-first、层级清楚、repo-owned 的默认入口延伸故事。
+2. 继续保持 coarse broker-first boundary、shared broker home reuse 与 `website QA` hero-lane sequencing 为硬约束。
+3. 让 family loop 的 freshness、reuse、next-step guidance 与 operator wording 在 shared broker home、repo docs、installed shell 与 status surfaces 上继续 fail closed。
 
 ## Evolution
 
@@ -127,4 +142,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-23 after completing milestone v1.4*
+*Last updated: 2026-04-24 after starting milestone v1.5*
