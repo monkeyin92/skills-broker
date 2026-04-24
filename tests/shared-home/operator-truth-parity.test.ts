@@ -8,6 +8,8 @@ import {
   formatCapabilityGrowthProofSurfaceZhLine,
   formatCoarseBoundaryLine,
   formatCoarseBoundaryZhLine,
+  formatDemandGuidedCapabilityGrowthLine,
+  formatDemandGuidedCapabilityGrowthZhLine,
   formatFamilyLoopProofSurfaceLine,
   formatFamilyLoopProofSurfaceZhLine,
   formatPostQaNextLoopLine,
@@ -105,6 +107,10 @@ describe("operator truth parity", () => {
       capabilityGrowthNextAction: {
         en: formatCapabilityGrowthNextActionLine(),
         zh: formatCapabilityGrowthNextActionZhLine()
+      },
+      demandGuidedCapabilityGrowth: {
+        en: formatDemandGuidedCapabilityGrowthLine(),
+        zh: formatDemandGuidedCapabilityGrowthZhLine()
       },
       thirdHostReadinessTokens: [
         "shared broker home",

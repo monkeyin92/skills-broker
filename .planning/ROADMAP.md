@@ -24,13 +24,13 @@
 |---|-------|------|--------------|------------------|
 | 24 | Surface Demand-Backed Growth Backlog | Aggregate real demand for capability growth from existing proof rails and classify demand states deterministically. | DEMAND-01, DEMAND-02, DEMAND-03 | Complete |
 | 25 | Prove Capability Health And Readiness | Turn demanded capabilities into freshness, blocked-action, readiness, and reuse health surfaced through shared broker home and `doctor`. | HEALTH-01, HEALTH-02, HEALTH-03 | Complete |
-| 26 | Lock Demand-Guided Operator Truth | Align docs, installed host shell wording, status, backlog, CI/parity, and release gate around one demand-guided capability growth story. | TRUST-01, TRUST-02, TRUST-03 | Planned |
+| 26 | Lock Demand-Guided Operator Truth | Align docs, installed host shell wording, status, backlog, CI/parity, and release gate around one demand-guided capability growth story. | TRUST-01, TRUST-02, TRUST-03 | Complete |
 
 ## Phase Completion Checklist
 
 - [x] Phase 24: Surface Demand-Backed Growth Backlog
 - [x] Phase 25: Prove Capability Health And Readiness
-- [ ] Phase 26: Lock Demand-Guided Operator Truth
+- [x] Phase 26: Lock Demand-Guided Operator Truth
 
 ## Phase Details
 
@@ -76,7 +76,9 @@
 
 **Requirements:** TRUST-01, TRUST-02, TRUST-03
 
-**Status:** planned
+**Status:** completed
+
+**Verification:** `.planning/phases/26-lock-demand-guided-operator-truth/26-VERIFICATION.md`
 
 **Success criteria:**
 1. README, README.zh-CN, generated host shell wording, `STATUS.md`, and `TODOS.md` explain the same demand-guided capability growth states and next actions.

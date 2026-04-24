@@ -24,6 +24,7 @@ This file is the repo-native execution board for `skills-broker`.
 - The v1.5 QA-first family-loop packet is now shipped on the active shipping ref: QA-first family loop: website QA first, web markdown second, social markdown third. After a successful website QA proof, the next proven loop to run is web markdown. After web markdown, social markdown is the next proven loop. `doctor` now exposes a QA-first family-loop packet: website QA adoption plus web markdown/social markdown freshness, reuse, and sequence-aware next actions.
 Capability growth next actions stay broker-owned: install, verify, rerun, refresh metadata, or prefer verified winner.
 `doctor` now exposes a capability growth packet: provenance, install_required, verification, repeat usage, cross-host reuse, degraded/failed counts, and next action.
+Demand-guided capability growth health shows real demand, stale or blocked acquisitions, promotion readiness, and satisfied local winners without moving winner selection into host shells.
 - Hosts choose only `broker_first`, `handle_normally`, or `clarify_before_broker`; the broker still chooses the concrete QA winner.
 - `doctor` now exposes a website QA adoption packet: recent routing evidence, freshness, and separate repeat-usage / cross-host reuse proof states.
 - `doctor` now exposes a QA-first family-loop packet: website QA adoption plus web markdown/social markdown freshness, reuse, and sequence-aware next actions.
@@ -799,6 +800,59 @@ Capability growth next actions stay broker-owned: install, verify, rerun, refres
           "type": "test",
           "path": "tests/cli/lifecycle-cli.test.ts",
           "label": "clear-manual-recovery keeps doctor strict green"
+        }
+      ]
+    },
+    {
+      "id": "phase26-demand-guided-growth-truth",
+      "title": "Phase 26 demand-guided capability growth truth",
+      "summary": "Demand-guided capability growth health shows real demand, stale or blocked acquisitions, promotion readiness, and satisfied local winners without moving winner selection into host shells. Doctor JSON/text, docs, installed shells, and CI trust now consume the same capabilityGrowthHealth truth.",
+      "status": "shipped_local",
+      "proofs": [
+        {
+          "type": "file",
+          "path": "src/broker/capability-demand.ts",
+          "label": "demand-backed capability health aggregation"
+        },
+        {
+          "type": "file",
+          "path": "src/shared-home/doctor.ts",
+          "label": "doctor capabilityGrowthHealth packet"
+        },
+        {
+          "type": "file",
+          "path": "src/shared-home/format.ts",
+          "label": "doctor demand-guided text output"
+        },
+        {
+          "type": "file",
+          "path": "src/core/operator-truth.ts",
+          "label": "canonical demand-guided operator truth wording"
+        },
+        {
+          "type": "file",
+          "path": "src/hosts/skill-markdown.ts",
+          "label": "installed host shell demand-guided wording"
+        },
+        {
+          "type": "test",
+          "path": "tests/broker/capability-demand.test.ts",
+          "label": "deterministic demand state coverage"
+        },
+        {
+          "type": "test",
+          "path": "tests/shared-home/doctor.test.ts",
+          "label": "doctor capabilityGrowthHealth blocked and stale coverage"
+        },
+        {
+          "type": "test",
+          "path": "tests/shared-home/operator-truth-parity.test.ts",
+          "label": "docs/status/installed-shell operator truth parity"
+        },
+        {
+          "type": "test",
+          "path": "tests/dev/ci-trust.test.ts",
+          "label": "CI trust consumes demand-guided capability growth truth"
         }
       ]
     },

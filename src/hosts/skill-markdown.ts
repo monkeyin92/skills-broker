@@ -3,6 +3,7 @@ import {
   formatCoarseBoundaryLine,
   formatCapabilityGrowthNextActionLine,
   formatCapabilityGrowthProofSurfaceLine,
+  formatDemandGuidedCapabilityGrowthLine,
   formatFamilyLoopProofSurfaceLine,
   formatPostQaNextLoopLine,
   formatQaFirstFamilyLoopLine,
@@ -221,6 +222,7 @@ ${formatPostQaNextLoopLine()}
 ${formatFamilyLoopProofSurfaceLine()}
 ${formatCapabilityGrowthProofSurfaceLine()}
 ${formatCapabilityGrowthNextActionLine()}
+${formatDemandGuidedCapabilityGrowthLine()}
 
 Treat the examples below as semantic anchors, not literal trigger phrases.
 

@@ -21,21 +21,21 @@
 
 ### Demand Signal
 
-- [ ] **DEMAND-01**: Operator can see which capability growth opportunities are backed by recent user demand across routing traces, `INSTALL_REQUIRED` outcomes, acquisition memory, and verified manifest misses.
-- [ ] **DEMAND-02**: Broker can distinguish proven demand, speculative/advisory candidates, blocked acquisitions, stale registry metadata, and already-satisfied local winners without changing host shell boundaries.
-- [ ] **DEMAND-03**: Demand aggregation stays deterministic and repo-owned, with tests covering missing, stale, contradictory, and duplicate demand evidence.
+- [x] **DEMAND-01**: Operator can see which capability growth opportunities are backed by recent user demand across routing traces, `INSTALL_REQUIRED` outcomes, acquisition memory, and verified manifest misses.
+- [x] **DEMAND-02**: Broker can distinguish proven demand, speculative/advisory candidates, blocked acquisitions, stale registry metadata, and already-satisfied local winners without changing host shell boundaries.
+- [x] **DEMAND-03**: Demand aggregation stays deterministic and repo-owned, with tests covering missing, stale, contradictory, and duplicate demand evidence.
 
 ### Capability Health And Readiness
 
-- [ ] **HEALTH-01**: `doctor` exposes a capability growth health packet that reports freshness, blocked next actions, promotion readiness, and reuse status for demanded capabilities.
-- [ ] **HEALTH-02**: Refresh guidance reuses existing acquisition memory, verified manifests, routing traces, and registry/downstream metadata instead of inventing a parallel telemetry model.
-- [ ] **HEALTH-03**: Capability health can prove stale-to-fresh and blocked-to-ready transitions on the shared broker home while keeping `website QA` and family-loop health green.
+- [x] **HEALTH-01**: `doctor` exposes a capability growth health packet that reports freshness, blocked next actions, promotion readiness, and reuse status for demanded capabilities.
+- [x] **HEALTH-02**: Refresh guidance reuses existing acquisition memory, verified manifests, routing traces, and registry/downstream metadata instead of inventing a parallel telemetry model.
+- [x] **HEALTH-03**: Capability health can prove stale-to-fresh and blocked-to-ready transitions on the shared broker home while keeping `website QA` and family-loop health green.
 
 ### Operator Truth And Guardrails
 
-- [ ] **TRUST-01**: README, README.zh-CN, generated host shell wording, `STATUS.md`, and `TODOS.md` share one demand-guided capability growth story.
-- [ ] **TRUST-02**: CI/parity rails fail closed on drift in demand counts, health states, readiness wording, or host-boundary wording.
-- [ ] **TRUST-03**: Release gate consumes the same demand-guided capability growth truth without reopening release-promotion mechanics or adding fourth-host scope.
+- [x] **TRUST-01**: README, README.zh-CN, generated host shell wording, `STATUS.md`, and `TODOS.md` share one demand-guided capability growth story.
+- [x] **TRUST-02**: CI/parity rails fail closed on drift in demand counts, health states, readiness wording, or host-boundary wording.
+- [x] **TRUST-03**: Release gate consumes the same demand-guided capability growth truth without reopening release-promotion mechanics or adding fourth-host scope.
 
 ## Future Requirements
 
