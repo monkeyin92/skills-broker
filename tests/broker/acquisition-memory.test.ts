@@ -80,6 +80,52 @@ describe("AcquisitionMemoryStore", () => {
     });
   });
 
+  it("derives acquisition outcome summaries for older memory entries", async () => {
+    runtimeDirectory = await mkdtemp(join(tmpdir(), "skills-broker-acq-memory-"));
+    const filePath = acquisitionMemoryFilePath(join(runtimeDirectory, ".skills-broker"));
+    const store = new AcquisitionMemoryStore(filePath);
+    await mkdir(dirname(filePath), { recursive: true });
+
+    await writeFile(
+      filePath,
+      JSON.stringify({
+        version: "2026-04-16",
+        entries: [
+          {
+            canonicalKey: "query:v2|families:requirements_analysis",
+            compatibilityIntent: "capability_discovery_or_install",
+            candidateId: "requirements-analysis",
+            packageId: "gstack",
+            leafCapabilityId: "gstack.office-hours",
+            successfulRoutes: 2,
+            installedAt: "2026-04-16T03:00:00.000Z",
+            verifiedAt: "2026-04-16T04:00:00.000Z",
+            firstReuseAt: "2026-04-16T04:00:00.000Z",
+            verifiedHosts: ["codex", "claude-code"],
+            provenance: "package_probe",
+            winnerSnapshot: capabilityCard("requirements-analysis")
+          }
+        ]
+      }),
+      "utf8"
+    );
+
+    await expect(store.read()).resolves.toMatchObject({
+      entries: [
+        {
+          outcomes: {
+            firstInstallAt: "2026-04-16T03:00:00.000Z",
+            verificationSuccesses: 2,
+            repeatUsages: 1,
+            crossHostReuses: 1,
+            degradedAcquisitions: 0,
+            failedAcquisitions: 0
+          }
+        }
+      ]
+    });
+  });
+
   it("records verified winners and matches future candidates by package and leaf identity", async () => {
     runtimeDirectory = await mkdtemp(join(tmpdir(), "skills-broker-acq-memory-"));
     const filePath = acquisitionMemoryFilePath(join(runtimeDirectory, ".skills-broker"));
@@ -112,7 +158,15 @@ describe("AcquisitionMemoryStore", () => {
           leafCapabilityId: "gstack.office-hours",
           successfulRoutes: 2,
           firstReuseAt: "2026-04-16T04:00:00.000Z",
-          verifiedHosts: ["codex", "claude-code"]
+          verifiedHosts: ["codex", "claude-code"],
+          outcomes: {
+            firstInstallAt: "2026-04-16T03:00:00.000Z",
+            verificationSuccesses: 2,
+            repeatUsages: 1,
+            crossHostReuses: 1,
+            degradedAcquisitions: 0,
+            failedAcquisitions: 0
+          }
         }
       ]
     });

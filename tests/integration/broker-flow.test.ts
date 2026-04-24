@@ -45,6 +45,15 @@ describe("runBroker", () => {
 
       expect(result.ok).toBe(true);
       expect(result.outcome.code).toBe("HANDOFF_READY");
+      expect(result.capabilityGrowth).toMatchObject({
+        stage: "verified_handoff",
+        nextAction: "rerun",
+        candidateId: "web-content-to-markdown",
+        capabilityId: "baoyu.url-to-markdown",
+        packageId: "baoyu",
+        installRequired: false,
+        successfulRoutes: 1
+      });
       expect(result.winner.id).toBe("web-content-to-markdown");
       expect(result.handoff.chosenPackage.packageId).toBe("baoyu");
       expect(result.handoff.chosenLeafCapability.subskillId).toBe(
@@ -230,6 +239,14 @@ describe("runBroker", () => {
           capabilityId: "baoyu.url-to-markdown",
           subskillId: "url-to-markdown"
         }
+      });
+      expect(result.capabilityGrowth).toMatchObject({
+        stage: "install_required",
+        nextAction: "install",
+        candidateId: "web-content-to-markdown",
+        capabilityId: "baoyu.url-to-markdown",
+        packageId: "baoyu",
+        installRequired: true
       });
       expect(result.trace).toMatchObject({
         selectionMode: "explicit",

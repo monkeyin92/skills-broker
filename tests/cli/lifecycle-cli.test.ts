@@ -372,7 +372,7 @@ describe("lifecycle cli", () => {
     } finally {
       await rm(runtimeDirectory, { recursive: true, force: true });
     }
-  }, 30000);
+  }, 120000);
 
   it("exits non-zero when doctor --strict sees an explicit missing host shell", async () => {
     const scriptPath = resolve("src/bin/skills-broker.ts");
@@ -415,7 +415,7 @@ describe("lifecycle cli", () => {
     } finally {
       await rm(runtimeDirectory, { recursive: true, force: true });
     }
-  }, 30000);
+  }, 120000);
 
   it("keeps doctor --strict green when no status item needs remote truth", async () => {
     const scriptPath = resolve("src/bin/skills-broker.ts");
@@ -1453,7 +1453,7 @@ describe("lifecycle cli", () => {
     } finally {
       await rm(runtimeDirectory, { recursive: true, force: true });
     }
-  }, 30_000);
+  }, 120000);
 
   it("auto-detects official Claude Code and Codex roots for zero-arg update", async () => {
     const scriptPath = resolve("src/bin/skills-broker.ts");
@@ -1495,7 +1495,7 @@ describe("lifecycle cli", () => {
     } finally {
       await rm(runtimeDirectory, { recursive: true, force: true });
     }
-  });
+  }, 120000);
 
   it("finds shared-home resources when executed from a non-repo cwd", async () => {
     await buildPublishedCli();

@@ -11,6 +11,10 @@ import {
   type BrokerRoutingTrace
 } from "../broker/trace.js";
 import {
+  summarizeCapabilityDemand,
+  type CapabilityDemandSummary
+} from "../broker/capability-demand.js";
+import {
   BROKER_HOSTS,
   brokerHostKnownShellEntries,
   isBrokerHost,
@@ -185,8 +189,13 @@ export type DoctorLifecycleResult = {
     state: DoctorProofRailState;
     entries: number;
     successfulRoutes: number;
+    verificationSuccesses: number;
     firstReuseRecorded: number;
+    repeatUsages: number;
     crossHostReuse: number;
+    degradedAcquisitions: number;
+    failedAcquisitions: number;
+    nextAction: "install" | "verify" | "rerun" | "refresh_metadata" | "prefer_verified_winner";
     qualityAssuranceSuccessfulRoutes: number;
     qualityAssuranceFirstReuseRecorded: number;
     qualityAssuranceCrossHostReuse: number;
@@ -206,6 +215,7 @@ export type DoctorLifecycleResult = {
   websiteQaLoop: DoctorFamilyProofSummary;
   websiteQaAdoption: DoctorWebsiteQaAdoptionSignal;
   familyLoopSignals: Record<DoctorProofFamily, DoctorFamilyLoopSignal>;
+  capabilityGrowthHealth: CapabilityDemandSummary;
   websiteQaRouting: {
     windowDays: number;
     observed: number;
@@ -813,6 +823,30 @@ function summarizeWebsiteQaRouting(
   };
 }
 
+function acquisitionMemoryNextAction(
+  entries: AcquisitionMemoryEntry[]
+): DoctorLifecycleResult["acquisitionMemory"]["nextAction"] {
+  if (entries.length === 0) {
+    return "install";
+  }
+
+  const degradedOrFailed = entries.some(
+    (entry) =>
+      entry.outcomes.degradedAcquisitions > 0 ||
+      entry.outcomes.failedAcquisitions > 0
+  );
+  if (degradedOrFailed) {
+    return "verify";
+  }
+
+  const hasRepeatUsage = entries.some((entry) => entry.outcomes.repeatUsages > 0);
+  if (!hasRepeatUsage) {
+    return "rerun";
+  }
+
+  return "prefer_verified_winner";
+}
+
 async function summarizeDoctorAcquisitionMemory(
   brokerHomeDirectory: string,
   warnings: string[]
@@ -827,8 +861,13 @@ async function summarizeDoctorAcquisitionMemory(
       state: "missing",
       entries: 0,
       successfulRoutes: 0,
+      verificationSuccesses: 0,
       firstReuseRecorded: 0,
+      repeatUsages: 0,
       crossHostReuse: 0,
+      degradedAcquisitions: 0,
+      failedAcquisitions: 0,
+      nextAction: "install",
       qualityAssuranceSuccessfulRoutes: 0,
       qualityAssuranceFirstReuseRecorded: 0,
       qualityAssuranceCrossHostReuse: 0
@@ -850,12 +889,29 @@ async function summarizeDoctorAcquisitionMemory(
         (total, entry) => total + entry.successfulRoutes,
         0
       ),
+      verificationSuccesses: memory.entries.reduce(
+        (total, entry) => total + entry.outcomes.verificationSuccesses,
+        0
+      ),
       firstReuseRecorded: memory.entries.filter(
         (entry) => entry.firstReuseAt !== undefined
       ).length,
+      repeatUsages: memory.entries.reduce(
+        (total, entry) => total + entry.outcomes.repeatUsages,
+        0
+      ),
       crossHostReuse: memory.entries.filter(
         (entry) => entry.verifiedHosts.length > 1
       ).length,
+      degradedAcquisitions: memory.entries.reduce(
+        (total, entry) => total + entry.outcomes.degradedAcquisitions,
+        0
+      ),
+      failedAcquisitions: memory.entries.reduce(
+        (total, entry) => total + entry.outcomes.failedAcquisitions,
+        0
+      ),
+      nextAction: acquisitionMemoryNextAction(memory.entries),
       qualityAssuranceSuccessfulRoutes: websiteQaEntries.reduce(
         (total, entry) => total + entry.successfulRoutes,
         0
@@ -878,8 +934,13 @@ async function summarizeDoctorAcquisitionMemory(
       state: "unreadable",
       entries: 0,
       successfulRoutes: 0,
+      verificationSuccesses: 0,
       firstReuseRecorded: 0,
+      repeatUsages: 0,
       crossHostReuse: 0,
+      degradedAcquisitions: 0,
+      failedAcquisitions: 0,
+      nextAction: "refresh_metadata",
       qualityAssuranceSuccessfulRoutes: 0,
       qualityAssuranceFirstReuseRecorded: 0,
       qualityAssuranceCrossHostReuse: 0
@@ -1200,6 +1261,25 @@ async function collectFamilyAcquisitionMetrics(
     return empty;
   } catch {
     return empty;
+  }
+}
+
+async function collectCapabilityDemandAcquisitionEntries(
+  brokerHomeDirectory: string,
+  state: DoctorProofRailState
+): Promise<AcquisitionMemoryEntry[]> {
+  if (state !== "present") {
+    return [];
+  }
+
+  try {
+    const memory = await new AcquisitionMemoryStore(
+      acquisitionMemoryFilePath(brokerHomeDirectory)
+    ).read();
+
+    return memory.entries;
+  } catch {
+    return [];
   }
 }
 
@@ -1782,6 +1862,11 @@ export async function doctorSharedBrokerHome(
     options.brokerHomeDirectory,
     acquisitionMemory.state
   );
+  const capabilityDemandAcquisitionEntries =
+    await collectCapabilityDemandAcquisitionEntries(
+      options.brokerHomeDirectory,
+      acquisitionMemory.state
+    );
   const familyReplayCounts = familyManifestCounts;
   const hosts = [
     ...(
@@ -1884,6 +1969,12 @@ export async function doctorSharedBrokerHome(
       }
     ])
   ) as Record<DoctorProofFamily, DoctorFamilyLoopSignal>;
+  const capabilityGrowthHealth = summarizeCapabilityDemand({
+    traces: routingTraces,
+    acquisitionEntries: capabilityDemandAcquisitionEntries,
+    since: routingSince,
+    windowDays: routingWindowDays
+  });
 
   return {
     command: "doctor",
@@ -1894,6 +1985,7 @@ export async function doctorSharedBrokerHome(
     websiteQaLoop,
     websiteQaAdoption,
     familyLoopSignals,
+    capabilityGrowthHealth,
     websiteQaRouting,
     routingMetrics: {
       windowDays: routingWindowDays,

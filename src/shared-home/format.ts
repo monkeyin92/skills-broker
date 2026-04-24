@@ -1,7 +1,7 @@
 import type {
+  DoctorLifecycleResult,
   DoctorFamilyLoopSignal,
   DoctorFamilyProofSummary,
-  DoctorLifecycleResult,
   DoctorProofFamily
 } from "./doctor.js";
 import {
@@ -227,6 +227,30 @@ function formatFamilyLoopNextActionLine(signal: DoctorFamilyLoopSignal): string 
   return `${signal.label} freshness next action: ${signal.nextAction}`;
 }
 
+function formatCapabilityGrowthHealthSummaryLine(
+  result: DoctorLifecycleResult
+): string {
+  const health = result.capabilityGrowthHealth;
+
+  return `Capability growth health (last ${health.windowDays}d): ${health.status}, opportunities=${health.totals.opportunities}, recent_demand=${health.totals.recentDemand}, proven=${health.totals.provenDemand}, speculative=${health.totals.speculativeAdvisory}, blocked=${health.totals.blockedAcquisition}, stale=${health.totals.staleMetadata}, ready=${health.totals.readyForPromotion}, satisfied=${health.totals.satisfiedLocalWinners}, next_action=${health.nextAction}`;
+}
+
+function formatCapabilityGrowthOpportunityLines(
+  result: DoctorLifecycleResult
+): string[] {
+  if (result.capabilityGrowthHealth.opportunities.length === 0) {
+    return ["Capability growth opportunity: none recorded yet"];
+  }
+
+  return result.capabilityGrowthHealth.opportunities.slice(0, 5).map((opportunity) => {
+    const hosts = opportunity.hosts.length === 0 ? "none" : opportunity.hosts.join(",");
+    const evidence = opportunity.evidence.length === 0 ? "none" : opportunity.evidence.join(",");
+    const latest = opportunity.latestDemandAt === undefined ? "none" : opportunity.latestDemandAt;
+
+    return `Capability growth opportunity ${opportunity.label}: state=${opportunity.state}, next_action=${opportunity.nextAction}, recent_demand=${opportunity.recentDemand}, total_demand=${opportunity.totalDemand}, install_required=${opportunity.installRequired}, no_candidate=${opportunity.noCandidate}, successful_routes=${opportunity.successfulRoutes}, repeat_usage=${opportunity.repeatUsages}, cross_host_reuse=${opportunity.crossHostReuses}, latest=${latest}, hosts=${hosts}, evidence=${evidence}`;
+  });
+}
+
 function formatFamilyRepeatUsageProofLine(
   family: DoctorProofFamily,
   proof: DoctorFamilyProofSummary
@@ -435,8 +459,10 @@ export function formatLifecycleResult(
       lines.push(formatWebsiteQaRoutingNextActionLine(result));
     }
     lines.push(
-      `Acquisition memory: ${result.acquisitionMemory.state}, entries=${result.acquisitionMemory.entries}, successful_routes=${result.acquisitionMemory.successfulRoutes}, first_reuse_after_install=${result.acquisitionMemory.firstReuseRecorded}, cross_host_reuse=${result.acquisitionMemory.crossHostReuse}, website_qa_successful_reruns=${result.acquisitionMemory.qualityAssuranceSuccessfulRoutes}, website_qa_repeat_usage=${result.acquisitionMemory.qualityAssuranceFirstReuseRecorded}`
+      `Acquisition memory: ${result.acquisitionMemory.state}, entries=${result.acquisitionMemory.entries}, successful_routes=${result.acquisitionMemory.successfulRoutes}, verification_successes=${result.acquisitionMemory.verificationSuccesses}, first_reuse_after_install=${result.acquisitionMemory.firstReuseRecorded}, repeat_usage=${result.acquisitionMemory.repeatUsages}, cross_host_reuse=${result.acquisitionMemory.crossHostReuse}, degraded=${result.acquisitionMemory.degradedAcquisitions}, failed=${result.acquisitionMemory.failedAcquisitions}, next_action=${result.acquisitionMemory.nextAction}, website_qa_successful_reruns=${result.acquisitionMemory.qualityAssuranceSuccessfulRoutes}, website_qa_repeat_usage=${result.acquisitionMemory.qualityAssuranceFirstReuseRecorded}`
     );
+    lines.push(formatCapabilityGrowthHealthSummaryLine(result));
+    lines.push(...formatCapabilityGrowthOpportunityLines(result));
     lines.push(
       `Website QA acquisition proof: repeat_usage=${result.acquisitionMemory.qualityAssuranceFirstReuseRecorded}, cross_host_reuse=${result.acquisitionMemory.qualityAssuranceCrossHostReuse}`
     );

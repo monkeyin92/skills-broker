@@ -1,5 +1,6 @@
 import type { CapabilityCard } from "../core/capability-card.js";
 import type { BrokerIntent } from "../core/types.js";
+import { describeCapabilityTrust } from "./capability-trust.js";
 import type { RequestRoutingReasonCode } from "./resolved-request.js";
 import type { RoutingHistory } from "./rank.js";
 
@@ -95,6 +96,13 @@ function mcpRegistryEvidence(card: CapabilityCard): string | null {
   return `registry evidence: ${validationFragment}, ${versionFragment}, ${transportFragment}, ${coverageFragment}`;
 }
 
+function trustEvidence(card: CapabilityCard): string {
+  const trust = describeCapabilityTrust(card);
+  const reason = trust.reasons.length === 0 ? "no trust reason" : trust.reasons.join(", ");
+
+  return `capability trust: ${trust.provenance}, ${trust.eligibility}, installState=${trust.installState}, installRequired=${trust.installRequired}, ${reason}`;
+}
+
 export function explainDecision(
   card: CapabilityCard,
   input: ExplainDecisionInput
@@ -121,6 +129,7 @@ export function explainDecision(
     `context cost: ${card.ranking.contextCost}`,
     `cache reuse: ${cacheReuse}, successful routing history: ${successfulRoutes}`,
     `portability bonus: ${card.hosts.portabilityScore}`,
+    trustEvidence(card),
     mcpRegistryEvidence(card)
   ]
     .filter((value): value is string => value !== null)

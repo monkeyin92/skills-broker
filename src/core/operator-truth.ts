@@ -26,6 +26,18 @@ export type OperatorTruthContract = {
     en: string;
     zh: string;
   };
+  capabilityGrowthProofSurface: {
+    en: string;
+    zh: string;
+  };
+  capabilityGrowthNextAction: {
+    en: string;
+    zh: string;
+  };
+  demandGuidedCapabilityGrowth: {
+    en: string;
+    zh: string;
+  };
   fullLifecycleParity: {
     en: string;
     zh: string;
@@ -68,6 +80,18 @@ export const OPERATOR_TRUTH_CONTRACT = {
     en: "`doctor` now exposes a QA-first family-loop packet: website QA adoption plus web markdown/social markdown freshness, reuse, and sequence-aware next actions.",
     zh: "`doctor` 现在会直接输出一份 QA-first family-loop packet：包含 website QA adoption，以及 web markdown / social markdown 的 freshness、reuse 与按顺序排列的 next action。"
   },
+  capabilityGrowthProofSurface: {
+    en: "`doctor` now exposes a capability growth packet: provenance, install_required, verification, repeat usage, cross-host reuse, degraded/failed counts, and next action.",
+    zh: "`doctor` 现在会直接输出一份 capability growth packet：provenance、install_required、verification、repeat usage、cross-host reuse、degraded/failed counts 与 next action。"
+  },
+  capabilityGrowthNextAction: {
+    en: "Capability growth next actions stay broker-owned: install, verify, rerun, refresh metadata, or prefer verified winner.",
+    zh: "Capability growth 的 next action 继续归 broker 所有：install、verify、rerun、refresh metadata，或 prefer verified winner。"
+  },
+  demandGuidedCapabilityGrowth: {
+    en: "Demand-guided capability growth health shows real demand, stale or blocked acquisitions, promotion readiness, and satisfied local winners without moving winner selection into host shells.",
+    zh: "Demand-guided capability growth health 会展示真实需求、stale 或 blocked acquisitions、promotion readiness，以及已满足的本地赢家，同时不把 winner selection 移进宿主壳。"
+  },
   fullLifecycleParity: {
     en: "Claude Code, Codex, and OpenCode now share full published lifecycle and proof/reuse parity.",
     zh: "Claude Code、Codex、OpenCode 现在已经共享完整的发布态 lifecycle 与 proof/reuse parity。"
@@ -108,6 +132,18 @@ export function formatWebsiteQaProofSurfaceLine(): string {
 
 export function formatFamilyLoopProofSurfaceLine(): string {
   return OPERATOR_TRUTH_CONTRACT.familyLoopProofSurface.en;
+}
+
+export function formatCapabilityGrowthProofSurfaceLine(): string {
+  return OPERATOR_TRUTH_CONTRACT.capabilityGrowthProofSurface.en;
+}
+
+export function formatCapabilityGrowthNextActionLine(): string {
+  return OPERATOR_TRUTH_CONTRACT.capabilityGrowthNextAction.en;
+}
+
+export function formatDemandGuidedCapabilityGrowthLine(): string {
+  return OPERATOR_TRUTH_CONTRACT.demandGuidedCapabilityGrowth.en;
 }
 
 export function formatFullLifecycleParityLine(): string {
@@ -152,6 +188,18 @@ export function formatWebsiteQaProofSurfaceZhLine(): string {
 
 export function formatFamilyLoopProofSurfaceZhLine(): string {
   return OPERATOR_TRUTH_CONTRACT.familyLoopProofSurface.zh;
+}
+
+export function formatCapabilityGrowthProofSurfaceZhLine(): string {
+  return OPERATOR_TRUTH_CONTRACT.capabilityGrowthProofSurface.zh;
+}
+
+export function formatCapabilityGrowthNextActionZhLine(): string {
+  return OPERATOR_TRUTH_CONTRACT.capabilityGrowthNextAction.zh;
+}
+
+export function formatDemandGuidedCapabilityGrowthZhLine(): string {
+  return OPERATOR_TRUTH_CONTRACT.demandGuidedCapabilityGrowth.zh;
 }
 
 export function formatFullLifecycleParityZhLine(): string {

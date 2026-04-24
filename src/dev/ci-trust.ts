@@ -1,8 +1,14 @@
 import { access, readFile } from "node:fs/promises";
 import { join } from "node:path";
 import {
+  formatCapabilityGrowthNextActionLine,
+  formatCapabilityGrowthNextActionZhLine,
+  formatCapabilityGrowthProofSurfaceLine,
+  formatCapabilityGrowthProofSurfaceZhLine,
   formatCoarseBoundaryLine,
   formatCoarseBoundaryZhLine,
+  formatDemandGuidedCapabilityGrowthLine,
+  formatDemandGuidedCapabilityGrowthZhLine,
   formatFamilyLoopProofSurfaceLine,
   formatFamilyLoopProofSurfaceZhLine,
   formatPostQaNextLoopLine,
@@ -255,6 +261,9 @@ export function buildCiTrustSurfaceSpecs(
     formatCoarseBoundaryLine(),
     formatWebsiteQaProofSurfaceLine(),
     formatFamilyLoopProofSurfaceLine(),
+    formatCapabilityGrowthProofSurfaceLine(),
+    formatCapabilityGrowthNextActionLine(),
+    formatDemandGuidedCapabilityGrowthLine(),
     formatQaFirstFamilyLoopLine(),
     formatPostQaNextLoopLine(),
     OPERATOR_TRUTH_CONTRACT.heroLane,
@@ -270,6 +279,9 @@ export function buildCiTrustSurfaceSpecs(
     formatCoarseBoundaryZhLine(),
     formatWebsiteQaProofSurfaceZhLine(),
     formatFamilyLoopProofSurfaceZhLine(),
+    formatCapabilityGrowthProofSurfaceZhLine(),
+    formatCapabilityGrowthNextActionZhLine(),
+    formatDemandGuidedCapabilityGrowthZhLine(),
     formatQaFirstFamilyLoopZhLine(),
     formatPostQaNextLoopZhLine(),
     OPERATOR_TRUTH_CONTRACT.heroLane,
@@ -324,6 +336,9 @@ export function buildCiTrustSurfaceSpecs(
             "formatQaFirstFamilyLoopLine",
             "formatPostQaNextLoopLine",
             "formatFamilyLoopProofSurfaceLine",
+            "formatCapabilityGrowthProofSurfaceLine",
+            "formatCapabilityGrowthNextActionLine",
+            "formatDemandGuidedCapabilityGrowthLine",
             "### Hero lane: website QA",
             "The second proven family is web markdown. Keep it visible here after website QA, not as a competing first move.",
             "The next proven family is social markdown. Keep it visible after web markdown, not as a competing first move."
@@ -373,6 +388,10 @@ export function buildCiTrustSurfaceSpecs(
           containsAll: [
             "websiteQaAdoption",
             "familyLoopSignals",
+            "capabilityGrowth",
+            "capabilityGrowthHealth",
+            "verification_successes",
+            "next_action=",
             "QA-first family freshness",
             "WEBSITE_QA_SIGNAL_STALE",
             "stale-to-fresh website QA adoption health transitions"
@@ -403,7 +422,13 @@ export function buildCiTrustSurfaceSpecs(
           layer: "source",
           path: "tests/sources/mcp-registry.test.ts",
           label: "mcp registry validation tests",
-          containsAll: ["registryValidation", "registryQueryCoverage"]
+          containsAll: ["registryValidation", "registryQueryCoverage", "discoverySource"]
+        }),
+        proof({
+          layer: "ci",
+          path: CI_WORKFLOW_PATH,
+          label: "capability trust CI hook",
+          containsAll: ["npm run ci:capability-trust"]
         }),
         proof({
           layer: "ranking",

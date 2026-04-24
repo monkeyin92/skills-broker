@@ -10,6 +10,15 @@ import type { RoutingHistory } from "./rank.js";
 
 export const ACQUISITION_MEMORY_VERSION = "2026-04-16" as const;
 
+export type AcquisitionOutcomeSummary = {
+  firstInstallAt: string;
+  verificationSuccesses: number;
+  repeatUsages: number;
+  crossHostReuses: number;
+  degradedAcquisitions: number;
+  failedAcquisitions: number;
+};
+
 export type AcquisitionMemoryEntry = {
   canonicalKey: string;
   compatibilityIntent: BrokerIntent;
@@ -22,6 +31,7 @@ export type AcquisitionMemoryEntry = {
   firstReuseAt?: string;
   verifiedHosts: BrokerHost[];
   provenance: "package_probe";
+  outcomes: AcquisitionOutcomeSummary;
   winnerSnapshot?: CapabilityCard;
 };
 
@@ -141,12 +151,37 @@ function replayableWinnerSnapshot(
   };
 }
 
-function isValidEntry(value: unknown): value is AcquisitionMemoryEntry {
+function isAcquisitionOutcomeSummary(value: unknown): value is AcquisitionOutcomeSummary {
+  return (
+    isRecord(value) &&
+    typeof value.firstInstallAt === "string" &&
+    typeof value.verificationSuccesses === "number" &&
+    typeof value.repeatUsages === "number" &&
+    typeof value.crossHostReuses === "number" &&
+    typeof value.degradedAcquisitions === "number" &&
+    typeof value.failedAcquisitions === "number"
+  );
+}
+
+function deriveOutcomeSummary(entry: Omit<AcquisitionMemoryEntry, "outcomes"> & { outcomes?: AcquisitionOutcomeSummary }): AcquisitionOutcomeSummary {
+  const verifiedHosts = Array.isArray(entry.verifiedHosts) ? entry.verifiedHosts : [];
+
+  return {
+    firstInstallAt: entry.installedAt,
+    verificationSuccesses: entry.successfulRoutes,
+    repeatUsages: Math.max(0, entry.successfulRoutes - 1),
+    crossHostReuses: Math.max(0, verifiedHosts.length - 1),
+    degradedAcquisitions: entry.outcomes?.degradedAcquisitions ?? 0,
+    failedAcquisitions: entry.outcomes?.failedAcquisitions ?? 0
+  };
+}
+
+function normalizeEntry(value: unknown): AcquisitionMemoryEntry | null {
   if (!isRecord(value)) {
-    return false;
+    return null;
   }
 
-  return (
+  const valid =
     typeof value.canonicalKey === "string" &&
     isBrokerIntent(value.compatibilityIntent) &&
     typeof value.candidateId === "string" &&
@@ -160,8 +195,32 @@ function isValidEntry(value: unknown): value is AcquisitionMemoryEntry {
     value.verifiedHosts.every((host) => isBrokerHost(host)) &&
     value.provenance === "package_probe" &&
     (value.winnerSnapshot === undefined ||
-      isCapabilityCardSnapshot(value.winnerSnapshot))
-  );
+      isCapabilityCardSnapshot(value.winnerSnapshot)) &&
+    (value.outcomes === undefined || isAcquisitionOutcomeSummary(value.outcomes));
+
+  if (!valid) {
+    return null;
+  }
+
+  const entry = value as Omit<AcquisitionMemoryEntry, "outcomes"> & {
+    outcomes?: AcquisitionOutcomeSummary;
+  };
+
+  return {
+    canonicalKey: entry.canonicalKey,
+    compatibilityIntent: entry.compatibilityIntent,
+    candidateId: entry.candidateId,
+    packageId: entry.packageId,
+    leafCapabilityId: entry.leafCapabilityId,
+    successfulRoutes: entry.successfulRoutes,
+    installedAt: entry.installedAt,
+    verifiedAt: entry.verifiedAt,
+    firstReuseAt: entry.firstReuseAt,
+    verifiedHosts: entry.verifiedHosts,
+    provenance: "package_probe",
+    outcomes: entry.outcomes ?? deriveOutcomeSummary(entry),
+    winnerSnapshot: entry.winnerSnapshot
+  };
 }
 
 function normalizeMemoryFile(value: unknown): AcquisitionMemoryFile | null {
@@ -169,17 +228,18 @@ function normalizeMemoryFile(value: unknown): AcquisitionMemoryFile | null {
     return null;
   }
 
-  if (
-    value.version !== ACQUISITION_MEMORY_VERSION ||
-    !Array.isArray(value.entries) ||
-    !value.entries.every((entry) => isValidEntry(entry))
-  ) {
+  if (value.version !== ACQUISITION_MEMORY_VERSION || !Array.isArray(value.entries)) {
+    return null;
+  }
+
+  const entries = value.entries.map((entry) => normalizeEntry(entry));
+  if (entries.some((entry) => entry === null)) {
     return null;
   }
 
   return {
     version: ACQUISITION_MEMORY_VERSION,
-    entries: value.entries
+    entries: entries as AcquisitionMemoryEntry[]
   };
 }
 
@@ -280,7 +340,7 @@ export class AcquisitionMemoryStore {
 
   async recordVerifiedWinner(
     input: RecordVerifiedWinnerInput
-  ): Promise<void> {
+  ): Promise<AcquisitionMemoryEntry> {
     const nowIso = input.now.toISOString();
     const memory = await this.read();
     const existingIndex = memory.entries.findIndex(
@@ -310,6 +370,17 @@ export class AcquisitionMemoryStore {
         input.currentHost
       ]),
       provenance: "package_probe",
+      outcomes: {
+        firstInstallAt: existingEntry?.outcomes.firstInstallAt ?? existingEntry?.installedAt ?? nowIso,
+        verificationSuccesses: (existingEntry?.successfulRoutes ?? 0) + 1,
+        repeatUsages: Math.max(0, (existingEntry?.successfulRoutes ?? 0)),
+        crossHostReuses: Math.max(0, uniqueHosts([
+          ...(existingEntry?.verifiedHosts ?? []),
+          input.currentHost
+        ]).length - 1),
+        degradedAcquisitions: existingEntry?.outcomes.degradedAcquisitions ?? 0,
+        failedAcquisitions: existingEntry?.outcomes.failedAcquisitions ?? 0
+      },
       winnerSnapshot: cloneCapabilityCard(input.winner)
     };
 
@@ -336,5 +407,6 @@ export class AcquisitionMemoryStore {
       "utf8"
     );
     await rename(temporaryFilePath, this.filePath);
+    return nextEntry;
   }
 }

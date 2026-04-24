@@ -7,6 +7,7 @@ import type {
 } from "../core/types.js";
 import type { HandoffEnvelope } from "./handoff.js";
 import type { BrokerRoutingTrace } from "./trace.js";
+import type { CapabilityGrowthProof } from "./capability-growth.js";
 
 export type BrokerAdvisoryCode =
   | "routing_trace_write_failed"
@@ -67,6 +68,7 @@ export type BrokerSuccessResult = {
   };
   handoff: HandoffEnvelope;
   acquisition?: undefined;
+  capabilityGrowth: CapabilityGrowthProof;
   advisories?: BrokerAdvisory[];
   debug: BrokerDebug;
   trace: BrokerRoutingTrace;
@@ -134,6 +136,7 @@ export type BrokerFailureResult = {
     message: string;
   };
   acquisition?: PackageAcquisitionHint;
+  capabilityGrowth?: CapabilityGrowthProof;
   failure?: {
     reasonCode: WorkflowFailureReasonCode;
     retryable: boolean;

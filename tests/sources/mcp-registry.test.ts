@@ -21,6 +21,7 @@ function expectValidatedRegistryMetadata(
   }
 ): void {
   expect(candidate.sourceMetadata).toMatchObject({
+    discoverySource: "mcp_registry",
     registryName: expected.name,
     registryTitle: expected.title,
     registryVersion: expected.version,

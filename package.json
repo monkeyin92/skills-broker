@@ -40,7 +40,8 @@
     "test:ci:narrative-parity": "node ./node_modules/vitest/vitest.mjs --run tests/shared-home/operator-truth-parity.test.ts tests/hosts/host-shell-install.test.ts",
     "verify:local": "node --import ./scripts/register-ts-node.mjs ./scripts/verify-local.mjs",
     "verify:local:check": "node --import ./scripts/register-ts-node.mjs ./scripts/verify-local.mjs --check-only",
-    "verify:local:repair": "node --import ./scripts/register-ts-node.mjs ./scripts/verify-local.mjs --repair"
+    "verify:local:repair": "node --import ./scripts/register-ts-node.mjs ./scripts/verify-local.mjs --repair",
+    "ci:capability-trust": "node --import ./scripts/register-ts-node.mjs ./scripts/capability-trust-check.mjs"
   },
   "devDependencies": {
     "@types/node": "^22.5.3",

@@ -1,45 +1,49 @@
 # State
 
 **Initialized:** 2026-04-22
-**Status:** milestone_shipped
+**Status:** no_active_milestone
 
 ## Project Reference
 
 See: `.planning/PROJECT.md` (updated 2026-04-24)
 
 **Core value:** 用户只需要描述想达成的结果，broker 就能在当前宿主里找到、准备并复用合适的能力，而不用让用户记住工具名、重新发现赢家、或自己判断安装路径。
-**Current focus:** Milestone v1.5 shipped in PR #33 — QA-first family proof loop is now canonical repo history and is waiting for review/merge
+**Current focus:** Milestone v1.7 archived; ready for `$gsd-new-milestone`
 
 ## Current Milestone
 
-- **Milestone:** v1.5 QA-First Family Proof Loop
-- **Status:** shipped
-- **Started:** 2026-04-24
-- **Archive:** `.planning/milestones/v1.5-ROADMAP.md`
+- **Milestone:** —
+- **Status:** no_active_milestone
+- **Started:** —
+- **Archive:** `.planning/milestones/v1.7-ROADMAP.md`
 
 ## Current Position
 
 - **Phase:** —
 - **Plan:** —
-- **Status:** Milestone v1.5 shipped - PR #33 open
-- **Last activity:** 2026-04-24 — Opened PR #33 (`codex/v1.5-qa-first-family-proof-loop` -> `main`) for milestone v1.5
+- **Status:** Milestone v1.7 audited, archived, and cleaned up
+- **Last activity:** 2026-04-24 — v1.7 milestone lifecycle completed
 
 ## Current Phase
 
 - **Phase:** —
 - **Goal:** —
-- **Status:** no_active_phase
+- **Status:** —
 - **Primary requirements:** —
-- **Plan count:** 6
-- **Wave count:** 3
+- **Plan count:** 0
+- **Wave count:** 0
 
 ## Phase Status
 
+No active phases. Next phase number is 27.
+
+## Latest Archived Milestone
+
 | Phase | Name | Status | Notes |
 |-------|------|--------|-------|
-| 18 | Encode QA-First Family Hierarchy | Completed | Archived at `.planning/milestones/v1.5-phases/18-encode-qa-first-family-hierarchy/18-VERIFICATION.md` |
-| 19 | Prove Family-Loop Freshness And Reuse | Completed | Archived at `.planning/milestones/v1.5-phases/19-prove-family-loop-freshness-and-reuse/19-VERIFICATION.md` |
-| 20 | Lock Family-Loop Truth Rails | Completed | Archived at `.planning/milestones/v1.5-phases/20-lock-family-loop-truth-rails/20-VERIFICATION.md` |
+| 24 | Surface Demand-Backed Growth Backlog | Archived | Requirements DEMAND-01, DEMAND-02, DEMAND-03; verified 2026-04-24 |
+| 25 | Prove Capability Health And Readiness | Archived | Requirements HEALTH-01, HEALTH-02, HEALTH-03; verified 2026-04-24 |
+| 26 | Lock Demand-Guided Operator Truth | Archived | Requirements TRUST-01, TRUST-02, TRUST-03; verified 2026-04-24 |
 
 ## Known Context
 
@@ -49,10 +53,8 @@ See: `.planning/PROJECT.md` (updated 2026-04-24)
 - Claude Code、Codex、OpenCode 继续共享同一套 shared broker home、thin host shell、proof/reuse state 与 published lifecycle contract
 - CI trust rails 已经通过 `release:gate` 收口成 canonical repo-owned release verdict；publish flow 也直接复用同一套 truth
 - host shell 仍然只能判断 `broker_first` / `handle_normally` / `clarify_before_broker`，不能在入口处选择具体 winner
-- routing traces、acquisition memory、verified downstream manifests、`doctor`、canonical `STATUS.md`、milestone audit 与 CI trust report 都是当前 repo-owned proof rail
-- `.planning/milestones/v1.5-phases/` 已承载最新一轮 phase archive；`.planning/phases/` 现在应留给下一轮 active milestone 使用
-- v1.5 已把 `website QA -> web markdown -> social markdown` 收成一条 QA-first family proof loop，并把 hierarchy、freshness/reuse 与 truth rails 一起锁成 canonical history
-- 下一轮 milestone 仍应优先围绕 coarse broker-first boundary、shared broker home reuse 与 QA-first sequencing 选择新的最高价值 bottleneck
+- routing traces、acquisition memory、verified downstream manifests、MCP registry advisory metadata、`doctor`、canonical `STATUS.md`、milestone audit 与 CI trust report 都是当前 repo-owned proof rail
+- v1.7 已把 capability growth 推进到 demand-guided health：真实需求、stale/blocked acquisition、promotion readiness 与 satisfied local winners 都进入 `doctor`、docs、installed shells、STATUS/TODOS 与 CI trust rails
 
 ## Session History
 
@@ -62,22 +64,11 @@ See: `.planning/PROJECT.md` (updated 2026-04-24)
 - 2026-04-23: Phases 5-8 executed and verified — see `.planning/milestones/v1.1-phases/`
 - 2026-04-23: Milestone v1.1 audited — see `.planning/milestones/v1.1-MILESTONE-AUDIT.md`
 - 2026-04-23: Milestone v1.2 executed, shipped, audited, and archived — see `.planning/milestones/v1.2-MILESTONE-AUDIT.md`
-- 2026-04-23: Milestone v1.3 started — requirements and roadmap drafted for phases 12-14
-- 2026-04-23: Phase 12 executed and verified — see `.planning/milestones/v1.3-phases/12-harden-website-qa-broker-first-hit-rate/12-VERIFICATION.md`
-- 2026-04-23: Phase 13 executed and verified — see `.planning/milestones/v1.3-phases/13-prove-website-qa-repeat-usage-loop/13-VERIFICATION.md`
-- 2026-04-23: Phase 14 executed and verified — see `.planning/milestones/v1.3-phases/14-lock-qa-first-operator-truth/14-VERIFICATION.md`
-- 2026-04-23: Milestone v1.3 shipped, audited, and archived — see `.planning/milestones/v1.3-MILESTONE-AUDIT.md`
-- 2026-04-23: Milestone v1.4 started — requirements and roadmap drafted for phases 15-17
-- 2026-04-23: Phase 15 executed and verified — see `.planning/milestones/v1.4-phases/15-quantify-website-qa-adoption-signals/15-VERIFICATION.md`
-- 2026-04-23: Phase 16 executed and verified — see `.planning/milestones/v1.4-phases/16-align-shared-home-health-with-qa-signal-freshness/16-VERIFICATION.md`
-- 2026-04-23: Phase 17 executed and verified — see `.planning/milestones/v1.4-phases/17-lock-adoption-signal-audit-truth/17-VERIFICATION.md`
-- 2026-04-23: Milestone v1.4 audited and archived — see `.planning/milestones/v1.4-MILESTONE-AUDIT.md`
-- 2026-04-24: Milestone v1.5 started — defining the QA-first family proof loop requirements and roadmap
-- 2026-04-24: Phase 18 executed and verified — see `.planning/milestones/v1.5-phases/18-encode-qa-first-family-hierarchy/18-VERIFICATION.md`
-- 2026-04-24: Phase 19 executed and verified — see `.planning/milestones/v1.5-phases/19-prove-family-loop-freshness-and-reuse/19-VERIFICATION.md`
-- 2026-04-24: Phase 20 executed and verified — see `.planning/milestones/v1.5-phases/20-lock-family-loop-truth-rails/20-VERIFICATION.md`
-- 2026-04-24: Milestone v1.5 audited and archived — see `.planning/milestones/v1.5-MILESTONE-AUDIT.md`
-- 2026-04-24: Milestone v1.5 shipped in PR #33 — see `https://github.com/monkeyin92/skills-broker/pull/33`
+- 2026-04-23: Milestone v1.3 executed, shipped, audited, and archived — see `.planning/milestones/v1.3-MILESTONE-AUDIT.md`
+- 2026-04-23: Milestone v1.4 executed, audited, and archived — see `.planning/milestones/v1.4-MILESTONE-AUDIT.md`
+- 2026-04-24: Milestone v1.5 executed, audited, archived, and shipped in PR #33 — see `.planning/milestones/v1.5-MILESTONE-AUDIT.md`
+- 2026-04-24: Milestone v1.6 executed, audited, archived, and cleaned up — see `.planning/milestones/v1.6-MILESTONE-AUDIT.md`
+- 2026-04-24: Milestone v1.7 executed, audited, archived, and cleaned up — see `.planning/milestones/v1.7-MILESTONE-AUDIT.md`
 
 ## Workflow Settings
 
@@ -92,18 +83,7 @@ See: `.planning/PROJECT.md` (updated 2026-04-24)
 
 ## Next Up
 
-Review and merge PR #33 when ready:
-
-`https://github.com/monkeyin92/skills-broker/pull/33`
-
-After merge, start the next milestone:
-
-`$gsd-new-milestone`
-
-Also available:
-- `cat .planning/milestones/v1.5-MILESTONE-AUDIT.md`
-- `cat .planning/milestones/v1.5-ROADMAP.md`
-- `cat .planning/MILESTONES.md`
+Run `$gsd-new-milestone` to define the next milestone.
 
 ---
-*State initialized: 2026-04-22*
+*State updated: 2026-04-24 after archiving milestone v1.7*

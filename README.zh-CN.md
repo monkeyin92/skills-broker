@@ -108,6 +108,9 @@ broker 决定：
 QA-first family loop：先 website QA，再 web markdown，最后 social markdown。
 当 website QA proof 已成立后，下一条该跑的 proven loop 是 web markdown；完成之后，social markdown 是再下一条。
 `doctor` 现在会直接输出一份 QA-first family-loop packet：包含 website QA adoption，以及 web markdown / social markdown 的 freshness、reuse 与按顺序排列的 next action。
+Capability growth 的 next action 继续归 broker 所有：install、verify、rerun、refresh metadata，或 prefer verified winner。
+`doctor` 现在会直接输出一份 capability growth packet：provenance、install_required、verification、repeat usage、cross-host reuse、degraded/failed counts 与 next action。
+Demand-guided capability growth health 会展示真实需求、stale 或 blocked acquisitions、promotion readiness，以及已满足的本地赢家，同时不把 winner selection 移进宿主壳。
 
 v0 当前包含：
 
