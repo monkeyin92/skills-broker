@@ -8,7 +8,7 @@
 See: `.planning/PROJECT.md` (updated 2026-04-24)
 
 **Core value:** 用户只需要描述想达成的结果，broker 就能在当前宿主里找到、准备并复用合适的能力，而不用让用户记住工具名、重新发现赢家、或自己判断安装路径。
-**Current focus:** Milestone v1.5 active — Phase 19 is next to prove family-loop freshness and reuse across shared-home surfaces
+**Current focus:** Milestone v1.5 active — Phase 20 is next to lock family-loop truth rails across docs, shells, status, and CI
 
 ## Current Milestone
 
@@ -19,17 +19,17 @@ See: `.planning/PROJECT.md` (updated 2026-04-24)
 
 ## Current Position
 
-- **Phase:** 19
+- **Phase:** 20
 - **Plan:** —
 - **Status:** Ready for phase planning
-- **Last activity:** 2026-04-24 — Phase 18 completed and verified
+- **Last activity:** 2026-04-24 — Phase 19 completed and verified
 
 ## Current Phase
 
-- **Phase:** 19
-- **Goal:** Prove family-loop freshness and reuse across shared-home surfaces
+- **Phase:** 20
+- **Goal:** Lock family-loop truth rails across docs, shells, status, and CI
 - **Status:** pending_planning
-- **Primary requirements:** FRESH-01, FRESH-02, FRESH-03
+- **Primary requirements:** TRUST-03, TRUST-04
 - **Plan count:** 0
 - **Wave count:** 0
 
@@ -38,7 +38,7 @@ See: `.planning/PROJECT.md` (updated 2026-04-24)
 | Phase | Name | Status | Notes |
 |-------|------|--------|-------|
 | 18 | Encode QA-First Family Hierarchy | Completed | Verified at `.planning/phases/18-encode-qa-first-family-hierarchy/18-VERIFICATION.md` |
-| 19 | Prove Family-Loop Freshness And Reuse | Pending | Depends on Phase 18 |
+| 19 | Prove Family-Loop Freshness And Reuse | Completed | Verified at `.planning/phases/19-prove-family-loop-freshness-and-reuse/19-VERIFICATION.md` |
 | 20 | Lock Family-Loop Truth Rails | Pending | Depends on Phase 19 |
 
 ## Known Context
@@ -56,6 +56,7 @@ See: `.planning/PROJECT.md` (updated 2026-04-24)
 - v1.5 当前目标是把 `website QA`、`web markdown`、`social markdown` 收成一条 QA-first family proof loop，同时不把 `website QA` hero lane 打平成并列入口
 - v1.5 roadmap 现已定义为 phases 18-20，顺序为 hierarchy → freshness/reuse → truth rails
 - Phase 18 已把 QA-first family hierarchy 与 post-QA next-loop guidance 对齐到 docs、doctor text、generated host shell、STATUS 与 TODOS
+- Phase 19 已把 family-loop freshness / reuse / next-step guidance 收成 `doctor` 的 top-level `familyLoopSignals` packet，并让 post-QA guidance 保持 QA-first sequence
 
 ## Session History
 
@@ -79,6 +80,7 @@ See: `.planning/PROJECT.md` (updated 2026-04-24)
 - 2026-04-24: Milestone v1.5 roadmap created — Phase 18 is next
 - 2026-04-24: Phase 18 context and plans created — execution in progress
 - 2026-04-24: Phase 18 executed and verified — see `.planning/phases/18-encode-qa-first-family-hierarchy/18-VERIFICATION.md`
+- 2026-04-24: Phase 19 executed and verified — see `.planning/phases/19-prove-family-loop-freshness-and-reuse/19-VERIFICATION.md`
 
 ## Workflow Settings
 
@@ -95,7 +97,7 @@ See: `.planning/PROJECT.md` (updated 2026-04-24)
 
 Start planning the active milestone:
 
-`$gsd-plan-phase 19`
+`$gsd-plan-phase 20`
 
 Also available:
 - `cat .planning/milestones/v1.4-MILESTONE-AUDIT.md`

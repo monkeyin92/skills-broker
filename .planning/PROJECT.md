@@ -64,10 +64,10 @@ v1.2 已经把 canonical shipping truth 收口到 repo-owned `release:gate` / `r
 - ✓ shared-home adoption health、`doctor` 与 `STATUS.md` 现在能区分 active / stale / missing，并指出下一步 refresh action — v1.4 Phase 16
 - ✓ canonical `STATUS.md`、milestone audit 与 CI trust rails 现在消费同一份 website QA adoption packet，并对 wording / counts / freshness drift fail closed — v1.4 Phase 17
 - ✓ QA-first family hierarchy 与 post-QA next-loop guidance 现在已在 README、README.zh-CN、generated host shell、`doctor` text、`STATUS.md` 与 `TODOS.md` 上使用同一份 canonical wording — v1.5 Phase 18
+- ✓ `doctor` 与 shared-home surfaces 现在会把 `website QA`、`web markdown`、`social markdown` 的 family-loop freshness、reuse 与 sequence-aware refresh guidance 收成同一份 repo-owned packet — v1.5 Phase 19
 
 ### Active
 
-- [ ] QA-first family loop 的 freshness、reuse 与 next-step guidance 能在 shared broker home 与 repo-owned proof surfaces 上被直接读取
 - [ ] CI、parity、audit 与 canonical broker surfaces 必须继续把 README、README.zh-CN、installed host shell、`STATUS.md`、`TODOS.md` 与 `doctor` 锁在同一份 QA-first family-loop truth 上
 
 ### Out of Scope
@@ -85,7 +85,7 @@ v1.2 已经把 canonical shipping truth 收口到 repo-owned `release:gate` / `r
 
 v1.3 已经把 `website QA` 这条默认入口的三层真相都补齐了：Phase 12 锁住 route confidence 与 repo-owned routing evidence，Phase 13 锁住 repeat usage / cross-host reuse proof loop，Phase 14 把 README、host shell、STATUS、TODOS 与 CI/parity guardrail 对齐到同一份 coarse-boundary operator story。v1.4 又补上最后一层：Phase 15 收 recent adoption packet，Phase 16 把 adoption health 与 refresh guidance 对齐到 freshness，Phase 17 把 `STATUS.md`、milestone audit 与 CI/parity guardrails 锁到同一份 packet。repo 现在不需要再靠一次 demo 或手工读 trace 去解释默认入口是否还活着。
 
-现成可复用的 rail 已经很多：routing traces、acquisition memory、verified downstream manifests、`doctor`、canonical `STATUS.md`、milestone audit、CI trust report、three-host shared-home smoke。v1.4 已经优先复用这些 surface 把 QA-first story 升级成 adoption signal，而不是急着扩更多 capability surface、宿主模板化，或重开 release truth 的新抽象。
+现成可复用的 rail 已经很多：routing traces、acquisition memory、verified downstream manifests、`doctor`、canonical `STATUS.md`、milestone audit、CI trust report、three-host shared-home smoke。v1.4 已经优先复用这些 surface 把 QA-first story 升级成 adoption signal，而不是急着扩更多 capability surface、宿主模板化，或重开 release truth 的新抽象。Phase 18 则把 QA-first hierarchy 与 post-QA next-loop wording 对齐成同一份 canonical operator truth；Phase 19 继续复用 acquisition memory 与 verified downstream manifests，把三段 family loop 的 freshness / reuse / next action 收成新的 shared-home proof packet。
 
 因此当前 repo truth 已经把 freshness / adoption / auditability 这一层闭环：`website QA` 作为默认入口是否仍然在真实宿主里工作、被重复使用、跨宿主复用，以及 maintainer 能否不翻 raw trace 就看懂这件事，现在都有 repo-owned surface 可读。
 
@@ -143,4 +143,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-24 after completing Phase 18*
+*Last updated: 2026-04-24 after completing Phase 19*

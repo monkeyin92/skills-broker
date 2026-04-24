@@ -13,9 +13,9 @@
 
 ### Family Loop Proof
 
-- [ ] **FRESH-01**: `doctor` and shared-home surfaces can show freshness for `web markdown` and `social markdown` alongside the existing `website QA` packet, so maintainers can verify that the full QA-first family loop is currently alive
-- [ ] **FRESH-02**: Maintainer can distinguish which segment of the family loop is stale or missing (`website QA`, `web markdown`, or `social markdown`) and what concrete refresh action should run next
-- [ ] **FRESH-03**: Shared-home proof surfaces can show reuse state for the post-QA family loop across Claude Code, Codex, and OpenCode without flattening the hero-lane sequence
+- [x] **FRESH-01**: `doctor` and shared-home surfaces can show freshness for `web markdown` and `social markdown` alongside the existing `website QA` packet, so maintainers can verify that the full QA-first family loop is currently alive
+- [x] **FRESH-02**: Maintainer can distinguish which segment of the family loop is stale or missing (`website QA`, `web markdown`, or `social markdown`) and what concrete refresh action should run next
+- [x] **FRESH-03**: Shared-home proof surfaces can show reuse state for the post-QA family loop across Claude Code, Codex, and OpenCode without flattening the hero-lane sequence
 
 ### Cross-Surface Trust
 
@@ -56,9 +56,9 @@
 | LOOP-01 | Phase 18 | Complete |
 | LOOP-02 | Phase 18 | Complete |
 | LOOP-03 | Phase 18 | Complete |
-| FRESH-01 | Phase 19 | Pending |
-| FRESH-02 | Phase 19 | Pending |
-| FRESH-03 | Phase 19 | Pending |
+| FRESH-01 | Phase 19 | Complete |
+| FRESH-02 | Phase 19 | Complete |
+| FRESH-03 | Phase 19 | Complete |
 | TRUST-03 | Phase 20 | Pending |
 | TRUST-04 | Phase 20 | Pending |
 
@@ -70,4 +70,4 @@
 
 ---
 *Requirements defined: 2026-04-24*
-*Last updated: 2026-04-24 after completing Phase 18*
+*Last updated: 2026-04-24 after completing Phase 19*

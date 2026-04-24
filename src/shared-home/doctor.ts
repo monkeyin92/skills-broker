@@ -124,6 +124,54 @@ export type DoctorWebsiteQaAdoptionSignal = {
   nextAction: string;
 };
 
+export type DoctorFamilyLoopSignalStatus =
+  DoctorWebsiteQaAdoptionSignalStatus;
+
+export type DoctorFamilyLoopSignal = {
+  label: string;
+  windowDays: number;
+  status: DoctorFamilyLoopSignalStatus;
+  proofs: {
+    verifyState: DoctorFamilyProofSummary["verifyState"];
+    repeatUsageState: DoctorFamilyProofSummary["repeatUsageState"];
+    crossHostReuseState: DoctorFamilyProofSummary["crossHostReuseState"];
+  };
+  latest: {
+    verifiedAt?: string;
+    firstReuseAt?: string;
+    verifiedManifestAt?: string;
+    activityAt?: string;
+  };
+  reuse: {
+    rerunSuccessfulRoutes: number;
+    reuseRecorded: number;
+    crossHostReuseRecorded: number;
+    downstreamReplayManifests: number;
+    verifiedHosts: BrokerHost[];
+    activeHosts: number;
+    supportedHosts: number;
+  };
+  hosts: Array<{
+    name: BrokerHost;
+    status: DoctorFamilyLoopSignalStatus;
+    lastVerifiedManifestAt?: string;
+    historicalVerified: boolean;
+  }>;
+  nextAction: string;
+};
+
+type DoctorFamilyLoopSignalBase = Omit<DoctorFamilyLoopSignal, "nextAction">;
+
+type DoctorFamilyAcquisitionMetric = {
+  rerunSuccessfulRoutes: number;
+  reuseRecorded: number;
+  crossHostReuseRecorded: number;
+  latestVerifiedAt?: string;
+  latestFirstReuseAt?: string;
+  verifiedHosts: BrokerHost[];
+  entries: number;
+};
+
 export type DoctorLifecycleResult = {
   command: "doctor";
   sharedHome: {
@@ -157,6 +205,7 @@ export type DoctorLifecycleResult = {
   familyProofs: Record<DoctorProofFamily, DoctorFamilyProofSummary>;
   websiteQaLoop: DoctorFamilyProofSummary;
   websiteQaAdoption: DoctorWebsiteQaAdoptionSignal;
+  familyLoopSignals: Record<DoctorProofFamily, DoctorFamilyLoopSignal>;
   websiteQaRouting: {
     windowDays: number;
     observed: number;
@@ -1094,20 +1143,7 @@ async function summarizeDoctorVerifiedDownstreamManifests(
 async function collectFamilyAcquisitionMetrics(
   brokerHomeDirectory: string,
   state: DoctorProofRailState
-): Promise<
-  Record<
-    DoctorProofFamily,
-    {
-      rerunSuccessfulRoutes: number;
-      reuseRecorded: number;
-      crossHostReuseRecorded: number;
-      latestVerifiedAt?: string;
-      latestFirstReuseAt?: string;
-      verifiedHosts: BrokerHost[];
-      entries: number;
-    }
-  >
-> {
+): Promise<Record<DoctorProofFamily, DoctorFamilyAcquisitionMetric>> {
   const empty = Object.fromEntries(
     DOCTOR_FAMILY_CONFIGS.map((config) => [
       config.family,
@@ -1121,18 +1157,7 @@ async function collectFamilyAcquisitionMetrics(
         entries: 0
       }
     ])
-  ) as unknown as Record<
-    DoctorProofFamily,
-    {
-      rerunSuccessfulRoutes: number;
-      reuseRecorded: number;
-      crossHostReuseRecorded: number;
-      latestVerifiedAt?: string;
-      latestFirstReuseAt?: string;
-      verifiedHosts: BrokerHost[];
-      entries: number;
-    }
-  >;
+  ) as unknown as Record<DoctorProofFamily, DoctorFamilyAcquisitionMetric>;
 
   if (state !== "present") {
     return empty;
@@ -1351,6 +1376,194 @@ function summarizeWebsiteQaAdoptionSignal(input: {
       routing: input.routing
     })
   };
+}
+
+function summarizeWebsiteQaFamilyLoopSignal(input: {
+  adoption: DoctorWebsiteQaAdoptionSignal;
+  proof: DoctorFamilyProofSummary;
+  acquisition: DoctorFamilyAcquisitionMetric;
+}): DoctorFamilyLoopSignalBase {
+  const hosts = input.adoption.hosts.map((host) => ({
+    name: host.name,
+    status: host.status,
+    lastVerifiedManifestAt: host.lastVerifiedManifestAt,
+    historicalVerified: host.historicalVerified
+  }));
+
+  return {
+    label: "Website QA",
+    windowDays: input.adoption.windowDays,
+    status: input.adoption.status,
+    proofs: {
+      verifyState: input.adoption.proofs.verifyState,
+      repeatUsageState: input.adoption.proofs.repeatUsageState,
+      crossHostReuseState: input.adoption.proofs.crossHostReuseState
+    },
+    latest: {
+      verifiedAt: input.adoption.latest.verifiedAt,
+      firstReuseAt: input.adoption.latest.firstReuseAt,
+      verifiedManifestAt: input.adoption.latest.verifiedManifestAt,
+      activityAt: input.adoption.latest.activityAt
+    },
+    reuse: {
+      rerunSuccessfulRoutes: input.acquisition.rerunSuccessfulRoutes,
+      reuseRecorded: input.acquisition.reuseRecorded,
+      crossHostReuseRecorded: input.acquisition.crossHostReuseRecorded,
+      downstreamReplayManifests: input.proof.downstreamReplayManifests,
+      verifiedHosts: input.acquisition.verifiedHosts,
+      activeHosts: hosts.filter((host) => host.status === "active").length,
+      supportedHosts: BROKER_HOSTS.length
+    },
+    hosts
+  };
+}
+
+function summarizeGenericFamilyLoopSignal(input: {
+  family: DoctorProofFamily;
+  windowDays: number;
+  since: Date;
+  proof: DoctorFamilyProofSummary;
+  acquisition: DoctorFamilyAcquisitionMetric;
+  verifiedDownstream: DoctorVerifiedDownstreamScan;
+}): DoctorFamilyLoopSignalBase {
+  const latestVerifiedManifestAt =
+    input.verifiedDownstream.familyLatestVerifiedAt[input.family];
+  const latestActivityAt = latestTimestamp(
+    input.acquisition.latestVerifiedAt,
+    input.acquisition.latestFirstReuseAt,
+    latestVerifiedManifestAt
+  );
+  const status: DoctorFamilyLoopSignalStatus =
+    latestActivityAt === undefined
+      ? "missing"
+      : isTimestampOnOrAfter(latestActivityAt, input.since)
+        ? "active"
+        : "stale";
+
+  const hosts = BROKER_HOSTS.map((host) => {
+    const lastVerifiedManifestAt =
+      input.verifiedDownstream.hostFamilyLatestVerifiedAt[host][input.family];
+    const historicalVerified =
+      input.acquisition.verifiedHosts.includes(host) ||
+      input.verifiedDownstream.hostFamilyManifestCounts[host][input.family] > 0;
+    const hostStatus: DoctorFamilyLoopSignalStatus = isTimestampOnOrAfter(
+      lastVerifiedManifestAt,
+      input.since
+    )
+      ? "active"
+      : historicalVerified
+        ? "stale"
+        : "missing";
+
+    return {
+      name: host,
+      status: hostStatus,
+      lastVerifiedManifestAt,
+      historicalVerified
+    };
+  });
+
+  return {
+    label: input.proof.label,
+    windowDays: input.windowDays,
+    status,
+    proofs: {
+      verifyState: input.proof.verifyState,
+      repeatUsageState: input.proof.repeatUsageState,
+      crossHostReuseState: input.proof.crossHostReuseState
+    },
+    latest: {
+      verifiedAt: input.acquisition.latestVerifiedAt,
+      firstReuseAt: input.acquisition.latestFirstReuseAt,
+      verifiedManifestAt: latestVerifiedManifestAt,
+      activityAt: latestActivityAt
+    },
+    reuse: {
+      rerunSuccessfulRoutes: input.acquisition.rerunSuccessfulRoutes,
+      reuseRecorded: input.acquisition.reuseRecorded,
+      crossHostReuseRecorded: input.acquisition.crossHostReuseRecorded,
+      downstreamReplayManifests: input.proof.downstreamReplayManifests,
+      verifiedHosts: input.acquisition.verifiedHosts,
+      activeHosts: hosts.filter((host) => host.status === "active").length,
+      supportedHosts: BROKER_HOSTS.length
+    },
+    hosts
+  };
+}
+
+function familyLoopSequenceLabel(family: DoctorProofFamily): string {
+  switch (family) {
+    case "website_qa":
+      return "QA-first hero-lane";
+    case "web_content_to_markdown":
+      return "second proven loop";
+    case "social_post_to_markdown":
+      return "third proven loop";
+  }
+}
+
+function familyLoopActiveMessage(family: DoctorProofFamily): string {
+  switch (family) {
+    case "website_qa":
+      return "Website QA signal is active; keep this hero lane exercised as the default-entry demo.";
+    case "web_content_to_markdown":
+      return "Web Markdown signal is active; keep this second proven loop exercised after website QA.";
+    case "social_post_to_markdown":
+      return "Social Markdown signal is active; keep this third proven loop exercised after web markdown.";
+  }
+}
+
+function familyLoopMissingMessage(config: DoctorFamilyConfig): string {
+  return `Run one ${config.requestLabel} request now so doctor records a current ${familyLoopSequenceLabel(config.family)} signal.`;
+}
+
+function familyLoopStaleMessage(config: DoctorFamilyConfig): string {
+  return `Refresh the ${config.requestLabel} loop now so doctor shows a current ${familyLoopSequenceLabel(config.family)} signal instead of historical proof only.`;
+}
+
+function familyLoopSignalNextAction(input: {
+  config: DoctorFamilyConfig;
+  signal: DoctorFamilyLoopSignalBase;
+  proof: DoctorFamilyProofSummary;
+  familySignals: Record<DoctorProofFamily, DoctorFamilyLoopSignalBase>;
+  websiteQaAdoption: DoctorWebsiteQaAdoptionSignal;
+}): string {
+  if (input.config.family === "website_qa") {
+    return input.websiteQaAdoption.nextAction;
+  }
+
+  if (input.familySignals.website_qa.status !== "active") {
+    return `Refresh the website QA hero lane first, then rerun the same ${input.config.requestLabel} request so doctor records a fresh ${familyLoopSequenceLabel(input.config.family)} signal.`;
+  }
+
+  if (
+    input.config.family === "social_post_to_markdown" &&
+    input.familySignals.web_content_to_markdown.status !== "active"
+  ) {
+    return "Refresh the web markdown loop first, then rerun the same social markdown request so doctor records a fresh third proven loop signal.";
+  }
+
+  if (input.proof.phase === "proof_unreadable") {
+    return input.proof.nextAction;
+  }
+
+  if (
+    input.proof.verifyState !== "confirmed" ||
+    input.proof.repeatUsageState !== "confirmed" ||
+    input.proof.crossHostReuseState !== "confirmed"
+  ) {
+    return input.proof.nextAction;
+  }
+
+  if (input.signal.status === "missing") {
+    return familyLoopMissingMessage(input.config);
+  }
+
+  if (input.signal.status === "stale") {
+    return familyLoopStaleMessage(input.config);
+  }
+
+  return familyLoopActiveMessage(input.config.family);
 }
 
 function conflictReason(
@@ -1630,6 +1843,47 @@ export async function doctorSharedBrokerHome(
     acquisition: familyAcquisitionMetrics.website_qa,
     verifiedDownstream: verifiedDownstreamScan
   });
+  const familyLoopSignalBases = Object.fromEntries(
+    DOCTOR_FAMILY_CONFIGS.map((config) => {
+      if (config.family === "website_qa") {
+        return [
+          config.family,
+          summarizeWebsiteQaFamilyLoopSignal({
+            adoption: websiteQaAdoption,
+            proof: familyProofs.website_qa,
+            acquisition: familyAcquisitionMetrics.website_qa
+          })
+        ];
+      }
+
+      return [
+        config.family,
+        summarizeGenericFamilyLoopSignal({
+          family: config.family,
+          windowDays: routingWindowDays,
+          since: routingSince,
+          proof: familyProofs[config.family],
+          acquisition: familyAcquisitionMetrics[config.family],
+          verifiedDownstream: verifiedDownstreamScan
+        })
+      ];
+    })
+  ) as Record<DoctorProofFamily, DoctorFamilyLoopSignalBase>;
+  const familyLoopSignals = Object.fromEntries(
+    DOCTOR_FAMILY_CONFIGS.map((config) => [
+      config.family,
+      {
+        ...familyLoopSignalBases[config.family],
+        nextAction: familyLoopSignalNextAction({
+          config,
+          signal: familyLoopSignalBases[config.family],
+          proof: familyProofs[config.family],
+          familySignals: familyLoopSignalBases,
+          websiteQaAdoption
+        })
+      }
+    ])
+  ) as Record<DoctorProofFamily, DoctorFamilyLoopSignal>;
 
   return {
     command: "doctor",
@@ -1639,6 +1893,7 @@ export async function doctorSharedBrokerHome(
     familyProofs,
     websiteQaLoop,
     websiteQaAdoption,
+    familyLoopSignals,
     websiteQaRouting,
     routingMetrics: {
       windowDays: routingWindowDays,
