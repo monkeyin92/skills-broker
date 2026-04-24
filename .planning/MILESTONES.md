@@ -1,5 +1,26 @@
 # Project Milestones: skills-broker
 
+## v1.7 Demand-Guided Capability Growth Health (Shipped: 2026-04-24)
+
+**Delivered:** `skills-broker` now turns capability growth into demand-guided health: operator-visible demand, stale/blocked acquisitions, promotion readiness, and satisfied local winners are derived from routing traces and acquisition memory, surfaced through `doctor`, and locked into docs, installed shells, `STATUS.md`, `TODOS.md`, and CI trust rails without moving winner selection into host shells.
+
+**Phases completed:** 24-26 (3 plans total)
+
+**Key accomplishments:**
+
+- Added deterministic demand-backed opportunity aggregation across routing traces, `INSTALL_REQUIRED` outcomes, `NO_CANDIDATE`, successful handoffs, and acquisition memory.
+- Exposed `capabilityGrowthHealth` in doctor JSON/text with freshness, blocked next actions, promotion readiness, reuse state, and top opportunity details.
+- Locked demand-guided capability growth wording across README, README.zh-CN, generated host shell, `STATUS.md`, `TODOS.md`, operator-truth parity, CI trust, release gate, and tests while preserving the coarse broker-first boundary.
+
+**Stats:**
+
+- 3 phases, 9 requirements satisfied
+- Validation passed: `npm test -- --run`, `npm run ci:blind-spot`, `npm run release:gate`, `npm run build`
+
+**Git range:** `feat(phase-24-25): surface capability growth health` → `test: stabilize local handoff and lifecycle checks`
+
+**What's next:** Use `$gsd-new-milestone` to choose the next bottleneck. Keep `website QA` as the hero lane and keep host shells coarse unless demand-guided health proves a stronger follow-on pressure.
+
 ## v1.6 Registry-Ready Capability Growth Loop (Shipped: 2026-04-24)
 
 **Delivered:** `skills-broker` 现在已经把 verified downstream manifests、MCP registry advisory 与 acquisition memory 收成一条 registry-ready capability growth loop：operator 能看懂 candidate provenance、installability、verification、reuse state 与下一步 action，同时 host shell 继续只做 coarse broker-first boundary。
