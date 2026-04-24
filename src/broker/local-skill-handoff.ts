@@ -52,6 +52,30 @@ export async function resolveLocalSkillHandoffSource(
 
   const skillName = preferredSkillName(card);
 
+  if (options.brokerHomeDirectory !== undefined) {
+    for (const host of handoffSearchHosts(options.currentHost, options.brokerHomeDirectory)) {
+      const location = await findInstalledLeafLocation(card, {
+        currentHost: host,
+        brokerHomeDirectory: options.brokerHomeDirectory,
+        packageSearchRoots: [
+          join(options.brokerHomeDirectory, "downstream", host, "skills")
+        ],
+        cwd: options.cwd
+      });
+
+      if (location === undefined) {
+        continue;
+      }
+
+      return {
+        skillName,
+        skillDirectory: location.skillDirectory,
+        skillFilePath: join(location.skillDirectory, "SKILL.md"),
+        sourceHost: host === options.currentHost ? undefined : host
+      };
+    }
+  }
+
   for (const host of handoffSearchHosts(
     options.currentHost,
     options.brokerHomeDirectory

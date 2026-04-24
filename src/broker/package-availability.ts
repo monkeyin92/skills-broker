@@ -151,6 +151,7 @@ function baseSearchRoots(
   const cwd = resolve(input.cwd ?? process.cwd());
   const home = homedir();
   const roots = [
+    ...brokerManagedRoot,
     join(home, ".agents", "skills"),
     join(home, ".agent", "skills"),
     join(home, ".codex", "skills"),
@@ -158,8 +159,6 @@ function baseSearchRoots(
     join(cwd, ".agent", "skills"),
     join(cwd, ".codex", "skills")
   ];
-
-  roots.push(...brokerManagedRoot);
 
   return unique(roots.map((root) => resolve(root)));
 }
