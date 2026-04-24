@@ -1,14 +1,14 @@
 # State
 
 **Initialized:** 2026-04-22
-**Status:** defining_requirements
+**Status:** ready_for_planning
 
 ## Project Reference
 
 See: `.planning/PROJECT.md` (updated 2026-04-24)
 
 **Core value:** 用户只需要描述想达成的结果，broker 就能在当前宿主里找到、准备并复用合适的能力，而不用让用户记住工具名、重新发现赢家、或自己判断安装路径。
-**Current focus:** Milestone v1.5 active — define the QA-first family proof loop requirements and roadmap without flattening the hero lane
+**Current focus:** Milestone v1.5 active — roadmap ready for Phase 18 to encode the QA-first family hierarchy without flattening the hero lane
 
 ## Current Milestone
 
@@ -19,25 +19,27 @@ See: `.planning/PROJECT.md` (updated 2026-04-24)
 
 ## Current Position
 
-- **Phase:** —
+- **Phase:** 18
 - **Plan:** —
-- **Status:** Defining requirements
-- **Last activity:** 2026-04-24 — Milestone v1.5 started
+- **Status:** Ready for phase planning
+- **Last activity:** 2026-04-24 — Roadmap created for phases 18-20
 
 ## Current Phase
 
-- **Phase:** —
-- **Goal:** Define milestone v1.5 requirements and roadmap
-- **Status:** defining_requirements
-- **Primary requirements:** —
-- **Plan count:** 6
-- **Wave count:** 3
+- **Phase:** 18
+- **Goal:** Encode the QA-first family hierarchy across repo-owned surfaces
+- **Status:** pending_planning
+- **Primary requirements:** LOOP-01, LOOP-02, LOOP-03
+- **Plan count:** 0
+- **Wave count:** 0
 
 ## Phase Status
 
 | Phase | Name | Status | Notes |
 |-------|------|--------|-------|
-| — | Not yet defined | Pending | Requirements and roadmap for milestone v1.5 are being defined |
+| 18 | Encode QA-First Family Hierarchy | Pending | Ready for `$gsd-plan-phase 18` |
+| 19 | Prove Family-Loop Freshness And Reuse | Pending | Depends on Phase 18 |
+| 20 | Lock Family-Loop Truth Rails | Pending | Depends on Phase 19 |
 
 ## Known Context
 
@@ -52,6 +54,7 @@ See: `.planning/PROJECT.md` (updated 2026-04-24)
 - routing traces、acquisition memory、verified downstream manifests、`doctor`、canonical `STATUS.md`、milestone audit 与 CI trust report 都是 v1.4 可复用的 adoption-signal rail
 - `.planning/milestones/v1.3-phases/` 已承载上一轮 phase archive；`.planning/phases/` 当前为空，适合启动新 phase
 - v1.5 当前目标是把 `website QA`、`web markdown`、`social markdown` 收成一条 QA-first family proof loop，同时不把 `website QA` hero lane 打平成并列入口
+- v1.5 roadmap 现已定义为 phases 18-20，顺序为 hierarchy → freshness/reuse → truth rails
 
 ## Session History
 
@@ -72,6 +75,7 @@ See: `.planning/PROJECT.md` (updated 2026-04-24)
 - 2026-04-23: Phase 17 executed and verified — see `.planning/milestones/v1.4-phases/17-lock-adoption-signal-audit-truth/17-VERIFICATION.md`
 - 2026-04-23: Milestone v1.4 audited and archived — see `.planning/milestones/v1.4-MILESTONE-AUDIT.md`
 - 2026-04-24: Milestone v1.5 started — defining the QA-first family proof loop requirements and roadmap
+- 2026-04-24: Milestone v1.5 roadmap created — Phase 18 is next
 
 ## Workflow Settings
 
@@ -86,14 +90,15 @@ See: `.planning/PROJECT.md` (updated 2026-04-24)
 
 ## Next Up
 
-Define the active milestone artifacts:
+Start planning the active milestone:
 
-`$gsd-new-milestone`
+`$gsd-plan-phase 18`
 
 Also available:
 - `cat .planning/milestones/v1.4-MILESTONE-AUDIT.md`
 - `cat .planning/PROJECT.md`
 - `cat .planning/REQUIREMENTS.md`
+- `cat .planning/ROADMAP.md`
 
 ---
 *State initialized: 2026-04-22*

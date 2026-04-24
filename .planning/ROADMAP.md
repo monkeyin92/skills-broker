@@ -1,110 +1,103 @@
 # Roadmap: skills-broker
 
-**Created:** 2026-04-23
-**Source Requirements:** 7 v1.4 requirements from `.planning/REQUIREMENTS.md`
+**Created:** 2026-04-24
+**Source Requirements:** 8 v1.5 requirements from `.planning/REQUIREMENTS.md`
 **Granularity:** coarse
 **Project Type:** brownfield
 
 ## Roadmap Summary
 
-**3 phases** | **7 requirements mapped** | All v1.4 requirements covered ✓
+**3 phases** | **8 requirements mapped** | All v1.5 requirements covered ✓
 
 | # | Phase | Goal | Requirements | Success Criteria | UI Hint |
 |---|-------|------|--------------|------------------|---------|
-| 15 | Quantify Website QA Adoption Signals | 把 `website QA` 的近期 broker-first / repeat-usage / cross-host reuse 证据收成可读的 adoption signal，而不是只剩历史 proof 痕迹 | ADOPT-01, ADOPT-02 | 4 | no |
-| 16 | Align Shared-Home Health With QA Signal Freshness | 让 adoption health、next-action guidance 与三宿主 shared-home proof 一起对齐到 “QA-first 现在是否还活着” 这件事上 | ADOPT-03, HEALTH-01, HEALTH-02 | 4 | no |
-| 17 | Lock Adoption-Signal Audit Truth | 把 website QA adoption packet 锁进 canonical `STATUS.md`、milestone audit 与 CI trust rail，让 drift fail closed | TRUST-01, TRUST-02 | 4 | no |
+| 18 | Encode QA-First Family Hierarchy | 把 `website QA -> web markdown -> social markdown` 的层级故事收成 repo-owned 默认入口延伸 truth，同时继续坚持 QA-first hero lane | LOOP-01, LOOP-02, LOOP-03 | 4 | no |
+| 19 | Prove Family-Loop Freshness And Reuse | 让 shared-home 与 `doctor` 能直接看见三段 family loop 各自的 freshness、reuse 与 refresh action | FRESH-01, FRESH-02, FRESH-03 | 4 | no |
+| 20 | Lock Family-Loop Truth Rails | 把 docs、installed shell、`STATUS.md`、CI/parity/audit surfaces 锁到同一份 QA-first family-loop contract | TRUST-03, TRUST-04 | 4 | no |
 
 ## Phase Details
 
-### Phase 15: Quantify Website QA Adoption Signals
+### Phase 18: Encode QA-First Family Hierarchy
 
-**Goal:** 把 `website QA` 的近期 broker-first hits、repeat usage、cross-host reuse 与 per-host coverage 从 raw traces / counters 里收成 maintainer 可直接读取的 adoption signal。
+**Goal:** 把 `website QA` 作为唯一第一步的默认入口故事继续向下延伸，让 `web markdown` 与 `social markdown` 成为 operator 能自然理解的第二、第三条 proven loop，而不是重新打平为并列入口。
 
-**Requirements:** `ADOPT-01`, `ADOPT-02`
+**Requirements:** `LOOP-01`, `LOOP-02`, `LOOP-03`
 
-**Status:** completed
-
-**Verification:** `.planning/milestones/v1.4-phases/15-quantify-website-qa-adoption-signals/15-VERIFICATION.md`
+**Status:** pending
 
 **UI hint**: no
 
 Plans:
 
-- [ ] `15-01-PLAN.md` — Define time-windowed website QA signal aggregation from routing traces, acquisition memory, and host coverage rails
-- [ ] `15-02-PLAN.md` — Surface the recent website QA adoption packet on doctor / CLI / status-facing surfaces without breaking existing proof contracts
+- [ ] `18-01-PLAN.md` — Align canonical operator-truth surfaces and generated host copy on the QA-first three-step hierarchy
+- [ ] `18-02-PLAN.md` — Surface the recommended post-QA next loop on repo-owned surfaces without pushing concrete winner selection into the host shell
 
 **Success criteria:**
-1. maintainer 可以从 repo-owned surfaces 直接读到近期 website QA broker-first hits、repeat usage 与 host breakdown，而不需要手工读 raw trace
-2. repo 能区分“proof 曾经存在”与“近期 adoption signal 仍然活着”，不让一次性 demo 永久伪装成健康默认入口
-3. signal aggregation 尽量复用现有 routing trace、acquisition memory 与 verified-manifest rail，而不是发明平行 telemetry
-4. 对 signal aggregation 或 freshness semantics 的回归会在 tests / fixtures / doctor contract 中 fail closed
+1. operator 可以从 repo-owned surfaces 直接读到 `website QA` 是唯一第一步，而 `web markdown`、`social markdown` 分别是第二、第三条 proven loop
+2. 安装后的 host shell 与 repo docs 会把 operator 从 `website QA` 引导到下一条 proven loop，而不是让宿主选择具体 downstream winner
+3. 成功完成 `website QA` proof 后，operator 可以直接看懂下一步推荐跑哪条 loop，而不需要翻多份 docs 或 traces 自己拼 hierarchy
+4. coarse broker-first boundary、hero-lane sequencing 与 shared broker home reuse contract 不会因 hierarchy wording 回归
 
-**Depends on:** v1.3 已经把 route confidence、repeat-usage proof 与 QA-first operator truth shipped 到 `main`
+**Depends on:** v1.4 已把 `website QA` adoption packet、health 与 audit truth 锁成 repo-owned surfaces
 
-### Phase 16: Align Shared-Home Health With QA Signal Freshness
+### Phase 19: Prove Family-Loop Freshness And Reuse
 
-**Goal:** 让 adoption health 与 website QA recent-signal freshness 真正对齐，并在 signal 缺口出现时给 maintainer 一条明确的 refresh action。
+**Goal:** 让 shared-home 与 `doctor` 从 “只知道 `website QA` 这条默认入口是否还活着” 继续升级到 “能看见整个 QA-first family loop 哪一段新鲜、哪一段 stale、下一步该刷新什么”。
 
-**Requirements:** `ADOPT-03`, `HEALTH-01`, `HEALTH-02`
+**Requirements:** `FRESH-01`, `FRESH-02`, `FRESH-03`
 
-**Status:** completed
-
-**Verification:** `.planning/milestones/v1.4-phases/16-align-shared-home-health-with-qa-signal-freshness/16-VERIFICATION.md`
+**Status:** pending
 
 **UI hint**: no
 
 Plans:
 
-- [ ] `16-01-PLAN.md` — Wire website QA signal freshness into adoption-health semantics and next-action guidance
-- [ ] `16-02-PLAN.md` — Prove stale-to-fresh refresh transitions for website QA on the Claude Code / Codex / OpenCode shared-home surface
+- [ ] `19-01-PLAN.md` — Extend shared-home and `doctor` surfaces with segment-specific family-loop freshness and refresh guidance
+- [ ] `19-02-PLAN.md` — Prove post-QA family-loop reuse across Claude Code, Codex, and OpenCode without flattening the hero-lane sequence
 
 **Success criteria:**
-1. adoption health 不会在 website QA hero-lane signal stale / missing / contradicted 时继续给出误导性的 green/default-ready posture
-2. `doctor` / status-facing surfaces 会直接指出当前缺的是 refresh signal、repeat usage、还是 cross-host reuse freshness
-3. repo 可以在 canonical 三宿主 shared-home surface 上证明 stale-to-fresh refresh transitions，而不是只停在单宿主或一次性 smoke
-4. coarse broker-first boundary、thin host shell 与现有 proof/reuse contract 不会因为 freshness logic 回归
+1. `doctor` 与 shared-home surfaces 会同时显示 `website QA`、`web markdown`、`social markdown` 三段 loop 的 freshness，而不只剩 hero-lane 历史 proof
+2. maintainer 可以直接看出 family loop 缺的是哪一段 proof，以及下一步要跑哪种 refresh action
+3. 三宿主 shared-home proof surface 能表达 post-QA loop 的 reuse state，同时保留 `website QA` 作为第一步的层级关系
+4. family-loop freshness / reuse semantics 的回归会在 tests 或 repo-owned fixtures 中 fail closed，而不是留给人工读 traces
 
-**Depends on:** Phase 15 已先把 recent website QA adoption packet 定义并 surfaced 出来
+**Depends on:** Phase 18 先把 QA-first hierarchy 与 next-loop guidance 收成 canonical operator truth
 
-### Phase 17: Lock Adoption-Signal Audit Truth
+### Phase 20: Lock Family-Loop Truth Rails
 
-**Goal:** 让 canonical `STATUS.md`、milestone audit 与 CI trust rail 消费同一份 website QA adoption packet，并在语义或计数漂移时 fail closed。
+**Goal:** 让 README、README.zh-CN、installed host shell、`STATUS.md`、`TODOS.md`、CI/parity/audit rails 与 `doctor` 一起消费同一份 QA-first family-loop contract，并在 drift 时 fail closed。
 
-**Requirements:** `TRUST-01`, `TRUST-02`
+**Requirements:** `TRUST-03`, `TRUST-04`
 
-**Status:** completed
-
-**Verification:** `.planning/milestones/v1.4-phases/17-lock-adoption-signal-audit-truth/17-VERIFICATION.md`
+**Status:** pending
 
 **UI hint**: no
 
 Plans:
 
-- [ ] `17-01-PLAN.md` — Align canonical STATUS and milestone-audit surfaces on the website QA adoption packet
-- [ ] `17-02-PLAN.md` — Add parity / CI trust guardrails so adoption-signal wording, counts, and freshness semantics fail closed
+- [ ] `20-01-PLAN.md` — Align docs, generated host shell, `STATUS.md`, `TODOS.md`, and `doctor` on one QA-first family-loop wording contract
+- [ ] `20-02-PLAN.md` — Add parity, CI, and audit guardrails so hierarchy and freshness guidance drift fail closed
 
 **Success criteria:**
-1. `doctor`、canonical `STATUS.md`、milestone audit 与 CI trust rail 会讲同一份 website QA adoption packet，而不是各自发明 summary
-2. maintainer 在 ship / audit 时可以直接复用 adoption packet，而不是回头手工拼 freshness / repeat-usage truth
-3. adoption-signal wording、counts、thresholds 或 stale semantics 的漂移会在 repo-native guardrail 中爆红，而不是留给人工 review
-4. milestone 继续专注 adoption signal / auditability，不借机重开 capability breadth、host templating 或 release-truth 主题
+1. README、README.zh-CN、installed host shell、`STATUS.md`、`TODOS.md` 与 `doctor` 会讲同一份 QA-first family-loop story，而不是各自发明 next-step wording
+2. CI、parity 与 milestone-audit rails 会对 family-loop hierarchy、freshness semantics 与 refresh guidance 的漂移 fail closed
+3. maintainer 可以从 repo-owned surfaces 审计当前 family loop truth，而不需要重新翻 raw trace 或手工拼文案差异
+4. milestone 继续专注 QA-first default-entry 延伸 story，不借机重开新 family、第四宿主、shipping truth 或 generic schema 泛化
 
-**Depends on:** Phase 16 先把 adoption health 与 refresh guidance 对齐到 QA-first freshness
+**Depends on:** Phase 19 已把 family-loop freshness 与 reuse semantics surfaced 成 canonical proof packet
 
 ## Milestone View
 
-### Milestone 5: Website QA Adoption Signals
+### Milestone 6: QA-First Family Proof Loop
 
-Deliver Phases 15-17 to turn `website QA` from a historically proven default-entry lane into a currently auditable adoption signal: quantify recent usage first, align shared-home health second, and lock audit truth last.
+Deliver Phases 18-20 to turn the current `website QA` hero lane into a clearer QA-first family proof loop: encode hierarchy first, prove family-loop freshness and reuse second, then lock wording and audit rails last.
 
 ## Notes
 
-- This roadmap continues numbering from milestone v1.3; no phase renumber reset was used.
+- This roadmap continues numbering from milestone v1.4; no phase renumber reset was used.
 - Research was skipped for this milestone because `workflow.research` is currently disabled and repo-native product truth is already specific enough to scope the work.
-- Previous milestone artifacts are already archived under `.planning/milestones/v1.3-phases/`, so the active planning workspace is clean before Phase 15.
-- The roadmap intentionally prioritizes adoption-signal freshness over capability-breadth expansion, host templating, or shipping-summary-heavy work, because the highest remaining product risk is whether QA-first is still a living default-entry habit.
+- The roadmap intentionally keeps `website QA` as the only first move and does not reopen maintained-family schema generalization, query-native migration, or package-vs-leaf identity migration.
 
 ---
-*Roadmap created: 2026-04-23*
-*Last updated: 2026-04-23 after completing and archiving milestone v1.4*
+*Roadmap created: 2026-04-24*
+*Last updated: 2026-04-24 after creating milestone v1.5 roadmap*

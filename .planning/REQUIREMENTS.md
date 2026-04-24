@@ -53,13 +53,21 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
+| LOOP-01 | Phase 18 | Pending |
+| LOOP-02 | Phase 18 | Pending |
+| LOOP-03 | Phase 18 | Pending |
+| FRESH-01 | Phase 19 | Pending |
+| FRESH-02 | Phase 19 | Pending |
+| FRESH-03 | Phase 19 | Pending |
+| TRUST-03 | Phase 20 | Pending |
+| TRUST-04 | Phase 20 | Pending |
 
 **Coverage:**
 
 - v1.5 requirements: 8 total
-- Mapped to phases: 0
-- Unmapped: 8 ⚠️
+- Mapped to phases: 8
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-04-24*
-*Last updated: 2026-04-24 after defining milestone v1.5 requirements*
+*Last updated: 2026-04-24 after creating milestone v1.5 roadmap*
