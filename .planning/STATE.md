@@ -20,27 +20,27 @@ See: `.planning/PROJECT.md` (updated 2026-04-24)
 
 ## Current Position
 
-- **Phase:** Not started (next: 24)
+- **Phase:** 26 — Lock Demand-Guided Operator Truth
 - **Plan:** —
-- **Status:** Roadmap created; ready to plan Phase 24
-- **Last activity:** 2026-04-24 — Milestone v1.7 started
+- **Status:** Phases 24-25 complete; ready to execute Phase 26
+- **Last activity:** 2026-04-24 — Phase 25 completed
 
 ## Current Phase
 
-- **Phase:** 24 — Surface Demand-Backed Growth Backlog
-- **Goal:** Aggregate real demand for capability growth from existing proof rails and classify demand states deterministically.
-- **Status:** pending planning
-- **Primary requirements:** DEMAND-01, DEMAND-02, DEMAND-03
-- **Plan count:** 0
+- **Phase:** 26 — Lock Demand-Guided Operator Truth
+- **Goal:** Make demand-guided capability growth health a canonical operator story across docs, installed host shell wording, status, backlog, and CI/release guardrails.
+- **Status:** pending execution
+- **Primary requirements:** TRUST-01, TRUST-02, TRUST-03
+- **Plan count:** 1
 - **Wave count:** 0
 
 ## Phase Status
 
 | Phase | Name | Status | Requirements |
 |-------|------|--------|--------------|
-| 24 | Surface Demand-Backed Growth Backlog | Pending planning | DEMAND-01, DEMAND-02, DEMAND-03 |
-| 25 | Prove Capability Health And Readiness | Pending | HEALTH-01, HEALTH-02, HEALTH-03 |
-| 26 | Lock Demand-Guided Operator Truth | Pending | TRUST-01, TRUST-02, TRUST-03 |
+| 24 | Surface Demand-Backed Growth Backlog | Complete | DEMAND-01, DEMAND-02, DEMAND-03 |
+| 25 | Prove Capability Health And Readiness | Complete | HEALTH-01, HEALTH-02, HEALTH-03 |
+| 26 | Lock Demand-Guided Operator Truth | Pending execution | TRUST-01, TRUST-02, TRUST-03 |
 
 ## Latest Archived Milestone
 
@@ -76,6 +76,7 @@ See: `.planning/PROJECT.md` (updated 2026-04-24)
 - 2026-04-24: Milestone v1.5 executed, audited, archived, and shipped in PR #33 — see `.planning/milestones/v1.5-MILESTONE-AUDIT.md`
 - 2026-04-24: Milestone v1.6 executed, audited, archived, and cleaned up — see `.planning/milestones/v1.6-MILESTONE-AUDIT.md`
 - 2026-04-24: Milestone v1.7 started — see `.planning/REQUIREMENTS.md` and `.planning/ROADMAP.md`
+- 2026-04-24: Phases 24-25 completed — demand summary and doctor health packet implemented
 
 ## Workflow Settings
 
@@ -90,7 +91,7 @@ See: `.planning/PROJECT.md` (updated 2026-04-24)
 
 ## Next Up
 
-Run `$gsd-plan-phase 24` to plan the demand-backed capability growth backlog.
+Continue Phase 26 to lock demand-guided capability growth operator truth.
 
 ---
 *State updated: 2026-04-24 after starting milestone v1.7*

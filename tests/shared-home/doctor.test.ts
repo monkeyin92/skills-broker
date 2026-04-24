@@ -321,6 +321,48 @@ async function writeWebsiteQaInstallRequiredTraceFixture(
   );
 }
 
+async function writeCapabilityDemandTraceFixture(
+  brokerHomeDirectory: string,
+  timestamp = "2026-04-24T10:00:00.000Z"
+): Promise<void> {
+  const traceFilePath = routingTraceLogFilePath(brokerHomeDirectory);
+  await mkdir(join(brokerHomeDirectory, "state"), { recursive: true });
+  await writeFile(
+    traceFilePath,
+    `${JSON.stringify({
+      traceVersion: "2026-03-31",
+      requestText: "install a repo office-hours analysis capability",
+      host: "codex",
+      hostDecision: "broker_first",
+      resultCode: "INSTALL_REQUIRED",
+      routingOutcome: "fallback",
+      missLayer: "retrieval",
+      normalizedBy: "structured_query",
+      requestSurface: "structured_query",
+      requestContract: "query_native",
+      selectionMode: "explicit",
+      hostAction: "offer_package_install",
+      candidateCount: 1,
+      winnerId: "gstack.office-hours",
+      winnerPackageId: "gstack",
+      selectedCapabilityId: "gstack.office-hours",
+      selectedLeafCapabilityId: "office-hours",
+      selectedImplementationId: "gstack.office_hours",
+      selectedPackageInstallState: "available",
+      requestedProofFamily: "capability_discovery_or_install",
+      semanticMatchReason: null,
+      semanticMatchCandidateId: null,
+      semanticMatchProofFamily: null,
+      workflowId: null,
+      runId: null,
+      stageId: null,
+      reasonCode: "package_not_installed",
+      timestamp
+    })}\n`,
+    "utf8"
+  );
+}
+
 async function writeReusableFamilyProofFixtures(
   brokerHomeDirectory: string,
   options: {
@@ -1370,6 +1412,12 @@ describe("doctor shared broker home", () => {
         "Acquisition memory: present, entries=2, successful_routes=3, verification_successes=3, first_reuse_after_install=1, repeat_usage=1, cross_host_reuse=1, degraded=0, failed=0, next_action=prefer_verified_winner, website_qa_successful_reruns=1, website_qa_repeat_usage=0"
       );
       expect(rendered).toContain(
+        "Capability growth health (last 7d): stale, opportunities=2, recent_demand=0, proven=0, speculative=0, blocked=0, stale=2, ready=0, satisfied=0, next_action=refresh_metadata"
+      );
+      expect(rendered).toContain(
+        "Capability growth opportunity gstack.office-hours: state=stale_metadata, next_action=refresh_metadata"
+      );
+      expect(rendered).toContain(
         "Website QA acquisition proof: repeat_usage=0, cross_host_reuse=0"
       );
 
@@ -1390,6 +1438,58 @@ describe("doctor shared broker home", () => {
         qualityAssuranceSuccessfulRoutes: 1,
         qualityAssuranceFirstReuseRecorded: 0,
         qualityAssuranceCrossHostReuse: 0
+      });
+      expect(parsed.capabilityGrowthHealth.totals.staleMetadata).toBe(2);
+    } finally {
+      await rm(runtimeDirectory, { recursive: true, force: true });
+    }
+  });
+
+  it("reports demand-guided capability growth health for blocked and stale opportunities", async () => {
+    const runtimeDirectory = await mkdtemp(join(tmpdir(), "skills-broker-doctor-demand-health-"));
+    const brokerHomeDirectory = join(runtimeDirectory, ".skills-broker");
+
+    try {
+      await installSharedBrokerHome({
+        brokerHomeDirectory,
+        projectRoot: process.cwd()
+      });
+      await writeCapabilityDemandTraceFixture(brokerHomeDirectory);
+
+      const blockedResult = await doctorSharedBrokerHome({
+        brokerHomeDirectory,
+        homeDirectory: runtimeDirectory,
+        cwd: runtimeDirectory,
+        now: new Date("2026-04-24T12:00:00.000Z")
+      });
+      const blockedRendered = formatLifecycleResult(blockedResult, "text");
+
+      expect(blockedResult.capabilityGrowthHealth).toMatchObject({
+        status: "active",
+        totals: {
+          opportunities: 1,
+          recentDemand: 1,
+          blockedAcquisition: 1
+        },
+        nextAction: "verify"
+      });
+      expect(blockedRendered).toContain(
+        "Capability growth health (last 7d): active, opportunities=1, recent_demand=1, proven=0, speculative=0, blocked=1, stale=0, ready=0, satisfied=0, next_action=verify"
+      );
+
+      const staleResult = await doctorSharedBrokerHome({
+        brokerHomeDirectory,
+        homeDirectory: runtimeDirectory,
+        cwd: runtimeDirectory,
+        now: new Date("2026-05-10T12:00:00.000Z")
+      });
+
+      expect(staleResult.capabilityGrowthHealth).toMatchObject({
+        status: "stale",
+        totals: {
+          staleMetadata: 1
+        },
+        nextAction: "refresh_metadata"
       });
     } finally {
       await rm(runtimeDirectory, { recursive: true, force: true });

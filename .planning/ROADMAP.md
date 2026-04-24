@@ -22,14 +22,14 @@
 
 | # | Phase | Goal | Requirements | Success Criteria |
 |---|-------|------|--------------|------------------|
-| 24 | Surface Demand-Backed Growth Backlog | Aggregate real demand for capability growth from existing proof rails and classify demand states deterministically. | DEMAND-01, DEMAND-02, DEMAND-03 | Planned |
-| 25 | Prove Capability Health And Readiness | Turn demanded capabilities into freshness, blocked-action, readiness, and reuse health surfaced through shared broker home and `doctor`. | HEALTH-01, HEALTH-02, HEALTH-03 | Planned |
+| 24 | Surface Demand-Backed Growth Backlog | Aggregate real demand for capability growth from existing proof rails and classify demand states deterministically. | DEMAND-01, DEMAND-02, DEMAND-03 | Complete |
+| 25 | Prove Capability Health And Readiness | Turn demanded capabilities into freshness, blocked-action, readiness, and reuse health surfaced through shared broker home and `doctor`. | HEALTH-01, HEALTH-02, HEALTH-03 | Complete |
 | 26 | Lock Demand-Guided Operator Truth | Align docs, installed host shell wording, status, backlog, CI/parity, and release gate around one demand-guided capability growth story. | TRUST-01, TRUST-02, TRUST-03 | Planned |
 
 ## Phase Completion Checklist
 
-- [ ] Phase 24: Surface Demand-Backed Growth Backlog
-- [ ] Phase 25: Prove Capability Health And Readiness
+- [x] Phase 24: Surface Demand-Backed Growth Backlog
+- [x] Phase 25: Prove Capability Health And Readiness
 - [ ] Phase 26: Lock Demand-Guided Operator Truth
 
 ## Phase Details
@@ -40,7 +40,9 @@
 
 **Requirements:** DEMAND-01, DEMAND-02, DEMAND-03
 
-**Status:** planned
+**Status:** completed
+
+**Verification:** `.planning/phases/24-surface-demand-backed-growth-backlog/24-VERIFICATION.md`
 
 **Success criteria:**
 1. Operator can inspect a capability growth backlog derived from routing traces, `INSTALL_REQUIRED` outcomes, acquisition memory, and verified manifest misses.
@@ -56,7 +58,9 @@
 
 **Requirements:** HEALTH-01, HEALTH-02, HEALTH-03
 
-**Status:** planned
+**Status:** completed
+
+**Verification:** `.planning/phases/25-prove-capability-health-and-readiness/25-VERIFICATION.md`
 
 **Success criteria:**
 1. `doctor` exposes a capability growth health packet with demanded capability freshness, blocked next actions, promotion readiness, and reuse status.

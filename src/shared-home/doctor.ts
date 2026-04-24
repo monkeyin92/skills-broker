@@ -11,6 +11,10 @@ import {
   type BrokerRoutingTrace
 } from "../broker/trace.js";
 import {
+  summarizeCapabilityDemand,
+  type CapabilityDemandSummary
+} from "../broker/capability-demand.js";
+import {
   BROKER_HOSTS,
   brokerHostKnownShellEntries,
   isBrokerHost,
@@ -211,6 +215,7 @@ export type DoctorLifecycleResult = {
   websiteQaLoop: DoctorFamilyProofSummary;
   websiteQaAdoption: DoctorWebsiteQaAdoptionSignal;
   familyLoopSignals: Record<DoctorProofFamily, DoctorFamilyLoopSignal>;
+  capabilityGrowthHealth: CapabilityDemandSummary;
   websiteQaRouting: {
     windowDays: number;
     observed: number;
@@ -1259,6 +1264,25 @@ async function collectFamilyAcquisitionMetrics(
   }
 }
 
+async function collectCapabilityDemandAcquisitionEntries(
+  brokerHomeDirectory: string,
+  state: DoctorProofRailState
+): Promise<AcquisitionMemoryEntry[]> {
+  if (state !== "present") {
+    return [];
+  }
+
+  try {
+    const memory = await new AcquisitionMemoryStore(
+      acquisitionMemoryFilePath(brokerHomeDirectory)
+    ).read();
+
+    return memory.entries;
+  } catch {
+    return [];
+  }
+}
+
 function summarizeWebsiteQaHistoricalTraceActivity(
   traces: BrokerRoutingTrace[]
 ): {
@@ -1838,6 +1862,11 @@ export async function doctorSharedBrokerHome(
     options.brokerHomeDirectory,
     acquisitionMemory.state
   );
+  const capabilityDemandAcquisitionEntries =
+    await collectCapabilityDemandAcquisitionEntries(
+      options.brokerHomeDirectory,
+      acquisitionMemory.state
+    );
   const familyReplayCounts = familyManifestCounts;
   const hosts = [
     ...(
@@ -1940,6 +1969,12 @@ export async function doctorSharedBrokerHome(
       }
     ])
   ) as Record<DoctorProofFamily, DoctorFamilyLoopSignal>;
+  const capabilityGrowthHealth = summarizeCapabilityDemand({
+    traces: routingTraces,
+    acquisitionEntries: capabilityDemandAcquisitionEntries,
+    since: routingSince,
+    windowDays: routingWindowDays
+  });
 
   return {
     command: "doctor",
@@ -1950,6 +1985,7 @@ export async function doctorSharedBrokerHome(
     websiteQaLoop,
     websiteQaAdoption,
     familyLoopSignals,
+    capabilityGrowthHealth,
     websiteQaRouting,
     routingMetrics: {
       windowDays: routingWindowDays,
