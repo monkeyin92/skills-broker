@@ -96,8 +96,7 @@ jobs:
           claude_dir="${RUNNER_TEMP}/status-doctor/.claude/skills/skills-broker"
           codex_dir="${RUNNER_TEMP}/status-doctor/.agents/skills/skills-broker"
           opencode_dir="${RUNNER_TEMP}/status-doctor/.config/opencode/skills/skills-broker"
-          node dist/bin/skills-broker.js doctor \
-            --strict \
+          node dist/bin/skills-broker.js doctor --strict \
             --refresh-remote \
             --broker-home "$broker_home" \
             --claude-dir "$claude_dir" \
