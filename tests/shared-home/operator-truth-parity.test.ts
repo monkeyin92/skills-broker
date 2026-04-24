@@ -388,7 +388,7 @@ describe("operator truth parity", () => {
     expect(phase15Item).toBeDefined();
     expect(phase15Item).toMatchObject({
       id: "phase15-website-qa-adoption-signals",
-      status: "shipped_local"
+      status: "shipped_remote"
     });
     expect(phase15Item!.summary).toContain("adoption packet");
     expect(phase15Item!.summary).toContain("freshness");
@@ -412,7 +412,7 @@ describe("operator truth parity", () => {
     expect(phase16Item).toBeDefined();
     expect(phase16Item).toMatchObject({
       id: "phase16-website-qa-freshness-health",
-      status: "shipped_local"
+      status: "shipped_remote"
     });
     expect(phase16Item!.summary).toContain("adoptionHealth");
     expect(phase16Item!.summary).toContain("stale-to-fresh");
@@ -436,7 +436,7 @@ describe("operator truth parity", () => {
     expect(phase17Item).toBeDefined();
     expect(phase17Item).toMatchObject({
       id: "phase17-adoption-signal-audit-truth",
-      status: "shipped_local"
+      status: "shipped_remote"
     });
     expect(phase17Item!.summary).toContain("CI trust");
     expect(phase17Item!.summary).toContain("adoption packet");
@@ -464,7 +464,7 @@ describe("operator truth parity", () => {
     expect(phase18Item).toBeDefined();
     expect(phase18Item).toMatchObject({
       id: "phase18-qa-first-family-hierarchy",
-      status: "shipped_local"
+      status: "shipped_remote"
     });
     expect(phase18Item!.summary).toContain(formatQaFirstFamilyLoopLine());
     expect(phase18Item!.summary).toContain(formatPostQaNextLoopLine());
@@ -488,7 +488,7 @@ describe("operator truth parity", () => {
     expect(phase19Item).toBeDefined();
     expect(phase19Item).toMatchObject({
       id: "phase19-family-loop-freshness-reuse",
-      status: "shipped_local"
+      status: "shipped_remote"
     });
     expect(phase19Item!.summary).toContain("familyLoopSignals");
     expect(phase19Item!.summary).toContain("sequence-aware");
@@ -512,7 +512,7 @@ describe("operator truth parity", () => {
     expect(phase20Item).toBeDefined();
     expect(phase20Item).toMatchObject({
       id: "phase20-family-loop-truth-rails",
-      status: "shipped_local"
+      status: "shipped_remote"
     });
     expect(phase20Item!.summary).toContain(formatFamilyLoopProofSurfaceLine());
     expect(phase20Item!.summary).toContain("CI trust");

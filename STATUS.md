@@ -20,8 +20,8 @@ This file is the repo-native execution board for `skills-broker`.
 - The Phase 11 publish-flow closure packet is now shipped on the active shipping ref: `.github/workflows/publish-npm.yml` now runs `release:gate` before publish, `release:promote` after publish, pushes promoted `STATUS.md` truth back to the default branch, and closes out on the same canonical release gate.
 - The Phase 12 website-QA routing-confidence packet is now shipped on the active shipping ref: clear website QA asks cross the coarse broker-first boundary more reliably, nearby page-level phrasing stays fail-closed, and `doctor` now surfaces website QA routing evidence directly.
 - The Phase 13 website-QA repeat-usage packet is now shipped on the active shipping ref: the website QA loop now proves repeat usage and cross-host reuse on the three-host shared-home surface, and `doctor` now distinguishes the two states.
-- The v1.4 website-QA adoption-signal packet is now shipped locally on `HEAD`: `doctor` now exposes a website QA adoption packet with recent routing evidence, freshness, per-host coverage, and refresh guidance; adoption health follows that packet instead of historical proof alone; and STATUS / CI trust now mirror the same packet fail-closed.
-- The v1.5 QA-first family-loop packet is now shipped locally on `HEAD`: QA-first family loop: website QA first, web markdown second, social markdown third. After a successful website QA proof, the next proven loop to run is web markdown. After web markdown, social markdown is the next proven loop. `doctor` now exposes a QA-first family-loop packet: website QA adoption plus web markdown/social markdown freshness, reuse, and sequence-aware next actions.
+- The v1.4 website-QA adoption-signal packet is now shipped on the active shipping ref: `doctor` now exposes a website QA adoption packet with recent routing evidence, freshness, per-host coverage, and refresh guidance; adoption health follows that packet instead of historical proof alone; and STATUS / CI trust now mirror the same packet fail-closed.
+- The v1.5 QA-first family-loop packet is now shipped on the active shipping ref: QA-first family loop: website QA first, web markdown second, social markdown third. After a successful website QA proof, the next proven loop to run is web markdown. After web markdown, social markdown is the next proven loop. `doctor` now exposes a QA-first family-loop packet: website QA adoption plus web markdown/social markdown freshness, reuse, and sequence-aware next actions.
 - Hosts choose only `broker_first`, `handle_normally`, or `clarify_before_broker`; the broker still chooses the concrete QA winner.
 - `doctor` now exposes a website QA adoption packet: recent routing evidence, freshness, and separate repeat-usage / cross-host reuse proof states.
 - `doctor` now exposes a QA-first family-loop packet: website QA adoption plus web markdown/social markdown freshness, reuse, and sequence-aware next actions.
@@ -593,7 +593,7 @@ This file is the repo-native execution board for `skills-broker`.
       "id": "phase15-website-qa-adoption-signals",
       "title": "Phase 15 website QA adoption signals",
       "summary": "`doctor` now exposes a website QA adoption packet with recent routing evidence, freshness, per-host coverage, and refresh guidance instead of leaving maintainers to reconstruct the current signal from raw traces.",
-      "status": "shipped_local",
+      "status": "shipped_remote",
       "proofs": [
         {
           "type": "file",
@@ -616,7 +616,7 @@ This file is the repo-native execution board for `skills-broker`.
       "id": "phase16-website-qa-freshness-health",
       "title": "Phase 16 website QA freshness health",
       "summary": "`adoptionHealth` now follows the website QA adoption packet, blocking on missing / stale / incomplete QA-first signal and proving stale-to-fresh refresh transitions on the shared-home surface.",
-      "status": "shipped_local",
+      "status": "shipped_remote",
       "proofs": [
         {
           "type": "file",
@@ -644,7 +644,7 @@ This file is the repo-native execution board for `skills-broker`.
       "id": "phase17-adoption-signal-audit-truth",
       "title": "Phase 17 adoption-signal audit truth",
       "summary": "Operator docs, canonical `STATUS.md`, and CI trust now mirror the same website QA adoption packet wording so adoption-signal freshness drift fails closed instead of decaying into narrative-only truth.",
-      "status": "shipped_local",
+      "status": "shipped_remote",
       "proofs": [
         {
           "type": "file",
@@ -672,7 +672,7 @@ This file is the repo-native execution board for `skills-broker`.
       "id": "phase18-qa-first-family-hierarchy",
       "title": "Phase 18 QA-first family hierarchy",
       "summary": "QA-first family loop: website QA first, web markdown second, social markdown third. After a successful website QA proof, the next proven loop to run is web markdown. After web markdown, social markdown is the next proven loop.",
-      "status": "shipped_local",
+      "status": "shipped_remote",
       "proofs": [
         {
           "type": "file",
@@ -700,7 +700,7 @@ This file is the repo-native execution board for `skills-broker`.
       "id": "phase19-family-loop-freshness-reuse",
       "title": "Phase 19 family-loop freshness and reuse",
       "summary": "`doctor` now exposes `familyLoopSignals`, surfacing web markdown and social markdown freshness, reuse, host coverage, and sequence-aware refresh guidance next to website QA adoption.",
-      "status": "shipped_local",
+      "status": "shipped_remote",
       "proofs": [
         {
           "type": "file",
@@ -728,7 +728,7 @@ This file is the repo-native execution board for `skills-broker`.
       "id": "phase20-family-loop-truth-rails",
       "title": "Phase 20 family-loop truth rails",
       "summary": "`doctor` now exposes a QA-first family-loop packet: website QA adoption plus web markdown/social markdown freshness, reuse, and sequence-aware next actions. Docs, installed shells, STATUS, TODOS, and CI trust now fail closed on that shared wording.",
-      "status": "shipped_local",
+      "status": "shipped_remote",
       "proofs": [
         {
           "type": "file",
