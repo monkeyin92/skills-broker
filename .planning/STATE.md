@@ -1,14 +1,14 @@
 # State
 
 **Initialized:** 2026-04-22
-**Status:** ready_for_planning
+**Status:** ready_for_milestone_audit
 
 ## Project Reference
 
 See: `.planning/PROJECT.md` (updated 2026-04-24)
 
 **Core value:** 用户只需要描述想达成的结果，broker 就能在当前宿主里找到、准备并复用合适的能力，而不用让用户记住工具名、重新发现赢家、或自己判断安装路径。
-**Current focus:** Milestone v1.5 active — Phase 20 is next to lock family-loop truth rails across docs, shells, status, and CI
+**Current focus:** Milestone v1.5 phases are complete — milestone audit is next before archive
 
 ## Current Milestone
 
@@ -20,18 +20,18 @@ See: `.planning/PROJECT.md` (updated 2026-04-24)
 ## Current Position
 
 - **Phase:** 20
-- **Plan:** —
-- **Status:** Ready for phase planning
-- **Last activity:** 2026-04-24 — Phase 19 completed and verified
+- **Plan:** 20-01 / 20-02 complete
+- **Status:** Ready for milestone audit
+- **Last activity:** 2026-04-24 — Phase 20 completed and verified
 
 ## Current Phase
 
 - **Phase:** 20
 - **Goal:** Lock family-loop truth rails across docs, shells, status, and CI
-- **Status:** pending_planning
+- **Status:** completed
 - **Primary requirements:** TRUST-03, TRUST-04
-- **Plan count:** 0
-- **Wave count:** 0
+- **Plan count:** 2
+- **Wave count:** 2
 
 ## Phase Status
 
@@ -39,7 +39,7 @@ See: `.planning/PROJECT.md` (updated 2026-04-24)
 |-------|------|--------|-------|
 | 18 | Encode QA-First Family Hierarchy | Completed | Verified at `.planning/phases/18-encode-qa-first-family-hierarchy/18-VERIFICATION.md` |
 | 19 | Prove Family-Loop Freshness And Reuse | Completed | Verified at `.planning/phases/19-prove-family-loop-freshness-and-reuse/19-VERIFICATION.md` |
-| 20 | Lock Family-Loop Truth Rails | Pending | Depends on Phase 19 |
+| 20 | Lock Family-Loop Truth Rails | Completed | Verified at `.planning/phases/20-lock-family-loop-truth-rails/20-VERIFICATION.md` |
 
 ## Known Context
 
@@ -57,6 +57,7 @@ See: `.planning/PROJECT.md` (updated 2026-04-24)
 - v1.5 roadmap 现已定义为 phases 18-20，顺序为 hierarchy → freshness/reuse → truth rails
 - Phase 18 已把 QA-first family hierarchy 与 post-QA next-loop guidance 对齐到 docs、doctor text、generated host shell、STATUS 与 TODOS
 - Phase 19 已把 family-loop freshness / reuse / next-step guidance 收成 `doctor` 的 top-level `familyLoopSignals` packet，并让 post-QA guidance 保持 QA-first sequence
+- Phase 20 已把 family-loop packet wording 接进 README 双语、installed host shell、STATUS、TODOS、doctor text、parity tests 与 CI trust rails
 
 ## Session History
 
@@ -81,6 +82,7 @@ See: `.planning/PROJECT.md` (updated 2026-04-24)
 - 2026-04-24: Phase 18 context and plans created — execution in progress
 - 2026-04-24: Phase 18 executed and verified — see `.planning/phases/18-encode-qa-first-family-hierarchy/18-VERIFICATION.md`
 - 2026-04-24: Phase 19 executed and verified — see `.planning/phases/19-prove-family-loop-freshness-and-reuse/19-VERIFICATION.md`
+- 2026-04-24: Phase 20 executed and verified — see `.planning/phases/20-lock-family-loop-truth-rails/20-VERIFICATION.md`
 
 ## Workflow Settings
 
@@ -97,7 +99,7 @@ See: `.planning/PROJECT.md` (updated 2026-04-24)
 
 Start planning the active milestone:
 
-`$gsd-plan-phase 20`
+`$gsd-audit-milestone`
 
 Also available:
 - `cat .planning/milestones/v1.4-MILESTONE-AUDIT.md`

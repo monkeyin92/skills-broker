@@ -101,6 +101,7 @@ The second proven family is **web markdown**. It is the next operator loop to ru
 The next proven family is **social markdown**. It should show up after web markdown as another maintained loop, not as a new first move.
 QA-first family loop: website QA first, web markdown second, social markdown third.
 After a successful website QA proof, the next proven loop to run is web markdown. After web markdown, social markdown is the next proven loop.
+`doctor` now exposes a QA-first family-loop packet: website QA adoption plus web markdown/social markdown freshness, reuse, and sequence-aware next actions.
 
 v0 currently includes:
 
@@ -288,6 +289,7 @@ Website QA cross-host reuse proof: confirmed (first reuse across hosts recorded)
 If you later clear acquisition memory, a verified downstream manifest from one host should still be enough for another host to recover `INSTALL_REQUIRED` instead of falling all the way back to `NO_CANDIDATE`.
 
 `doctor` now exposes a website QA adoption packet: recent routing evidence, freshness, and separate repeat-usage / cross-host reuse proof states.
+`doctor` now exposes a QA-first family-loop packet: website QA adoption plus web markdown/social markdown freshness, reuse, and sequence-aware next actions.
 
 If you want to clear only that advisory memory and re-run the loop from scratch, use:
 
@@ -307,6 +309,7 @@ This is the fastest way to confirm the shared-home install is real after the QA 
 - the support matrix now claims Claude Code, Codex, and OpenCode with full lifecycle / proof parity, and the operator-facing docs say the same thing
 - the host still explains only the coarse broker-first boundary instead of choosing the concrete QA winner up front
 - `doctor` shows the website QA adoption packet, including freshness plus the next missing repeat-usage / cross-host reuse proof
+- `doctor` also shows the QA-first family-loop packet, including web markdown / social markdown freshness, reuse, and sequence-aware next actions
 - operator-facing failures tell you what broke and what to inspect next
 
 ### 4. Try explicit shared-home directories

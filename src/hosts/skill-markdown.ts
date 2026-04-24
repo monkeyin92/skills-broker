@@ -1,6 +1,7 @@
 import type { BrokerHost } from "../core/types.js";
 import {
   formatCoarseBoundaryLine,
+  formatFamilyLoopProofSurfaceLine,
   formatPostQaNextLoopLine,
   formatQaFirstFamilyLoopLine,
   OPERATOR_TRUTH_CONTRACT,
@@ -215,6 +216,7 @@ Use the broker first when the user is asking for:
 If you need one concrete broker-first example to calibrate the boundary, start with ${HERO_LANE}.
 ${formatQaFirstFamilyLoopLine()}
 ${formatPostQaNextLoopLine()}
+${formatFamilyLoopProofSurfaceLine()}
 
 Treat the examples below as semantic anchors, not literal trigger phrases.
 

@@ -6,6 +6,7 @@ import { acquisitionMemoryFilePath } from "../../src/broker/acquisition-memory";
 import { routingTraceLogFilePath } from "../../src/broker/trace-store";
 import { loadMaintainedBrokerFirstContract } from "../../src/core/maintained-broker-first";
 import {
+  formatFamilyLoopProofSurfaceLine,
   formatPostQaNextLoopLine,
   formatQaFirstFamilyLoopLine
 } from "../../src/core/operator-truth";
@@ -1904,6 +1905,7 @@ describe("doctor shared broker home", () => {
       );
       expect(rendered).toContain(formatQaFirstFamilyLoopLine());
       expect(rendered).toContain(formatPostQaNextLoopLine());
+      expect(rendered).toContain(formatFamilyLoopProofSurfaceLine());
       expect(rendered).toContain(
         "QA-first family freshness (last 7d): website QA=active, web markdown=active, social markdown=active"
       );

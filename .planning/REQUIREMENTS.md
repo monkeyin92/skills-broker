@@ -19,8 +19,8 @@
 
 ### Cross-Surface Trust
 
-- [ ] **TRUST-03**: README, README.zh-CN, installed host shell, `STATUS.md`, `TODOS.md`, and `doctor` consume the same QA-first family-loop wording and hierarchy
-- [ ] **TRUST-04**: CI, parity, and audit rails fail closed when family-loop hierarchy, freshness semantics, or next-step guidance drift across repo-owned surfaces
+- [x] **TRUST-03**: README, README.zh-CN, installed host shell, `STATUS.md`, `TODOS.md`, and `doctor` consume the same QA-first family-loop wording and hierarchy
+- [x] **TRUST-04**: CI, parity, and audit rails fail closed when family-loop hierarchy, freshness semantics, or next-step guidance drift across repo-owned surfaces
 
 ## Future Requirements
 
@@ -59,8 +59,8 @@
 | FRESH-01 | Phase 19 | Complete |
 | FRESH-02 | Phase 19 | Complete |
 | FRESH-03 | Phase 19 | Complete |
-| TRUST-03 | Phase 20 | Pending |
-| TRUST-04 | Phase 20 | Pending |
+| TRUST-03 | Phase 20 | Complete |
+| TRUST-04 | Phase 20 | Complete |
 
 **Coverage:**
 
@@ -70,4 +70,4 @@
 
 ---
 *Requirements defined: 2026-04-24*
-*Last updated: 2026-04-24 after completing Phase 19*
+*Last updated: 2026-04-24 after completing Phase 20*

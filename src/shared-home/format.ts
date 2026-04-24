@@ -5,6 +5,7 @@ import type {
   DoctorProofFamily
 } from "./doctor.js";
 import {
+  formatFamilyLoopProofSurfaceLine,
   formatPostQaNextLoopLine,
   formatQaFirstFamilyLoopLine
 } from "../core/operator-truth.js";
@@ -389,6 +390,7 @@ export function formatLifecycleResult(
     lines.push(formatWebsiteQaNextActionLine(result));
     lines.push(formatQaFirstFamilyLoopLine());
     lines.push(formatPostQaNextLoopLine());
+    lines.push(formatFamilyLoopProofSurfaceLine());
     lines.push(formatFamilyLoopFreshnessSummaryLine(result));
     for (const family of [
       "web_content_to_markdown",

@@ -107,6 +107,7 @@ broker 决定：
 下一条已经证明的 family 是 **social markdown**。它应该排在 web markdown 之后作为另一条 maintained loop，而不是重新变成一个新的第一步。
 QA-first family loop：先 website QA，再 web markdown，最后 social markdown。
 当 website QA proof 已成立后，下一条该跑的 proven loop 是 web markdown；完成之后，social markdown 是再下一条。
+`doctor` 现在会直接输出一份 QA-first family-loop packet：包含 website QA adoption，以及 web markdown / social markdown 的 freshness、reuse 与按顺序排列的 next action。
 
 v0 当前包含：
 
@@ -295,6 +296,7 @@ Website QA cross-host reuse proof: confirmed (first reuse across hosts recorded)
 如果你之后把 acquisition memory 清掉，另一个 host 仍然应该能靠这份 verified downstream manifest 恢复出 `INSTALL_REQUIRED`，而不是一路退化回 `NO_CANDIDATE`。
 
 `doctor` 现在会直接输出一份 website QA adoption packet：近期 routing evidence、freshness，以及拆开的 repeat usage / cross-host reuse proof state。
+`doctor` 现在会直接输出一份 QA-first family-loop packet：包含 website QA adoption，以及 web markdown / social markdown 的 freshness、reuse 与按顺序排列的 next action。
 
 如果你只想把这份 advisory memory 清掉，再从头重跑这个闭环，可以用：
 
@@ -314,6 +316,7 @@ npx skills-broker doctor --strict
 - 支持矩阵已经翻到 Claude Code、Codex、OpenCode，而且 full lifecycle / proof parity 的 truth 在 operator-facing 文案里保持一致
 - 宿主仍然只解释 coarse broker-first boundary，而不是先替 broker 选具体 QA winner
 - `doctor` 会直接显示 website QA adoption packet，包括 freshness，以及下一步缺的是 repeat usage 还是 cross-host reuse proof
+- `doctor` 也会直接显示 QA-first family-loop packet，包括 web markdown / social markdown 的 freshness、reuse 与按顺序排列的 next action
 - operator-facing 失败能指出先去检查哪里
 
 ### 4. 用显式目录试跑共享 home

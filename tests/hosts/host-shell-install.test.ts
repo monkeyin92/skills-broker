@@ -8,6 +8,7 @@ import {
 } from "../../src/core/maintained-broker-first";
 import {
   formatCoarseBoundaryLine,
+  formatFamilyLoopProofSurfaceLine,
   formatFullLifecycleParityLine,
   formatPostQaNextLoopLine,
   formatPublishedLifecycleCommandsLine,
@@ -64,6 +65,7 @@ function expectHostSkillLayout(
     "If you need one concrete broker-first example to calibrate the boundary, start with website QA.",
     formatQaFirstFamilyLoopLine(),
     formatPostQaNextLoopLine(),
+    formatFamilyLoopProofSurfaceLine(),
     "Treat the examples below as semantic anchors, not literal trigger phrases.",
     "### Hero lane: website QA",
     "Keep website QA visually first. It is the QA default-entry lane and the calibration lane. Other maintained lanes are still valid, but secondary.",

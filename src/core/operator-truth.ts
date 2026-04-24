@@ -22,6 +22,10 @@ export type OperatorTruthContract = {
     en: string;
     zh: string;
   };
+  familyLoopProofSurface: {
+    en: string;
+    zh: string;
+  };
   fullLifecycleParity: {
     en: string;
     zh: string;
@@ -60,6 +64,10 @@ export const OPERATOR_TRUTH_CONTRACT = {
     en: "`doctor` now exposes a website QA adoption packet: recent routing evidence, freshness, and separate repeat-usage / cross-host reuse proof states.",
     zh: "`doctor` 现在会直接输出一份 website QA adoption packet：近期 routing evidence、freshness，以及拆开的 repeat usage / cross-host reuse proof state。"
   },
+  familyLoopProofSurface: {
+    en: "`doctor` now exposes a QA-first family-loop packet: website QA adoption plus web markdown/social markdown freshness, reuse, and sequence-aware next actions.",
+    zh: "`doctor` 现在会直接输出一份 QA-first family-loop packet：包含 website QA adoption，以及 web markdown / social markdown 的 freshness、reuse 与按顺序排列的 next action。"
+  },
   fullLifecycleParity: {
     en: "Claude Code, Codex, and OpenCode now share full published lifecycle and proof/reuse parity.",
     zh: "Claude Code、Codex、OpenCode 现在已经共享完整的发布态 lifecycle 与 proof/reuse parity。"
@@ -96,6 +104,10 @@ export function formatCoarseBoundaryLine(): string {
 
 export function formatWebsiteQaProofSurfaceLine(): string {
   return OPERATOR_TRUTH_CONTRACT.websiteQaProofSurface.en;
+}
+
+export function formatFamilyLoopProofSurfaceLine(): string {
+  return OPERATOR_TRUTH_CONTRACT.familyLoopProofSurface.en;
 }
 
 export function formatFullLifecycleParityLine(): string {
@@ -136,6 +148,10 @@ export function formatCoarseBoundaryZhLine(): string {
 
 export function formatWebsiteQaProofSurfaceZhLine(): string {
   return OPERATOR_TRUTH_CONTRACT.websiteQaProofSurface.zh;
+}
+
+export function formatFamilyLoopProofSurfaceZhLine(): string {
+  return OPERATOR_TRUTH_CONTRACT.familyLoopProofSurface.zh;
 }
 
 export function formatFullLifecycleParityZhLine(): string {

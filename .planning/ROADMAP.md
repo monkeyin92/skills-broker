@@ -73,7 +73,9 @@ Plans:
 
 **Requirements:** `TRUST-03`, `TRUST-04`
 
-**Status:** pending
+**Status:** completed
+
+**Verification:** `.planning/phases/20-lock-family-loop-truth-rails/20-VERIFICATION.md`
 
 **UI hint**: no
 
@@ -104,4 +106,4 @@ Deliver Phases 18-20 to turn the current `website QA` hero lane into a clearer Q
 
 ---
 *Roadmap created: 2026-04-24*
-*Last updated: 2026-04-24 after completing Phase 19*
+*Last updated: 2026-04-24 after completing Phase 20*
