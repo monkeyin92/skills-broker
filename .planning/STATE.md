@@ -1,45 +1,49 @@
 # State
 
 **Initialized:** 2026-04-22
-**Status:** milestone_phases_complete
+**Status:** no_active_milestone
 
 ## Project Reference
 
 See: `.planning/PROJECT.md` (updated 2026-04-24)
 
 **Core value:** 用户只需要描述想达成的结果，broker 就能在当前宿主里找到、准备并复用合适的能力，而不用让用户记住工具名、重新发现赢家、或自己判断安装路径。
-**Current focus:** Milestone v1.6 — Registry-Ready Capability Growth Loop; all phases complete, lifecycle pending
+**Current focus:** Milestone v1.6 archived; ready for `$gsd-new-milestone`
 
 ## Current Milestone
 
-- **Milestone:** v1.6 Registry-Ready Capability Growth Loop
-- **Status:** phases_complete
-- **Started:** 2026-04-24
-- **Archive:** —
+- **Milestone:** —
+- **Status:** no_active_milestone
+- **Started:** —
+- **Archive:** `.planning/milestones/v1.6-ROADMAP.md`
 
 ## Current Position
 
 - **Phase:** —
 - **Plan:** —
-- **Status:** All phases complete; milestone lifecycle pending
-- **Last activity:** 2026-04-24 — Phase 23 completed and verified
+- **Status:** Milestone v1.6 audited, archived, and cleaned up
+- **Last activity:** 2026-04-24 — v1.6 milestone lifecycle completed
 
 ## Current Phase
 
 - **Phase:** —
 - **Goal:** —
-- **Status:** phases_complete
+- **Status:** —
 - **Primary requirements:** —
 - **Plan count:** 0
 - **Wave count:** 0
 
 ## Phase Status
 
+No active phases. Next phase number is 24.
+
+## Latest Archived Milestone
+
 | Phase | Name | Status | Notes |
 |-------|------|--------|-------|
-| 21 | Normalize Capability Trust Surface | Completed | Requirements CAP-01, CAP-02, CAP-03; verified 2026-04-24 |
-| 22 | Prove Capability Acquisition Loop | Completed | Requirements ACQ-01, ACQ-02, ACQ-03; verified 2026-04-24 |
-| 23 | Lock Capability Growth Operator Truth | Completed | Requirements TRUST-01, TRUST-02, TRUST-03; verified 2026-04-24 |
+| 21 | Normalize Capability Trust Surface | Archived | Requirements CAP-01, CAP-02, CAP-03; verified 2026-04-24 |
+| 22 | Prove Capability Acquisition Loop | Archived | Requirements ACQ-01, ACQ-02, ACQ-03; verified 2026-04-24 |
+| 23 | Lock Capability Growth Operator Truth | Archived | Requirements TRUST-01, TRUST-02, TRUST-03; verified 2026-04-24 |
 
 ## Known Context
 
@@ -51,7 +55,7 @@ See: `.planning/PROJECT.md` (updated 2026-04-24)
 - host shell 仍然只能判断 `broker_first` / `handle_normally` / `clarify_before_broker`，不能在入口处选择具体 winner
 - routing traces、acquisition memory、verified downstream manifests、MCP registry advisory metadata、`doctor`、canonical `STATUS.md`、milestone audit 与 CI trust report 都是当前 repo-owned proof rail
 - v1.5 已把 `website QA -> web markdown -> social markdown` 收成一条 QA-first family proof loop，并把 hierarchy、freshness/reuse 与 truth rails 一起锁成 canonical history
-- v1.6 选择 CAP-05：把 verified downstream manifests、MCP registry advisory 与 acquisition memory 推进成 operator-visible capability growth loop
+- v1.6 已把 verified downstream manifests、MCP registry advisory 与 acquisition memory 推进成 operator-visible capability growth loop
 
 ## Session History
 
@@ -64,7 +68,7 @@ See: `.planning/PROJECT.md` (updated 2026-04-24)
 - 2026-04-23: Milestone v1.3 executed, shipped, audited, and archived — see `.planning/milestones/v1.3-MILESTONE-AUDIT.md`
 - 2026-04-23: Milestone v1.4 executed, audited, and archived — see `.planning/milestones/v1.4-MILESTONE-AUDIT.md`
 - 2026-04-24: Milestone v1.5 executed, audited, archived, and shipped in PR #33 — see `.planning/milestones/v1.5-MILESTONE-AUDIT.md`
-- 2026-04-24: Milestone v1.6 started — defining CAP-05 capability growth requirements and roadmap
+- 2026-04-24: Milestone v1.6 executed, audited, archived, and cleaned up — see `.planning/milestones/v1.6-MILESTONE-AUDIT.md`
 
 ## Workflow Settings
 
@@ -79,7 +83,7 @@ See: `.planning/PROJECT.md` (updated 2026-04-24)
 
 ## Next Up
 
-Run milestone audit, complete milestone, and cleanup.
+Run `$gsd-new-milestone` to define the next milestone.
 
 ---
 *State initialized: 2026-04-22*

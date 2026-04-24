@@ -1,5 +1,28 @@
 # Project Milestones: skills-broker
 
+## v1.6 Registry-Ready Capability Growth Loop (Shipped: 2026-04-24)
+
+**Delivered:** `skills-broker` 现在已经把 verified downstream manifests、MCP registry advisory 与 acquisition memory 收成一条 registry-ready capability growth loop：operator 能看懂 candidate provenance、installability、verification、reuse state 与下一步 action，同时 host shell 继续只做 coarse broker-first boundary。
+
+**Phases completed:** 21-23 (3 plans total)
+
+**Key accomplishments:**
+
+- 把 installed local skills、verified downstream manifests、MCP registry advisory candidates、broker-owned workflows、acquisition memory 与 unknown provenance 收成 stable trust labels、eligibility/degraded/rejected explanations 与 fail-closed precedence checks。
+- 把 advisory → `INSTALL_REQUIRED` → install/verify → later reuse 的 capability growth path 收成 broker result payload、shared-home acquisition memory outcomes 与 `doctor` next-action proof。
+- 把 README、README.zh-CN、generated host shell、`STATUS.md`、`TODOS.md`、`doctor`、parity tests 与 CI trust rails 锁到同一份 capability growth packet wording，并继续证明 host 不选择具体 skill、package、MCP candidate 或 workflow winner。
+
+**Stats:**
+
+- 43 files changed
+- 1,840 insertions / 79 deletions across phase commits
+- 3 phases, 3 plans, 9 requirements
+- 1 day from start to archive (2026-04-24)
+
+**Git range:** `feat(phase-21): normalize capability trust surface` → `feat(phase-23): lock capability growth operator truth`
+
+**What's next:** 用 `$gsd-new-milestone` 定义下一轮 requirements；在新的 repo-owned proof 显示 sequencing 失效前，继续保持 `website QA` 默认入口、coarse broker-first boundary 与 deterministic capability trust rails。
+
 ## v1.5 QA-First Family Proof Loop (Shipped: 2026-04-24)
 
 **Delivered:** `skills-broker` 现在已经把 `website QA` hero lane 延伸成一条可审计、可刷新、可复用的 QA-first family proof loop，并把 hierarchy、freshness/reuse 与 truth rails 一起收成 repo-owned 默认入口历史。

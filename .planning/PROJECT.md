@@ -4,7 +4,7 @@
 
 `skills-broker` 是一个安装一次、跨宿主复用的共享 broker runtime，当前已在 Claude Code、Codex、OpenCode 三个薄宿主壳上完成 published lifecycle 与 proof/reuse parity。它让用户只表达结果，由 broker 负责归一化请求、发现并排序能力候选、准备赢家，并把已验证的能力、proof rail 与 reuse state 跨宿主复用起来。
 
-v1.2 已经把 canonical shipping truth 收口到 repo-owned `release:gate` / `release:promote` 与 publish automation 上，v1.3 把 `website QA` 的 route confidence、repeat-usage proof 与 operator truth 收成一条可信的 default-entry story，v1.4 再把这条 QA-first story 推进到 freshness-aware adoption signal。v1.5 则继续把这条默认入口往后延伸成可审计的 family proof loop：operator 不但知道先做 `website QA`，还能直接看见 `web markdown` 与 `social markdown` 作为后续已证明 loop 的 freshness、reuse 与下一步 guidance。v1.6 现在把注意力转向 CAP-05：在不打破 QA-first 默认入口的前提下，把 verified downstream manifests、MCP registry advisory 与 acquisition memory 收成一条更可信的 capability growth loop。
+v1.2 已经把 canonical shipping truth 收口到 repo-owned `release:gate` / `release:promote` 与 publish automation 上，v1.3 把 `website QA` 的 route confidence、repeat-usage proof 与 operator truth 收成一条可信的 default-entry story，v1.4 再把这条 QA-first story 推进到 freshness-aware adoption signal。v1.5 则继续把这条默认入口往后延伸成可审计的 family proof loop：operator 不但知道先做 `website QA`，还能直接看见 `web markdown` 与 `social markdown` 作为后续已证明 loop 的 freshness、reuse 与下一步 guidance。v1.6 已经把 CAP-05 的 registry/downstream provenance、installability、verification 与 reuse proof 收成 operator-visible capability growth loop，同时继续守住 QA-first 默认入口与 host coarse broker-first boundary。
 
 ## Core Value
 
@@ -12,33 +12,27 @@ v1.2 已经把 canonical shipping truth 收口到 repo-owned `release:gate` / `r
 
 ## Current State
 
-- **Latest shipped milestone:** `v1.5 QA-First Family Proof Loop`（2026-04-24）
-- **Current milestone:** `v1.6 Registry-Ready Capability Growth Loop`（started 2026-04-24）
+- **Latest shipped milestone:** `v1.6 Registry-Ready Capability Growth Loop`（2026-04-24）
+- **Current milestone:** none — ready for `$gsd-new-milestone`
 - **Supported hosts:** Claude Code、Codex、OpenCode
 - **Hero lane:** `website QA`
 - **Proven families:** `web markdown`（second）、`social markdown`（next）
 - **Broker-owned workflows:** `idea-to-ship`、`investigation-to-fix`
-- **Trust posture:** canonical release truth、QA-first adoption signal 与 QA-first family proof loop 都已 shipped；v1.6 正在把 capability growth 的 registry/downstream trust、install/verify/reuse proof 与 operator guidance 收进同一份 repo-owned truth
+- **Trust posture:** canonical release truth、QA-first adoption signal、QA-first family proof loop 与 registry-ready capability growth loop 都已 shipped，并由 docs、doctor、host shell、status 与 CI/parity rails 共同锁定
 
-## Current Milestone: v1.6 Registry-Ready Capability Growth Loop
+## Current Milestone
 
-**Goal:** 让 broker 在保持 `website QA` 默认入口与 coarse broker-first boundary 不漂移的前提下，把 verified downstream manifests、MCP registry advisory 与 acquisition memory 推进成 operator-visible 的 capability growth loop。
+无 active milestone。下一步使用 `$gsd-new-milestone` 定义 v1.7 或下一轮 requirements。
 
-**Target features:**
+## Latest Completed Milestone: v1.6 Registry-Ready Capability Growth Loop
 
-- 强化 registry / downstream manifest 的 trust metadata、eligibility checks 与 explanation surface，让 operator 能看懂为什么某个能力被推荐、是否可安装、是否已验证
-- 把 capability install / verify / reuse 的增长路径收成可审计 proof packet，并明确区分 advisory candidate、install-required candidate、verified downstream winner 与 reused capability
-- 扩展 `doctor`、README / README.zh-CN、installed host shell、`STATUS.md`、`TODOS.md` 与 CI/parity rails 对 capability growth 的 guidance，且不让宿主入口细粒度选择具体 skill、package 或 workflow winner
-
-## Latest Completed Milestone: v1.5 QA-First Family Proof Loop
-
-**Goal achieved:** 把 `website QA` 这条 hero lane 延伸成一条可审计、可刷新、可复用的 family proof loop，让 operator 先看到 QA-first 默认入口，再自然看到 `web markdown` 与 `social markdown` 作为下一步已证明路径。
+**Goal achieved:** 让 broker 在保持 `website QA` 默认入口与 coarse broker-first boundary 不漂移的前提下，把 verified downstream manifests、MCP registry advisory 与 acquisition memory 推进成 operator-visible capability growth loop。
 
 **Delivered features:**
 
-- 已把 `website QA -> web markdown -> social markdown` 的 hierarchy 与 next-loop guidance 收成 README、README.zh-CN、generated host shell、`doctor`、`STATUS.md` 与 `TODOS.md` 共享的 canonical operator truth
-- 已让 shared-home / `doctor` 直接输出 `familyLoopSignals`，让 maintainer 不用翻 raw trace 就能看懂三段 loop 的 freshness、reuse 与 sequence-aware refresh action
-- 已把 docs、installed host shell、`STATUS.md`、`TODOS.md`、parity suite 与 CI trust rails 锁到同一份 QA-first family-loop packet wording，并在 drift 时 fail closed
+- 已把 installed local skills、verified downstream manifests、MCP registry advisory candidates、broker-owned workflows、acquisition memory 与 unknown provenance 收成 stable capability trust labels 与 explanation surface
+- 已把 advisory candidate → `INSTALL_REQUIRED` → successful install/verify → later reuse 的增长路径收成 broker result 与 shared-home acquisition proof packet
+- 已让 `doctor`、README、README.zh-CN、installed host shell、`STATUS.md`、`TODOS.md`、parity tests 与 CI trust rails 共享同一份 capability growth wording 与 next-action guidance，并继续证明 host shell 只做 coarse broker-first routing
 
 ## Requirements
 
@@ -67,10 +61,13 @@ v1.2 已经把 canonical shipping truth 收口到 repo-owned `release:gate` / `r
 - ✓ QA-first family hierarchy 与 post-QA next-loop guidance 现在已在 README、README.zh-CN、generated host shell、`doctor` text、`STATUS.md` 与 `TODOS.md` 上使用同一份 canonical wording — v1.5 Phase 18
 - ✓ `doctor` 与 shared-home surfaces 现在会把 `website QA`、`web markdown`、`social markdown` 的 family-loop freshness、reuse 与 sequence-aware refresh guidance 收成同一份 repo-owned packet — v1.5 Phase 19
 - ✓ README、README.zh-CN、generated host shell、`STATUS.md`、`TODOS.md`、`doctor`、parity tests 与 CI trust rails 现在会一起消费同一份 QA-first family-loop packet wording，并在 drift 时 fail closed — v1.5 Phase 20
+- ✓ capability candidate provenance、registry/downstream eligibility、stale/contradictory metadata 与 advisory-over-verified precedence 已由 deterministic trust check 和 broker explanation surface 锁住 — v1.6 Phase 21
+- ✓ advisory → install-required → verified → reused 的 capability acquisition path 已进入 broker result payload、shared-home memory 与 `doctor` next-action proof — v1.6 Phase 22
+- ✓ README、README.zh-CN、generated host shell、`STATUS.md`、`TODOS.md`、`doctor`、parity tests 与 CI trust rails 现在共享同一份 capability growth operator truth — v1.6 Phase 23
 
 ### Active
 
-- v1.6 要把 CAP-05 做成 registry-ready capability growth loop：registry / downstream manifest trust metadata 必须可解释、install / verify / reuse proof 必须可审计、operator-facing docs / doctor / host shell / CI truth 必须保持同一份 coarse-boundary guidance。
+- 无 active milestone requirements。下一轮应通过 `$gsd-new-milestone` 明确新的 product bottleneck。
 
 ### Out of Scope
 
@@ -89,7 +86,7 @@ v1.3 已经把 `website QA` 这条默认入口的三层真相都补齐了：Phas
 
 现成可复用的 rail 也已经很多：routing traces、acquisition memory、verified downstream manifests、`doctor`、canonical `STATUS.md`、milestone audit、CI trust report、three-host shared-home smoke。v1.5 在这些既有 rail 上继续前推，而没有另起平行故事：Phase 18 把 QA-first hierarchy 与 post-QA next-loop wording 对齐成同一份 canonical operator truth；Phase 19 把三段 family loop 的 freshness / reuse / next action 收成 shared-home proof packet；Phase 20 再把这份 packet 锁进 docs、installed shell、`STATUS.md`、`TODOS.md`、parity tests 与 CI trust rails。
 
-因此当前 repo truth 已经把默认入口 journey 从 single hero-lane proof 推进到 full family-loop truth：operator 可以直接看懂“先 QA、再 web markdown、再 social markdown”是否仍然新鲜、可复用、且由 shared broker home truth 支撑。v1.6 选择 CAP-05 作为新 bottleneck：默认入口已经可信，下一步不是马上扩第四宿主或打平更多 family，而是让 broker 的能力增长面同样具备 registry/downstream provenance、installability、verification 与 reuse proof。
+因此当前 repo truth 已经把默认入口 journey 从 single hero-lane proof 推进到 full family-loop truth：operator 可以直接看懂“先 QA、再 web markdown、再 social markdown”是否仍然新鲜、可复用、且由 shared broker home truth 支撑。v1.6 在这条基础上完成 CAP-05：broker 的能力增长面现在同样具备 registry/downstream provenance、installability、verification 与 reuse proof，并且没有把具体 winner selection 泄漏给 host shell。
 
 ## Constraints
 
@@ -119,11 +116,11 @@ v1.3 已经把 `website QA` 这条默认入口的三层真相都补齐了：Phas
 | v1.4 优先把 QA-first proof 升级成 adoption signal，而不是先扩 capability surface 或重开 shipping truth | 当前剩余产品风险是 freshness / auditability，而不是 breadth / ship mechanics | ✓ Good |
 | v1.5 继续保持 `website QA` 为唯一第一步，并把 `web markdown`、`social markdown` 收成后续 family proof loop | 现在要补的是默认入口的延伸 story，而不是把三条 family 打平或重开泛化迁移 | ✓ Good |
 | QA-first hierarchy 与 post-QA next-loop guidance 必须复用同一份 canonical phrasing 跨 docs、doctor、installed shells 和 trust rails | 否则 operator 仍要靠多份 surface 自己拼 hierarchy | ✓ Good |
-| v1.6 优先做 CAP-05 capability growth loop，而不是 HOST-04 / LOOP-04 / SHIP-03 | 默认入口与 family proof 已经可信，当前更高杠杆是让 broker 的下一批能力发现、安装、验证和复用同样可解释、可审计 | Active |
+| v1.6 优先做 CAP-05 capability growth loop，而不是 HOST-04 / LOOP-04 / SHIP-03 | 默认入口与 family proof 已经可信，当前更高杠杆是让 broker 的下一批能力发现、安装、验证和复用同样可解释、可审计 | ✓ Good |
 
 ## Next Milestone Direction
 
-1. v1.6 已选择 `CAP-05`：把 registry / downstream manifest / acquisition memory 推进成 registry-ready capability growth loop。
+1. 用 `$gsd-new-milestone` 重新选择下一轮 bottleneck；当前没有 active requirements。
 2. 继续保持 coarse broker-first boundary、shared broker home reuse 与 `website QA` 作为唯一第一步的 sequencing，直到新的 repo-owned proof 明确要求调整。
 3. 除非现有 sequencing 被证明失效，否则不重开 query-native migration、package-vs-leaf identity migration、maintained-family schema 泛化或第四宿主扩展。
 
@@ -145,4 +142,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-24 after starting milestone v1.6*
+*Last updated: 2026-04-24 after archiving milestone v1.6*
