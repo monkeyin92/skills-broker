@@ -1331,7 +1331,7 @@ describe("doctor shared broker home", () => {
     }
   }, 30_000);
 
-  it("reports acquisition memory reuse metrics in doctor output", async () => {
+  it("reports capabilityGrowth acquisition memory reuse metrics in doctor output", async () => {
     const runtimeDirectory = await mkdtemp(join(tmpdir(), "skills-broker-doctor-acq-memory-"));
     const brokerHomeDirectory = join(runtimeDirectory, ".skills-broker");
 

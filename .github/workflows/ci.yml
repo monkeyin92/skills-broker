@@ -24,6 +24,9 @@ jobs:
       - name: Run CI blind-spot report
         run: npm run ci:blind-spot
 
+      - name: Run capability trust check
+        run: npm run ci:capability-trust
+
       - name: Run narrative parity suite
         run: npm run test:ci:narrative-parity
 

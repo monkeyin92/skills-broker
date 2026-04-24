@@ -2,6 +2,10 @@ import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
+  formatCapabilityGrowthNextActionLine,
+  formatCapabilityGrowthNextActionZhLine,
+  formatCapabilityGrowthProofSurfaceLine,
+  formatCapabilityGrowthProofSurfaceZhLine,
   formatCoarseBoundaryLine,
   formatCoarseBoundaryZhLine,
   formatFamilyLoopProofSurfaceLine,
@@ -94,6 +98,14 @@ describe("operator truth parity", () => {
         en: formatFamilyLoopProofSurfaceLine(),
         zh: formatFamilyLoopProofSurfaceZhLine()
       },
+      capabilityGrowthProofSurface: {
+        en: formatCapabilityGrowthProofSurfaceLine(),
+        zh: formatCapabilityGrowthProofSurfaceZhLine()
+      },
+      capabilityGrowthNextAction: {
+        en: formatCapabilityGrowthNextActionLine(),
+        zh: formatCapabilityGrowthNextActionZhLine()
+      },
       thirdHostReadinessTokens: [
         "shared broker home",
         "thin host shell",
@@ -118,6 +130,8 @@ describe("operator truth parity", () => {
         formatCoarseBoundaryLine(),
         formatWebsiteQaProofSurfaceLine(),
         formatFamilyLoopProofSurfaceLine(),
+        formatCapabilityGrowthProofSurfaceLine(),
+        formatCapabilityGrowthNextActionLine(),
         formatQaFirstFamilyLoopLine(),
         formatPostQaNextLoopLine(),
         OPERATOR_TRUTH_CONTRACT.heroLane,
@@ -135,6 +149,8 @@ describe("operator truth parity", () => {
         formatCoarseBoundaryZhLine(),
         formatWebsiteQaProofSurfaceZhLine(),
         formatFamilyLoopProofSurfaceZhLine(),
+        formatCapabilityGrowthProofSurfaceZhLine(),
+        formatCapabilityGrowthNextActionZhLine(),
         formatQaFirstFamilyLoopZhLine(),
         formatPostQaNextLoopZhLine(),
         OPERATOR_TRUTH_CONTRACT.heroLane,
@@ -152,6 +168,8 @@ describe("operator truth parity", () => {
         formatCoarseBoundaryLine(),
         formatWebsiteQaProofSurfaceLine(),
         formatFamilyLoopProofSurfaceLine(),
+        formatCapabilityGrowthProofSurfaceLine(),
+        formatCapabilityGrowthNextActionLine(),
         OPERATOR_TRUTH_CONTRACT.heroLane,
         OPERATOR_TRUTH_CONTRACT.secondProvenFamily,
         OPERATOR_TRUTH_CONTRACT.thirdProvenFamily,
@@ -167,6 +185,8 @@ describe("operator truth parity", () => {
         formatCoarseBoundaryLine(),
         formatWebsiteQaProofSurfaceLine(),
         formatFamilyLoopProofSurfaceLine(),
+        formatCapabilityGrowthProofSurfaceLine(),
+        formatCapabilityGrowthNextActionLine(),
         OPERATOR_TRUTH_CONTRACT.heroLane,
         OPERATOR_TRUTH_CONTRACT.secondProvenFamily,
         OPERATOR_TRUTH_CONTRACT.thirdProvenFamily,

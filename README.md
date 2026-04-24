@@ -102,6 +102,8 @@ The next proven family is **social markdown**. It should show up after web markd
 QA-first family loop: website QA first, web markdown second, social markdown third.
 After a successful website QA proof, the next proven loop to run is web markdown. After web markdown, social markdown is the next proven loop.
 `doctor` now exposes a QA-first family-loop packet: website QA adoption plus web markdown/social markdown freshness, reuse, and sequence-aware next actions.
+Capability growth next actions stay broker-owned: install, verify, rerun, refresh metadata, or prefer verified winner.
+`doctor` now exposes a capability growth packet: provenance, install_required, verification, repeat usage, cross-host reuse, degraded/failed counts, and next action.
 
 v0 currently includes:
 

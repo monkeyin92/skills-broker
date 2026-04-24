@@ -1,6 +1,8 @@
 import type { BrokerHost } from "../core/types.js";
 import {
   formatCoarseBoundaryLine,
+  formatCapabilityGrowthNextActionLine,
+  formatCapabilityGrowthProofSurfaceLine,
   formatFamilyLoopProofSurfaceLine,
   formatPostQaNextLoopLine,
   formatQaFirstFamilyLoopLine,
@@ -217,6 +219,8 @@ If you need one concrete broker-first example to calibrate the boundary, start w
 ${formatQaFirstFamilyLoopLine()}
 ${formatPostQaNextLoopLine()}
 ${formatFamilyLoopProofSurfaceLine()}
+${formatCapabilityGrowthProofSurfaceLine()}
+${formatCapabilityGrowthNextActionLine()}
 
 Treat the examples below as semantic anchors, not literal trigger phrases.
 

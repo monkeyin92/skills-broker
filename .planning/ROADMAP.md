@@ -23,14 +23,14 @@ Let `skills-broker` grow capability coverage through registry/downstream manifes
 |---|-------|------|--------------|------------------|
 | 21 | Normalize Capability Trust Surface | Make candidate provenance, registry/downstream metadata, and fail-closed trust eligibility inspectable. | CAP-01, CAP-02, CAP-03 | Complete |
 | 22 | Prove Capability Acquisition Loop | Turn advisory → install-required → verified → reused capability growth into shared-home proof. | ACQ-01, ACQ-02, ACQ-03 | Complete |
-| 23 | Lock Capability Growth Operator Truth | Align docs, host shell, `doctor`, status, and CI/parity rails around one coarse-boundary capability growth story. | TRUST-01, TRUST-02, TRUST-03 | 4 |
+| 23 | Lock Capability Growth Operator Truth | Align docs, host shell, `doctor`, status, and CI/parity rails around one coarse-boundary capability growth story. | TRUST-01, TRUST-02, TRUST-03 | Complete |
 
 
 ## Phase Completion Checklist
 
 - [x] Phase 21: Normalize Capability Trust Surface
 - [x] Phase 22: Prove Capability Acquisition Loop
-- [ ] Phase 23: Lock Capability Growth Operator Truth
+- [x] Phase 23: Lock Capability Growth Operator Truth
 
 ## Phase Details
 
@@ -76,6 +76,10 @@ Let `skills-broker` grow capability coverage through registry/downstream manifes
 
 **Requirements:** TRUST-01, TRUST-02, TRUST-03
 
+**Status:** completed
+
+**Verification:** `.planning/phases/23-lock-capability-growth-operator-truth/23-VERIFICATION.md`
+
 **Success criteria:**
 1. README, README.zh-CN, generated host shell copy, `STATUS.md`, and `TODOS.md` use the same canonical capability growth wording and next-action guidance.
 2. Narrative parity and CI trust rails fail on drift in capability growth wording, candidate counts, provenance labels, health states, or next actions.
@@ -102,15 +106,7 @@ Let `skills-broker` grow capability coverage through registry/downstream manifes
 
 ## Next Up
 
-**Phase 23: Lock Capability Growth Operator Truth** — Align docs, host shell, `doctor`, status, and CI/parity rails around one coarse-boundary capability growth story.
-
-Run:
-
-`$gsd-discuss-phase 23`
-
-Also available:
-
-`$gsd-plan-phase 23`
+All v1.6 phases are complete. Run milestone audit / complete / cleanup.
 
 ---
-*Last updated: 2026-04-24 after completing Phase 22*
+*Last updated: 2026-04-24 after completing Phase 23*

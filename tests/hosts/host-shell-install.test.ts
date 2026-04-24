@@ -8,6 +8,8 @@ import {
 } from "../../src/core/maintained-broker-first";
 import {
   formatCoarseBoundaryLine,
+  formatCapabilityGrowthNextActionLine,
+  formatCapabilityGrowthProofSurfaceLine,
   formatFamilyLoopProofSurfaceLine,
   formatFullLifecycleParityLine,
   formatPostQaNextLoopLine,
@@ -66,6 +68,8 @@ function expectHostSkillLayout(
     formatQaFirstFamilyLoopLine(),
     formatPostQaNextLoopLine(),
     formatFamilyLoopProofSurfaceLine(),
+    formatCapabilityGrowthProofSurfaceLine(),
+    formatCapabilityGrowthNextActionLine(),
     "Treat the examples below as semantic anchors, not literal trigger phrases.",
     "### Hero lane: website QA",
     "Keep website QA visually first. It is the QA default-entry lane and the calibration lane. Other maintained lanes are still valid, but secondary.",

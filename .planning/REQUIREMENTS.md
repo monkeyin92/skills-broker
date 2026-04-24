@@ -60,9 +60,9 @@
 | ACQ-01 | Phase 22 | completed |
 | ACQ-02 | Phase 22 | completed |
 | ACQ-03 | Phase 22 | completed |
-| TRUST-01 | Phase 23 | planned |
-| TRUST-02 | Phase 23 | planned |
-| TRUST-03 | Phase 23 | planned |
+| TRUST-01 | Phase 23 | completed |
+| TRUST-02 | Phase 23 | completed |
+| TRUST-03 | Phase 23 | completed |
 
 ---
-*Last updated: 2026-04-24 after completing Phase 22*
+*Last updated: 2026-04-24 after completing Phase 23*

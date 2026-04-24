@@ -26,6 +26,14 @@ export type OperatorTruthContract = {
     en: string;
     zh: string;
   };
+  capabilityGrowthProofSurface: {
+    en: string;
+    zh: string;
+  };
+  capabilityGrowthNextAction: {
+    en: string;
+    zh: string;
+  };
   fullLifecycleParity: {
     en: string;
     zh: string;
@@ -68,6 +76,14 @@ export const OPERATOR_TRUTH_CONTRACT = {
     en: "`doctor` now exposes a QA-first family-loop packet: website QA adoption plus web markdown/social markdown freshness, reuse, and sequence-aware next actions.",
     zh: "`doctor` 现在会直接输出一份 QA-first family-loop packet：包含 website QA adoption，以及 web markdown / social markdown 的 freshness、reuse 与按顺序排列的 next action。"
   },
+  capabilityGrowthProofSurface: {
+    en: "`doctor` now exposes a capability growth packet: provenance, install_required, verification, repeat usage, cross-host reuse, degraded/failed counts, and next action.",
+    zh: "`doctor` 现在会直接输出一份 capability growth packet：provenance、install_required、verification、repeat usage、cross-host reuse、degraded/failed counts 与 next action。"
+  },
+  capabilityGrowthNextAction: {
+    en: "Capability growth next actions stay broker-owned: install, verify, rerun, refresh metadata, or prefer verified winner.",
+    zh: "Capability growth 的 next action 继续归 broker 所有：install、verify、rerun、refresh metadata，或 prefer verified winner。"
+  },
   fullLifecycleParity: {
     en: "Claude Code, Codex, and OpenCode now share full published lifecycle and proof/reuse parity.",
     zh: "Claude Code、Codex、OpenCode 现在已经共享完整的发布态 lifecycle 与 proof/reuse parity。"
@@ -108,6 +124,14 @@ export function formatWebsiteQaProofSurfaceLine(): string {
 
 export function formatFamilyLoopProofSurfaceLine(): string {
   return OPERATOR_TRUTH_CONTRACT.familyLoopProofSurface.en;
+}
+
+export function formatCapabilityGrowthProofSurfaceLine(): string {
+  return OPERATOR_TRUTH_CONTRACT.capabilityGrowthProofSurface.en;
+}
+
+export function formatCapabilityGrowthNextActionLine(): string {
+  return OPERATOR_TRUTH_CONTRACT.capabilityGrowthNextAction.en;
 }
 
 export function formatFullLifecycleParityLine(): string {
@@ -152,6 +176,14 @@ export function formatWebsiteQaProofSurfaceZhLine(): string {
 
 export function formatFamilyLoopProofSurfaceZhLine(): string {
   return OPERATOR_TRUTH_CONTRACT.familyLoopProofSurface.zh;
+}
+
+export function formatCapabilityGrowthProofSurfaceZhLine(): string {
+  return OPERATOR_TRUTH_CONTRACT.capabilityGrowthProofSurface.zh;
+}
+
+export function formatCapabilityGrowthNextActionZhLine(): string {
+  return OPERATOR_TRUTH_CONTRACT.capabilityGrowthNextAction.zh;
 }
 
 export function formatFullLifecycleParityZhLine(): string {
