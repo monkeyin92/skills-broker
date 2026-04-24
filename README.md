@@ -99,6 +99,9 @@ Within that lake, **website QA is the clearest default-entry lane today**. Requi
 
 The second proven family is **web markdown**. It is the next operator loop to run after website QA, not a competing first move.
 The next proven family is **social markdown**. It should show up after web markdown as another maintained loop, not as a new first move.
+QA-first family loop: website QA first, web markdown second, social markdown third.
+After a successful website QA proof, the next proven loop to run is web markdown. After web markdown, social markdown is the next proven loop.
+`doctor` now exposes a QA-first family-loop packet: website QA adoption plus web markdown/social markdown freshness, reuse, and sequence-aware next actions.
 
 v0 currently includes:
 
@@ -262,6 +265,7 @@ Web markdown is still a proven next lane, but only after the QA default-entry lo
 Once that default-entry loop feels clear, the second proven family is **web markdown**: ask for something like `turn this webpage into markdown https://example.com/post`, approve the install if needed, rerun the same request, then repeat it from the other host to prove cross-host reuse.
 
 The next proven family is **social markdown**: ask for something like `save this X post as markdown https://x.com/example/status/1`, approve the install if needed, rerun the same request, then repeat it from another supported host to prove the same cross-host reuse contract.
+After a successful website QA proof, the next proven loop to run is web markdown. After web markdown, social markdown is the next proven loop.
 
 On the first blocked pass, the host-side outcome should look like:
 
@@ -285,6 +289,7 @@ Website QA cross-host reuse proof: confirmed (first reuse across hosts recorded)
 If you later clear acquisition memory, a verified downstream manifest from one host should still be enough for another host to recover `INSTALL_REQUIRED` instead of falling all the way back to `NO_CANDIDATE`.
 
 `doctor` now exposes a website QA adoption packet: recent routing evidence, freshness, and separate repeat-usage / cross-host reuse proof states.
+`doctor` now exposes a QA-first family-loop packet: website QA adoption plus web markdown/social markdown freshness, reuse, and sequence-aware next actions.
 
 If you want to clear only that advisory memory and re-run the loop from scratch, use:
 
@@ -304,6 +309,7 @@ This is the fastest way to confirm the shared-home install is real after the QA 
 - the support matrix now claims Claude Code, Codex, and OpenCode with full lifecycle / proof parity, and the operator-facing docs say the same thing
 - the host still explains only the coarse broker-first boundary instead of choosing the concrete QA winner up front
 - `doctor` shows the website QA adoption packet, including freshness plus the next missing repeat-usage / cross-host reuse proof
+- `doctor` also shows the QA-first family-loop packet, including web markdown / social markdown freshness, reuse, and sequence-aware next actions
 - operator-facing failures tell you what broke and what to inspect next
 
 ### 4. Try explicit shared-home directories

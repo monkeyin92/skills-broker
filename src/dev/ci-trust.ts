@@ -3,6 +3,12 @@ import { join } from "node:path";
 import {
   formatCoarseBoundaryLine,
   formatCoarseBoundaryZhLine,
+  formatFamilyLoopProofSurfaceLine,
+  formatFamilyLoopProofSurfaceZhLine,
+  formatPostQaNextLoopLine,
+  formatPostQaNextLoopZhLine,
+  formatQaFirstFamilyLoopLine,
+  formatQaFirstFamilyLoopZhLine,
   OPERATOR_TRUTH_CONTRACT,
   formatFullLifecycleParityLine,
   formatFullLifecycleParityZhLine,
@@ -248,6 +254,9 @@ export function buildCiTrustSurfaceSpecs(
     formatThirdHostReadinessLine(),
     formatCoarseBoundaryLine(),
     formatWebsiteQaProofSurfaceLine(),
+    formatFamilyLoopProofSurfaceLine(),
+    formatQaFirstFamilyLoopLine(),
+    formatPostQaNextLoopLine(),
     OPERATOR_TRUTH_CONTRACT.heroLane,
     OPERATOR_TRUTH_CONTRACT.secondProvenFamily,
     OPERATOR_TRUTH_CONTRACT.thirdProvenFamily,
@@ -260,6 +269,9 @@ export function buildCiTrustSurfaceSpecs(
     formatThirdHostReadinessZhLine(),
     formatCoarseBoundaryZhLine(),
     formatWebsiteQaProofSurfaceZhLine(),
+    formatFamilyLoopProofSurfaceZhLine(),
+    formatQaFirstFamilyLoopZhLine(),
+    formatPostQaNextLoopZhLine(),
     OPERATOR_TRUTH_CONTRACT.heroLane,
     OPERATOR_TRUTH_CONTRACT.secondProvenFamily,
     OPERATOR_TRUTH_CONTRACT.thirdProvenFamily,
@@ -309,6 +321,9 @@ export function buildCiTrustSurfaceSpecs(
           path: "tests/hosts/host-shell-install.test.ts",
           label: "installed shell truth parity",
           containsAll: [
+            "formatQaFirstFamilyLoopLine",
+            "formatPostQaNextLoopLine",
+            "formatFamilyLoopProofSurfaceLine",
             "### Hero lane: website QA",
             "The second proven family is web markdown. Keep it visible here after website QA, not as a competing first move.",
             "The next proven family is social markdown. Keep it visible after web markdown, not as a competing first move."
@@ -334,9 +349,9 @@ export function buildCiTrustSurfaceSpecs(
           path: "STATUS.md",
           label: "STATUS adoption-packet truth",
           containsAll: [
-            "phase15-website-qa-adoption-signals",
-            "phase16-website-qa-freshness-health",
-            "phase17-adoption-signal-audit-truth"
+            "phase18-qa-first-family-hierarchy",
+            "phase19-family-loop-freshness-reuse",
+            "phase20-family-loop-truth-rails"
           ]
         }),
         proof({
@@ -357,6 +372,8 @@ export function buildCiTrustSurfaceSpecs(
           label: "doctor adoption-packet coverage",
           containsAll: [
             "websiteQaAdoption",
+            "familyLoopSignals",
+            "QA-first family freshness",
             "WEBSITE_QA_SIGNAL_STALE",
             "stale-to-fresh website QA adoption health transitions"
           ]

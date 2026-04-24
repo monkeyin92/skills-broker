@@ -4,6 +4,12 @@ import { describe, expect, it } from "vitest";
 import {
   formatCoarseBoundaryLine,
   formatCoarseBoundaryZhLine,
+  formatFamilyLoopProofSurfaceLine,
+  formatFamilyLoopProofSurfaceZhLine,
+  formatPostQaNextLoopLine,
+  formatPostQaNextLoopZhLine,
+  formatQaFirstFamilyLoopLine,
+  formatQaFirstFamilyLoopZhLine,
   OPERATOR_TRUTH_CONTRACT,
   formatFullLifecycleParityLine,
   formatFullLifecycleParityZhLine,
@@ -63,6 +69,14 @@ describe("operator truth parity", () => {
       heroLane: "website QA",
       secondProvenFamily: "web markdown",
       thirdProvenFamily: "social markdown",
+      qaFirstFamilyLoop: {
+        en: formatQaFirstFamilyLoopLine(),
+        zh: formatQaFirstFamilyLoopZhLine()
+      },
+      postQaNextLoop: {
+        en: formatPostQaNextLoopLine(),
+        zh: formatPostQaNextLoopZhLine()
+      },
       lifecycleCommands: [
         "npx skills-broker update",
         "npx skills-broker doctor",
@@ -75,6 +89,10 @@ describe("operator truth parity", () => {
       websiteQaProofSurface: {
         en: formatWebsiteQaProofSurfaceLine(),
         zh: formatWebsiteQaProofSurfaceZhLine()
+      },
+      familyLoopProofSurface: {
+        en: formatFamilyLoopProofSurfaceLine(),
+        zh: formatFamilyLoopProofSurfaceZhLine()
       },
       thirdHostReadinessTokens: [
         "shared broker home",
@@ -99,6 +117,9 @@ describe("operator truth parity", () => {
         formatFullLifecycleParityLine(),
         formatCoarseBoundaryLine(),
         formatWebsiteQaProofSurfaceLine(),
+        formatFamilyLoopProofSurfaceLine(),
+        formatQaFirstFamilyLoopLine(),
+        formatPostQaNextLoopLine(),
         OPERATOR_TRUTH_CONTRACT.heroLane,
         OPERATOR_TRUTH_CONTRACT.secondProvenFamily,
         OPERATOR_TRUTH_CONTRACT.thirdProvenFamily,
@@ -113,6 +134,9 @@ describe("operator truth parity", () => {
         formatFullLifecycleParityZhLine(),
         formatCoarseBoundaryZhLine(),
         formatWebsiteQaProofSurfaceZhLine(),
+        formatFamilyLoopProofSurfaceZhLine(),
+        formatQaFirstFamilyLoopZhLine(),
+        formatPostQaNextLoopZhLine(),
         OPERATOR_TRUTH_CONTRACT.heroLane,
         OPERATOR_TRUTH_CONTRACT.secondProvenFamily,
         OPERATOR_TRUTH_CONTRACT.thirdProvenFamily,
@@ -127,6 +151,7 @@ describe("operator truth parity", () => {
         formatFullLifecycleParityLine(),
         formatCoarseBoundaryLine(),
         formatWebsiteQaProofSurfaceLine(),
+        formatFamilyLoopProofSurfaceLine(),
         OPERATOR_TRUTH_CONTRACT.heroLane,
         OPERATOR_TRUTH_CONTRACT.secondProvenFamily,
         OPERATOR_TRUTH_CONTRACT.thirdProvenFamily,
@@ -141,6 +166,7 @@ describe("operator truth parity", () => {
         formatFullLifecycleParityLine(),
         formatCoarseBoundaryLine(),
         formatWebsiteQaProofSurfaceLine(),
+        formatFamilyLoopProofSurfaceLine(),
         OPERATOR_TRUTH_CONTRACT.heroLane,
         OPERATOR_TRUTH_CONTRACT.secondProvenFamily,
         OPERATOR_TRUTH_CONTRACT.thirdProvenFamily,
@@ -275,7 +301,7 @@ describe("operator truth parity", () => {
     );
   });
 
-  it("records the Phase 12-17 QA-first confidence packets in the canonical STATUS board", async () => {
+  it("records the Phase 12-20 QA-first confidence packets in the canonical STATUS board", async () => {
     const status = await readRepoFile("STATUS.md");
     const items = extractCanonicalStatusItems(status);
     const phase12Item = items.find(
@@ -292,6 +318,15 @@ describe("operator truth parity", () => {
     );
     const phase17Item = items.find(
       (item) => item.id === "phase17-adoption-signal-audit-truth"
+    );
+    const phase18Item = items.find(
+      (item) => item.id === "phase18-qa-first-family-hierarchy"
+    );
+    const phase19Item = items.find(
+      (item) => item.id === "phase19-family-loop-freshness-reuse"
+    );
+    const phase20Item = items.find(
+      (item) => item.id === "phase20-family-loop-truth-rails"
     );
 
     expect(phase12Item).toBeDefined();
@@ -353,7 +388,7 @@ describe("operator truth parity", () => {
     expect(phase15Item).toBeDefined();
     expect(phase15Item).toMatchObject({
       id: "phase15-website-qa-adoption-signals",
-      status: "shipped_local"
+      status: "shipped_remote"
     });
     expect(phase15Item!.summary).toContain("adoption packet");
     expect(phase15Item!.summary).toContain("freshness");
@@ -377,7 +412,7 @@ describe("operator truth parity", () => {
     expect(phase16Item).toBeDefined();
     expect(phase16Item).toMatchObject({
       id: "phase16-website-qa-freshness-health",
-      status: "shipped_local"
+      status: "shipped_remote"
     });
     expect(phase16Item!.summary).toContain("adoptionHealth");
     expect(phase16Item!.summary).toContain("stale-to-fresh");
@@ -401,7 +436,7 @@ describe("operator truth parity", () => {
     expect(phase17Item).toBeDefined();
     expect(phase17Item).toMatchObject({
       id: "phase17-adoption-signal-audit-truth",
-      status: "shipped_local"
+      status: "shipped_remote"
     });
     expect(phase17Item!.summary).toContain("CI trust");
     expect(phase17Item!.summary).toContain("adoption packet");
@@ -418,6 +453,78 @@ describe("operator truth parity", () => {
         expect.objectContaining({
           type: "test",
           path: "tests/shared-home/operator-truth-parity.test.ts"
+        }),
+        expect.objectContaining({
+          type: "test",
+          path: "tests/dev/ci-trust.test.ts"
+        })
+      ])
+    );
+
+    expect(phase18Item).toBeDefined();
+    expect(phase18Item).toMatchObject({
+      id: "phase18-qa-first-family-hierarchy",
+      status: "shipped_remote"
+    });
+    expect(phase18Item!.summary).toContain(formatQaFirstFamilyLoopLine());
+    expect(phase18Item!.summary).toContain(formatPostQaNextLoopLine());
+    expect(phase18Item!.proofs).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          type: "file",
+          path: "src/core/operator-truth.ts"
+        }),
+        expect.objectContaining({
+          type: "file",
+          path: "src/hosts/skill-markdown.ts"
+        }),
+        expect.objectContaining({
+          type: "test",
+          path: "tests/shared-home/operator-truth-parity.test.ts"
+        })
+      ])
+    );
+
+    expect(phase19Item).toBeDefined();
+    expect(phase19Item).toMatchObject({
+      id: "phase19-family-loop-freshness-reuse",
+      status: "shipped_remote"
+    });
+    expect(phase19Item!.summary).toContain("familyLoopSignals");
+    expect(phase19Item!.summary).toContain("sequence-aware");
+    expect(phase19Item!.proofs).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          type: "file",
+          path: "src/shared-home/doctor.ts"
+        }),
+        expect.objectContaining({
+          type: "file",
+          path: "src/shared-home/format.ts"
+        }),
+        expect.objectContaining({
+          type: "test",
+          path: "tests/e2e/shared-home-smoke.test.ts"
+        })
+      ])
+    );
+
+    expect(phase20Item).toBeDefined();
+    expect(phase20Item).toMatchObject({
+      id: "phase20-family-loop-truth-rails",
+      status: "shipped_remote"
+    });
+    expect(phase20Item!.summary).toContain(formatFamilyLoopProofSurfaceLine());
+    expect(phase20Item!.summary).toContain("CI trust");
+    expect(phase20Item!.proofs).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          type: "file",
+          path: "src/dev/ci-trust.ts"
+        }),
+        expect.objectContaining({
+          type: "test",
+          path: "tests/hosts/host-shell-install.test.ts"
         }),
         expect.objectContaining({
           type: "test",

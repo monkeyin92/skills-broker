@@ -1,8 +1,14 @@
 import type {
+  DoctorFamilyLoopSignal,
   DoctorFamilyProofSummary,
   DoctorLifecycleResult,
   DoctorProofFamily
 } from "./doctor.js";
+import {
+  formatFamilyLoopProofSurfaceLine,
+  formatPostQaNextLoopLine,
+  formatQaFirstFamilyLoopLine
+} from "../core/operator-truth.js";
 import type { RemoveLifecycleResult } from "./remove.js";
 import type { UpdateLifecycleResult } from "./update.js";
 
@@ -163,6 +169,62 @@ function formatFamilyCrossHostReuseProofLine(
   }
 
   return `${label} cross-host reuse proof: pending (first reuse across hosts not recorded yet)`;
+}
+
+function formatFamilyLoopHostList(hosts: readonly string[]): string {
+  return hosts.length === 0 ? "none" : hosts.join(",");
+}
+
+function formatFamilyLoopFreshnessSummaryLine(
+  result: DoctorLifecycleResult
+): string {
+  const websiteQa = result.familyLoopSignals.website_qa;
+  const webMarkdown = result.familyLoopSignals.web_content_to_markdown;
+  const socialMarkdown = result.familyLoopSignals.social_post_to_markdown;
+
+  return `QA-first family freshness (last ${websiteQa.windowDays}d): website QA=${websiteQa.status}, web markdown=${webMarkdown.status}, social markdown=${socialMarkdown.status}`;
+}
+
+function formatFamilyLoopSignalLine(signal: DoctorFamilyLoopSignal): string {
+  return `${signal.label} freshness (last ${signal.windowDays}d): ${signal.status}, verify=${signal.proofs.verifyState}, repeat_usage=${signal.proofs.repeatUsageState}, cross_host_reuse=${signal.proofs.crossHostReuseState}, verified_hosts=${formatFamilyLoopHostList(signal.reuse.verifiedHosts)}, replay_hosts=${signal.reuse.activeHosts}/${signal.reuse.supportedHosts}`;
+}
+
+function formatFamilyLoopLatestLine(signal: DoctorFamilyLoopSignal): string {
+  if (signal.latest.activityAt === undefined) {
+    return `${signal.label} freshness latest: no family-loop activity recorded yet`;
+  }
+
+  const details = [
+    `activity=${signal.latest.activityAt}`,
+    signal.latest.verifiedAt === undefined
+      ? undefined
+      : `verify=${signal.latest.verifiedAt}`,
+    signal.latest.firstReuseAt === undefined
+      ? undefined
+      : `first_reuse=${signal.latest.firstReuseAt}`,
+    signal.latest.verifiedManifestAt === undefined
+      ? undefined
+      : `replay=${signal.latest.verifiedManifestAt}`
+  ].filter((entry) => entry !== undefined);
+
+  return `${signal.label} freshness latest: ${details.join(", ")}`;
+}
+
+function formatFamilyLoopHostLines(signal: DoctorFamilyLoopSignal): string[] {
+  return signal.hosts.map((host) => {
+    const details = [
+      `historical_verified=${host.historicalVerified ? "yes" : "no"}`,
+      host.lastVerifiedManifestAt === undefined
+        ? undefined
+        : `last_replay=${host.lastVerifiedManifestAt}`
+    ].filter((entry) => entry !== undefined);
+
+    return `${signal.label} freshness host ${host.name}: ${host.status}, ${details.join(", ")}`;
+  });
+}
+
+function formatFamilyLoopNextActionLine(signal: DoctorFamilyLoopSignal): string {
+  return `${signal.label} freshness next action: ${signal.nextAction}`;
 }
 
 function formatFamilyRepeatUsageProofLine(
@@ -326,6 +388,20 @@ export function formatLifecycleResult(
     lines.push(formatWebsiteQaAdoptionNextActionLine(result));
     lines.push(formatWebsiteQaVerdictLine(result));
     lines.push(formatWebsiteQaNextActionLine(result));
+    lines.push(formatQaFirstFamilyLoopLine());
+    lines.push(formatPostQaNextLoopLine());
+    lines.push(formatFamilyLoopProofSurfaceLine());
+    lines.push(formatFamilyLoopFreshnessSummaryLine(result));
+    for (const family of [
+      "web_content_to_markdown",
+      "social_post_to_markdown"
+    ] as const satisfies DoctorProofFamily[]) {
+      const signal = result.familyLoopSignals[family];
+      lines.push(formatFamilyLoopSignalLine(signal));
+      lines.push(formatFamilyLoopLatestLine(signal));
+      lines.push(...formatFamilyLoopHostLines(signal));
+      lines.push(formatFamilyLoopNextActionLine(signal));
+    }
 
     if (
       result.routingMetrics.observed === 0 &&

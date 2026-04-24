@@ -72,9 +72,35 @@ jobs:
       - name: Build distributable runtime
         run: npm run build
 
+      - name: Materialize strict-doctor shared home
+        shell: bash
+        run: |
+          set -euo pipefail
+          broker_home="${RUNNER_TEMP}/status-doctor/.skills-broker"
+          claude_dir="${RUNNER_TEMP}/status-doctor/.claude/skills/skills-broker"
+          codex_dir="${RUNNER_TEMP}/status-doctor/.agents/skills/skills-broker"
+          opencode_dir="${RUNNER_TEMP}/status-doctor/.config/opencode/skills/skills-broker"
+          node dist/bin/skills-broker.js update \
+            --broker-home "$broker_home" \
+            --claude-dir "$claude_dir" \
+            --codex-dir "$codex_dir" \
+            --opencode-dir "$opencode_dir"
+          node ./scripts/seed-strict-doctor-shared-home.mjs "$broker_home"
+
       - name: Run strict status doctor
         shell: bash
         run: |
           set -euo pipefail
           ship_ref="origin/${GITHUB_HEAD_REF:-${GITHUB_REF_NAME}}"
-          node dist/bin/skills-broker.js doctor --strict --refresh-remote --repo-root "$GITHUB_WORKSPACE" --ship-ref "$ship_ref"
+          broker_home="${RUNNER_TEMP}/status-doctor/.skills-broker"
+          claude_dir="${RUNNER_TEMP}/status-doctor/.claude/skills/skills-broker"
+          codex_dir="${RUNNER_TEMP}/status-doctor/.agents/skills/skills-broker"
+          opencode_dir="${RUNNER_TEMP}/status-doctor/.config/opencode/skills/skills-broker"
+          node dist/bin/skills-broker.js doctor --strict \
+            --refresh-remote \
+            --broker-home "$broker_home" \
+            --claude-dir "$claude_dir" \
+            --codex-dir "$codex_dir" \
+            --opencode-dir "$opencode_dir" \
+            --repo-root "$GITHUB_WORKSPACE" \
+            --ship-ref "$ship_ref"

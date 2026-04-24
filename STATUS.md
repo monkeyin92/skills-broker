@@ -20,9 +20,11 @@ This file is the repo-native execution board for `skills-broker`.
 - The Phase 11 publish-flow closure packet is now shipped on the active shipping ref: `.github/workflows/publish-npm.yml` now runs `release:gate` before publish, `release:promote` after publish, pushes promoted `STATUS.md` truth back to the default branch, and closes out on the same canonical release gate.
 - The Phase 12 website-QA routing-confidence packet is now shipped on the active shipping ref: clear website QA asks cross the coarse broker-first boundary more reliably, nearby page-level phrasing stays fail-closed, and `doctor` now surfaces website QA routing evidence directly.
 - The Phase 13 website-QA repeat-usage packet is now shipped on the active shipping ref: the website QA loop now proves repeat usage and cross-host reuse on the three-host shared-home surface, and `doctor` now distinguishes the two states.
-- The v1.4 website-QA adoption-signal packet is now shipped locally on `HEAD`: `doctor` now exposes a website QA adoption packet with recent routing evidence, freshness, per-host coverage, and refresh guidance; adoption health follows that packet instead of historical proof alone; and STATUS / CI trust now mirror the same packet fail-closed.
+- The v1.4 website-QA adoption-signal packet is now shipped on the active shipping ref: `doctor` now exposes a website QA adoption packet with recent routing evidence, freshness, per-host coverage, and refresh guidance; adoption health follows that packet instead of historical proof alone; and STATUS / CI trust now mirror the same packet fail-closed.
+- The v1.5 QA-first family-loop packet is now shipped on the active shipping ref: QA-first family loop: website QA first, web markdown second, social markdown third. After a successful website QA proof, the next proven loop to run is web markdown. After web markdown, social markdown is the next proven loop. `doctor` now exposes a QA-first family-loop packet: website QA adoption plus web markdown/social markdown freshness, reuse, and sequence-aware next actions.
 - Hosts choose only `broker_first`, `handle_normally`, or `clarify_before_broker`; the broker still chooses the concrete QA winner.
 - `doctor` now exposes a website QA adoption packet: recent routing evidence, freshness, and separate repeat-usage / cross-host reuse proof states.
+- `doctor` now exposes a QA-first family-loop packet: website QA adoption plus web markdown/social markdown freshness, reuse, and sequence-aware next actions.
 - Compatibility-intent routing metrics are shipped on `origin/main`.
 - The query-native request migration tail is now shipped on the active shipping ref: top-level public requests stay `capabilityQuery`-native, and legacy cache/session records migrate forward without hiding compatibility-assisted routing.
 - The package-vs-leaf identity migration tail is now shipped on the active shipping ref: discovery, workflow stages, managed host seeds, and legacy workflow sessions all keep package-plus-leaf identity explicit and treat `implementation.id` as execution metadata only.
@@ -591,7 +593,7 @@ This file is the repo-native execution board for `skills-broker`.
       "id": "phase15-website-qa-adoption-signals",
       "title": "Phase 15 website QA adoption signals",
       "summary": "`doctor` now exposes a website QA adoption packet with recent routing evidence, freshness, per-host coverage, and refresh guidance instead of leaving maintainers to reconstruct the current signal from raw traces.",
-      "status": "shipped_local",
+      "status": "shipped_remote",
       "proofs": [
         {
           "type": "file",
@@ -614,7 +616,7 @@ This file is the repo-native execution board for `skills-broker`.
       "id": "phase16-website-qa-freshness-health",
       "title": "Phase 16 website QA freshness health",
       "summary": "`adoptionHealth` now follows the website QA adoption packet, blocking on missing / stale / incomplete QA-first signal and proving stale-to-fresh refresh transitions on the shared-home surface.",
-      "status": "shipped_local",
+      "status": "shipped_remote",
       "proofs": [
         {
           "type": "file",
@@ -642,7 +644,7 @@ This file is the repo-native execution board for `skills-broker`.
       "id": "phase17-adoption-signal-audit-truth",
       "title": "Phase 17 adoption-signal audit truth",
       "summary": "Operator docs, canonical `STATUS.md`, and CI trust now mirror the same website QA adoption packet wording so adoption-signal freshness drift fails closed instead of decaying into narrative-only truth.",
-      "status": "shipped_local",
+      "status": "shipped_remote",
       "proofs": [
         {
           "type": "file",
@@ -663,6 +665,100 @@ This file is the repo-native execution board for `skills-broker`.
           "type": "test",
           "path": "tests/dev/ci-trust.test.ts",
           "label": "CI trust report stays green on the live adoption-packet surfaces"
+        }
+      ]
+    },
+    {
+      "id": "phase18-qa-first-family-hierarchy",
+      "title": "Phase 18 QA-first family hierarchy",
+      "summary": "QA-first family loop: website QA first, web markdown second, social markdown third. After a successful website QA proof, the next proven loop to run is web markdown. After web markdown, social markdown is the next proven loop.",
+      "status": "shipped_remote",
+      "proofs": [
+        {
+          "type": "file",
+          "path": "src/core/operator-truth.ts",
+          "label": "canonical hierarchy and next-loop wording"
+        },
+        {
+          "type": "file",
+          "path": "src/hosts/skill-markdown.ts",
+          "label": "installed-shell hierarchy guidance"
+        },
+        {
+          "type": "test",
+          "path": "tests/shared-home/operator-truth-parity.test.ts",
+          "label": "docs and status hierarchy parity"
+        },
+        {
+          "type": "test",
+          "path": "tests/hosts/host-shell-install.test.ts",
+          "label": "installed-shell hierarchy coverage"
+        }
+      ]
+    },
+    {
+      "id": "phase19-family-loop-freshness-reuse",
+      "title": "Phase 19 family-loop freshness and reuse",
+      "summary": "`doctor` now exposes `familyLoopSignals`, surfacing web markdown and social markdown freshness, reuse, host coverage, and sequence-aware refresh guidance next to website QA adoption.",
+      "status": "shipped_remote",
+      "proofs": [
+        {
+          "type": "file",
+          "path": "src/shared-home/doctor.ts",
+          "label": "familyLoopSignals packet aggregation"
+        },
+        {
+          "type": "file",
+          "path": "src/shared-home/format.ts",
+          "label": "doctor family-loop packet text output"
+        },
+        {
+          "type": "test",
+          "path": "tests/shared-home/doctor.test.ts",
+          "label": "family-loop packet active/stale/missing coverage"
+        },
+        {
+          "type": "test",
+          "path": "tests/e2e/shared-home-smoke.test.ts",
+          "label": "shared-home smoke for family-loop packet reuse visibility"
+        }
+      ]
+    },
+    {
+      "id": "phase20-family-loop-truth-rails",
+      "title": "Phase 20 family-loop truth rails",
+      "summary": "`doctor` now exposes a QA-first family-loop packet: website QA adoption plus web markdown/social markdown freshness, reuse, and sequence-aware next actions. Docs, installed shells, STATUS, TODOS, and CI trust now fail closed on that shared wording.",
+      "status": "shipped_remote",
+      "proofs": [
+        {
+          "type": "file",
+          "path": "src/core/operator-truth.ts",
+          "label": "canonical family-loop packet wording"
+        },
+        {
+          "type": "file",
+          "path": "src/dev/ci-trust.ts",
+          "label": "CI trust family-loop packet checks"
+        },
+        {
+          "type": "test",
+          "path": "tests/shared-home/operator-truth-parity.test.ts",
+          "label": "docs and status family-loop packet parity"
+        },
+        {
+          "type": "test",
+          "path": "tests/hosts/host-shell-install.test.ts",
+          "label": "installed-shell family-loop packet coverage"
+        },
+        {
+          "type": "test",
+          "path": "tests/shared-home/doctor.test.ts",
+          "label": "doctor family-loop packet wording coverage"
+        },
+        {
+          "type": "test",
+          "path": "tests/dev/ci-trust.test.ts",
+          "label": "live repo CI trust stays green on family-loop truth rails"
         }
       ]
     },

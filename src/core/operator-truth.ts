@@ -4,6 +4,14 @@ export type OperatorTruthContract = {
   heroLane: "website QA";
   secondProvenFamily: "web markdown";
   thirdProvenFamily: "social markdown";
+  qaFirstFamilyLoop: {
+    en: string;
+    zh: string;
+  };
+  postQaNextLoop: {
+    en: string;
+    zh: string;
+  };
   lifecycleCommands: readonly string[];
   thirdHostReadinessTokens: readonly string[];
   coarseBoundary: {
@@ -11,6 +19,10 @@ export type OperatorTruthContract = {
     zh: string;
   };
   websiteQaProofSurface: {
+    en: string;
+    zh: string;
+  };
+  familyLoopProofSurface: {
     en: string;
     zh: string;
   };
@@ -26,6 +38,14 @@ export const OPERATOR_TRUTH_CONTRACT = {
   heroLane: "website QA",
   secondProvenFamily: "web markdown",
   thirdProvenFamily: "social markdown",
+  qaFirstFamilyLoop: {
+    en: "QA-first family loop: website QA first, web markdown second, social markdown third.",
+    zh: "QA-first family loop：先 website QA，再 web markdown，最后 social markdown。"
+  },
+  postQaNextLoop: {
+    en: "After a successful website QA proof, the next proven loop to run is web markdown. After web markdown, social markdown is the next proven loop.",
+    zh: "当 website QA proof 已成立后，下一条该跑的 proven loop 是 web markdown；完成之后，social markdown 是再下一条。"
+  },
   lifecycleCommands: [
     "npx skills-broker update",
     "npx skills-broker doctor",
@@ -43,6 +63,10 @@ export const OPERATOR_TRUTH_CONTRACT = {
   websiteQaProofSurface: {
     en: "`doctor` now exposes a website QA adoption packet: recent routing evidence, freshness, and separate repeat-usage / cross-host reuse proof states.",
     zh: "`doctor` 现在会直接输出一份 website QA adoption packet：近期 routing evidence、freshness，以及拆开的 repeat usage / cross-host reuse proof state。"
+  },
+  familyLoopProofSurface: {
+    en: "`doctor` now exposes a QA-first family-loop packet: website QA adoption plus web markdown/social markdown freshness, reuse, and sequence-aware next actions.",
+    zh: "`doctor` 现在会直接输出一份 QA-first family-loop packet：包含 website QA adoption，以及 web markdown / social markdown 的 freshness、reuse 与按顺序排列的 next action。"
   },
   fullLifecycleParity: {
     en: "Claude Code, Codex, and OpenCode now share full published lifecycle and proof/reuse parity.",
@@ -66,12 +90,24 @@ export function formatPublishedLifecycleCommandsLine(): string {
   return `Published lifecycle commands: ${OPERATOR_TRUTH_CONTRACT.lifecycleCommands.join(" / ")}`;
 }
 
+export function formatQaFirstFamilyLoopLine(): string {
+  return OPERATOR_TRUTH_CONTRACT.qaFirstFamilyLoop.en;
+}
+
+export function formatPostQaNextLoopLine(): string {
+  return OPERATOR_TRUTH_CONTRACT.postQaNextLoop.en;
+}
+
 export function formatCoarseBoundaryLine(): string {
   return OPERATOR_TRUTH_CONTRACT.coarseBoundary.en;
 }
 
 export function formatWebsiteQaProofSurfaceLine(): string {
   return OPERATOR_TRUTH_CONTRACT.websiteQaProofSurface.en;
+}
+
+export function formatFamilyLoopProofSurfaceLine(): string {
+  return OPERATOR_TRUTH_CONTRACT.familyLoopProofSurface.en;
 }
 
 export function formatFullLifecycleParityLine(): string {
@@ -98,12 +134,24 @@ export function formatPublishedLifecycleCommandsZhLine(): string {
   return `发布态 lifecycle 命令统一为：${OPERATOR_TRUTH_CONTRACT.lifecycleCommands.join(" / ")}`;
 }
 
+export function formatQaFirstFamilyLoopZhLine(): string {
+  return OPERATOR_TRUTH_CONTRACT.qaFirstFamilyLoop.zh;
+}
+
+export function formatPostQaNextLoopZhLine(): string {
+  return OPERATOR_TRUTH_CONTRACT.postQaNextLoop.zh;
+}
+
 export function formatCoarseBoundaryZhLine(): string {
   return OPERATOR_TRUTH_CONTRACT.coarseBoundary.zh;
 }
 
 export function formatWebsiteQaProofSurfaceZhLine(): string {
   return OPERATOR_TRUTH_CONTRACT.websiteQaProofSurface.zh;
+}
+
+export function formatFamilyLoopProofSurfaceZhLine(): string {
+  return OPERATOR_TRUTH_CONTRACT.familyLoopProofSurface.zh;
 }
 
 export function formatFullLifecycleParityZhLine(): string {

@@ -11,7 +11,9 @@ import { loadMaintainedBrokerFirstContract } from "../../src/core/maintained-bro
 import {
   formatCoarseBoundaryLine,
   formatFullLifecycleParityLine,
+  formatPostQaNextLoopLine,
   formatPublishedLifecycleCommandsLine,
+  formatQaFirstFamilyLoopLine,
   formatSupportedHostsLine,
   formatThirdHostReadinessLine
 } from "../../src/core/operator-truth";
@@ -75,6 +77,8 @@ function expectCodexSkillLayout(skill: string): void {
     formatThirdHostReadinessLine(),
     "## Broker-First (`broker_first`)",
     "If you need one concrete broker-first example to calibrate the boundary, start with website QA.",
+    formatQaFirstFamilyLoopLine(),
+    formatPostQaNextLoopLine(),
     "### Hero lane: website QA",
     "Keep website QA visually first. It is the QA default-entry lane and the calibration lane. Other maintained lanes are still valid, but secondary.",
     ...HERO_LANE_EXAMPLES,
@@ -517,6 +521,22 @@ describe("shared broker home smoke", () => {
               reuseRecorded: number;
             };
           };
+          familyLoopSignals: {
+            web_content_to_markdown: {
+              status: string;
+              reuse: {
+                verifiedHosts: string[];
+                activeHosts: number;
+              };
+            };
+            social_post_to_markdown: {
+              status: string;
+              reuse: {
+                verifiedHosts: string[];
+                activeHosts: number;
+              };
+            };
+          };
           adoptionHealth: {
             status: string;
             managedHosts: string[];
@@ -544,6 +564,24 @@ describe("shared broker home smoke", () => {
             verifyState: "confirmed",
             crossHostReuseState: "confirmed",
             reuseRecorded: 1
+          })
+        );
+        expect(parityDoctorResult.familyLoopSignals.web_content_to_markdown).toEqual(
+          expect.objectContaining({
+            status: "stale",
+            reuse: expect.objectContaining({
+              verifiedHosts: ["claude-code", "codex", "opencode"],
+              activeHosts: 0
+            })
+          })
+        );
+        expect(parityDoctorResult.familyLoopSignals.social_post_to_markdown).toEqual(
+          expect.objectContaining({
+            status: "stale",
+            reuse: expect.objectContaining({
+              verifiedHosts: ["claude-code", "opencode"],
+              activeHosts: 0
+            })
           })
         );
         expect(parityDoctorResult.adoptionHealth).toEqual(

@@ -6,6 +6,11 @@ import { acquisitionMemoryFilePath } from "../../src/broker/acquisition-memory";
 import { routingTraceLogFilePath } from "../../src/broker/trace-store";
 import { loadMaintainedBrokerFirstContract } from "../../src/core/maintained-broker-first";
 import {
+  formatFamilyLoopProofSurfaceLine,
+  formatPostQaNextLoopLine,
+  formatQaFirstFamilyLoopLine
+} from "../../src/core/operator-truth";
+import {
   brokerFirstGateArtifactPath,
   type BrokerFirstGateArtifact
 } from "../../src/shared-home/broker-first-gate";
@@ -1701,10 +1706,152 @@ describe("doctor shared broker home", () => {
         nextAction:
           "Repeat the same website QA request once more to prove repeat usage beyond the first verified handoff."
       });
+      expect(result.familyLoopSignals.website_qa).toEqual({
+        label: "Website QA",
+        windowDays: 7,
+        status: "active",
+        proofs: {
+          verifyState: "confirmed",
+          repeatUsageState: "pending",
+          crossHostReuseState: "pending"
+        },
+        latest: {
+          verifiedAt: "2026-04-16T05:00:00.000Z",
+          firstReuseAt: undefined,
+          verifiedManifestAt: "2026-04-16T05:00:00.000Z",
+          activityAt: "2026-04-16T05:00:00.000Z"
+        },
+        reuse: {
+          rerunSuccessfulRoutes: 1,
+          reuseRecorded: 0,
+          crossHostReuseRecorded: 0,
+          downstreamReplayManifests: 1,
+          verifiedHosts: ["codex"],
+          activeHosts: 1,
+          supportedHosts: 3
+        },
+        hosts: [
+          {
+            name: "claude-code",
+            status: "missing",
+            lastVerifiedManifestAt: undefined,
+            historicalVerified: false
+          },
+          {
+            name: "codex",
+            status: "active",
+            lastVerifiedManifestAt: "2026-04-16T05:00:00.000Z",
+            historicalVerified: true
+          },
+          {
+            name: "opencode",
+            status: "missing",
+            lastVerifiedManifestAt: undefined,
+            historicalVerified: false
+          }
+        ],
+        nextAction:
+          "Repeat the same website QA request once more to prove repeat usage beyond the first verified handoff."
+      });
+      expect(result.familyLoopSignals.web_content_to_markdown).toEqual({
+        label: "Web Markdown",
+        windowDays: 7,
+        status: "active",
+        proofs: {
+          verifyState: "confirmed",
+          repeatUsageState: "confirmed",
+          crossHostReuseState: "confirmed"
+        },
+        latest: {
+          verifiedAt: "2026-04-16T06:05:00.000Z",
+          firstReuseAt: "2026-04-16T06:30:00.000Z",
+          verifiedManifestAt: "2026-04-16T06:05:00.000Z",
+          activityAt: "2026-04-16T06:30:00.000Z"
+        },
+        reuse: {
+          rerunSuccessfulRoutes: 1,
+          reuseRecorded: 1,
+          crossHostReuseRecorded: 1,
+          downstreamReplayManifests: 1,
+          verifiedHosts: ["claude-code", "codex"],
+          activeHosts: 1,
+          supportedHosts: 3
+        },
+        hosts: [
+          {
+            name: "claude-code",
+            status: "active",
+            lastVerifiedManifestAt: "2026-04-16T06:05:00.000Z",
+            historicalVerified: true
+          },
+          {
+            name: "codex",
+            status: "stale",
+            lastVerifiedManifestAt: undefined,
+            historicalVerified: true
+          },
+          {
+            name: "opencode",
+            status: "missing",
+            lastVerifiedManifestAt: undefined,
+            historicalVerified: false
+          }
+        ],
+        nextAction:
+          "Web Markdown signal is active; keep this second proven loop exercised after website QA."
+      });
+      expect(result.familyLoopSignals.social_post_to_markdown).toEqual({
+        label: "Social Markdown",
+        windowDays: 7,
+        status: "active",
+        proofs: {
+          verifyState: "confirmed",
+          repeatUsageState: "confirmed",
+          crossHostReuseState: "confirmed"
+        },
+        latest: {
+          verifiedAt: "2026-04-16T07:05:00.000Z",
+          firstReuseAt: "2026-04-16T07:20:00.000Z",
+          verifiedManifestAt: "2026-04-16T07:20:00.000Z",
+          activityAt: "2026-04-16T07:20:00.000Z"
+        },
+        reuse: {
+          rerunSuccessfulRoutes: 2,
+          reuseRecorded: 1,
+          crossHostReuseRecorded: 1,
+          downstreamReplayManifests: 1,
+          verifiedHosts: ["codex", "opencode"],
+          activeHosts: 1,
+          supportedHosts: 3
+        },
+        hosts: [
+          {
+            name: "claude-code",
+            status: "missing",
+            lastVerifiedManifestAt: undefined,
+            historicalVerified: false
+          },
+          {
+            name: "codex",
+            status: "stale",
+            lastVerifiedManifestAt: undefined,
+            historicalVerified: true
+          },
+          {
+            name: "opencode",
+            status: "active",
+            lastVerifiedManifestAt: "2026-04-16T07:20:00.000Z",
+            historicalVerified: true
+          }
+        ],
+        nextAction:
+          "Social Markdown signal is active; keep this third proven loop exercised after web markdown."
+      });
 
       const parsed = JSON.parse(formatLifecycleResult(result, "json")) as typeof result;
       expect(parsed.websiteQaLoop).toEqual(parsed.familyProofs.website_qa);
       expect(parsed.websiteQaAdoption).toEqual(result.websiteQaAdoption);
+      expect(parsed.familyLoopSignals).toEqual(result.familyLoopSignals);
       expect(parsed.websiteQaRouting).toEqual(result.websiteQaRouting);
       expect(parsed.familyProofs.website_qa.phase).toBe("repeat_usage_pending");
       expect(parsed.familyProofs.web_content_to_markdown.verdict).toBe("proven");
@@ -1756,10 +1903,46 @@ describe("doctor shared broker home", () => {
       expect(rendered).toContain(
         "Website QA verdict: in_progress (phase=repeat_usage_pending)"
       );
+      expect(rendered).toContain(formatQaFirstFamilyLoopLine());
+      expect(rendered).toContain(formatPostQaNextLoopLine());
+      expect(rendered).toContain(formatFamilyLoopProofSurfaceLine());
+      expect(rendered).toContain(
+        "QA-first family freshness (last 7d): website QA=active, web markdown=active, social markdown=active"
+      );
+      expect(rendered).toContain(
+        "Web Markdown freshness (last 7d): active, verify=confirmed, repeat_usage=confirmed, cross_host_reuse=confirmed, verified_hosts=claude-code,codex, replay_hosts=1/3"
+      );
+      expect(rendered).toContain(
+        "Web Markdown freshness latest: activity=2026-04-16T06:30:00.000Z, verify=2026-04-16T06:05:00.000Z, first_reuse=2026-04-16T06:30:00.000Z, replay=2026-04-16T06:05:00.000Z"
+      );
+      expect(rendered).toContain(
+        "Web Markdown freshness host claude-code: active, historical_verified=yes, last_replay=2026-04-16T06:05:00.000Z"
+      );
+      expect(rendered).toContain(
+        "Web Markdown freshness host codex: stale, historical_verified=yes"
+      );
+      expect(rendered).toContain(
+        "Web Markdown freshness next action: Web Markdown signal is active; keep this second proven loop exercised after website QA."
+      );
+      expect(rendered).toContain(
+        "Social Markdown freshness (last 7d): active, verify=confirmed, repeat_usage=confirmed, cross_host_reuse=confirmed, verified_hosts=codex,opencode, replay_hosts=1/3"
+      );
+      expect(rendered).toContain(
+        "Social Markdown freshness latest: activity=2026-04-16T07:20:00.000Z, verify=2026-04-16T07:05:00.000Z, first_reuse=2026-04-16T07:20:00.000Z, replay=2026-04-16T07:20:00.000Z"
+      );
+      expect(rendered).toContain(
+        "Social Markdown freshness host opencode: active, historical_verified=yes, last_replay=2026-04-16T07:20:00.000Z"
+      );
+      expect(rendered).toContain(
+        "Social Markdown freshness next action: Social Markdown signal is active; keep this third proven loop exercised after web markdown."
+      );
       expect(rendered.indexOf("Website QA adoption (last 7d): active")).toBeLessThan(
         rendered.indexOf("Website QA verdict: in_progress")
       );
       expect(rendered.indexOf("Website QA verdict: in_progress")).toBeLessThan(
+        rendered.indexOf("QA-first family freshness")
+      );
+      expect(rendered.indexOf("QA-first family freshness")).toBeLessThan(
         rendered.indexOf("Routing metrics")
       );
       expect(rendered).toContain(
@@ -1904,8 +2087,38 @@ describe("doctor shared broker home", () => {
         nextAction:
           "Refresh the website QA signal from another supported host so the shared-home surface records fresh cross-host reuse."
       });
+      expect(result.familyLoopSignals.website_qa).toEqual(
+        expect.objectContaining({
+          status: "stale",
+          nextAction:
+            "Refresh the website QA signal from another supported host so the shared-home surface records fresh cross-host reuse."
+        })
+      );
+      expect(result.familyLoopSignals.web_content_to_markdown).toEqual(
+        expect.objectContaining({
+          status: "stale",
+          nextAction:
+            "Refresh the website QA hero lane first, then rerun the same web markdown request so doctor records a fresh second proven loop signal."
+        })
+      );
+      expect(result.familyLoopSignals.social_post_to_markdown).toEqual(
+        expect.objectContaining({
+          status: "missing",
+          nextAction:
+            "Refresh the website QA hero lane first, then rerun the same social markdown request so doctor records a fresh third proven loop signal."
+        })
+      );
       expect(rendered).toContain(
         "Website QA adoption (last 7d): stale, observed=0, hit=0, misroute=0, fallback=0, host_skips=0, hosts=0/3, verify=confirmed, repeat_usage=confirmed, cross_host_reuse=pending"
+      );
+      expect(rendered).toContain(
+        "QA-first family freshness (last 7d): website QA=stale, web markdown=stale, social markdown=missing"
+      );
+      expect(rendered).toContain(
+        "Web Markdown freshness next action: Refresh the website QA hero lane first, then rerun the same web markdown request so doctor records a fresh second proven loop signal."
+      );
+      expect(rendered).toContain(
+        "Social Markdown freshness next action: Refresh the website QA hero lane first, then rerun the same social markdown request so doctor records a fresh third proven loop signal."
       );
       expect(rendered).toContain(
         "Website QA adoption host codex: stale, observed=0, hit=0, misroute=0, fallback=0, host_skips=0, historical_verified=yes, last_trace=2026-04-16T05:00:00.000Z, last_replay=2026-04-16T05:00:00.000Z"
@@ -2109,8 +2322,30 @@ describe("doctor shared broker home", () => {
           phase: "cross_host_reuse_confirmed"
         })
       );
+      expect(result.familyLoopSignals.web_content_to_markdown).toEqual(
+        expect.objectContaining({
+          status: "active",
+          reuse: {
+            rerunSuccessfulRoutes: 2,
+            reuseRecorded: 1,
+            crossHostReuseRecorded: 1,
+            downstreamReplayManifests: 2,
+            verifiedHosts: ["claude-code", "opencode"],
+            activeHosts: 2,
+            supportedHosts: 3
+          },
+          nextAction:
+            "Web Markdown signal is active; keep this second proven loop exercised after website QA."
+        })
+      );
       expect(rendered).toContain(
         "Verified downstream manifests: present, total=3, website_qa=1, claude-code=1, codex=1, opencode=1"
+      );
+      expect(rendered).toContain(
+        "Web Markdown freshness (last 7d): active, verify=confirmed, repeat_usage=confirmed, cross_host_reuse=confirmed, verified_hosts=claude-code,opencode, replay_hosts=2/3"
+      );
+      expect(rendered).toContain(
+        "Web Markdown freshness host opencode: active, historical_verified=yes, last_replay=2026-04-16T06:30:00.000Z"
       );
       expect(rendered).toContain(
         "Web Markdown loop: install_required=observed (1 install_required trace); verify=confirmed (2 successful routes); reuse=confirmed (1 first reuse event); replay=ready (2 verified downstream manifests)"

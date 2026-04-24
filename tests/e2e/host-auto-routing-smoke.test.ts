@@ -86,7 +86,9 @@ describe("installed host-shell routing smoke", () => {
       };
 
       expect(doctorResult.adoptionHealth).toMatchObject({
-        status: "green",
+        // Fresh installs materialize managed hosts, but adoption stays blocked
+        // until the QA-first proof loop has current signal.
+        status: "blocked",
         managedHosts: ["claude-code", "codex", "opencode"]
       });
 
