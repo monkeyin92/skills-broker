@@ -1,19 +1,19 @@
 # State
 
 **Initialized:** 2026-04-22
-**Status:** milestone_completed
+**Status:** milestone_shipped
 
 ## Project Reference
 
 See: `.planning/PROJECT.md` (updated 2026-04-24)
 
 **Core value:** 用户只需要描述想达成的结果，broker 就能在当前宿主里找到、准备并复用合适的能力，而不用让用户记住工具名、重新发现赢家、或自己判断安装路径。
-**Current focus:** Milestone v1.5 completed and archived — QA-first family proof loop is now canonical repo history, and the next step is defining a new milestone
+**Current focus:** Milestone v1.5 shipped in PR #33 — QA-first family proof loop is now canonical repo history and is waiting for review/merge
 
 ## Current Milestone
 
 - **Milestone:** v1.5 QA-First Family Proof Loop
-- **Status:** completed
+- **Status:** shipped
 - **Started:** 2026-04-24
 - **Archive:** `.planning/milestones/v1.5-ROADMAP.md`
 
@@ -21,8 +21,8 @@ See: `.planning/PROJECT.md` (updated 2026-04-24)
 
 - **Phase:** —
 - **Plan:** —
-- **Status:** Milestone v1.5 completed, audited, and archived
-- **Last activity:** 2026-04-24 — Phases 18-20 executed, verified, and archived under `.planning/milestones/v1.5-phases/`
+- **Status:** Milestone v1.5 shipped - PR #33 open
+- **Last activity:** 2026-04-24 — Opened PR #33 (`codex/v1.5-qa-first-family-proof-loop` -> `main`) for milestone v1.5
 
 ## Current Phase
 
@@ -77,6 +77,7 @@ See: `.planning/PROJECT.md` (updated 2026-04-24)
 - 2026-04-24: Phase 19 executed and verified — see `.planning/milestones/v1.5-phases/19-prove-family-loop-freshness-and-reuse/19-VERIFICATION.md`
 - 2026-04-24: Phase 20 executed and verified — see `.planning/milestones/v1.5-phases/20-lock-family-loop-truth-rails/20-VERIFICATION.md`
 - 2026-04-24: Milestone v1.5 audited and archived — see `.planning/milestones/v1.5-MILESTONE-AUDIT.md`
+- 2026-04-24: Milestone v1.5 shipped in PR #33 — see `https://github.com/monkeyin92/skills-broker/pull/33`
 
 ## Workflow Settings
 
@@ -91,7 +92,11 @@ See: `.planning/PROJECT.md` (updated 2026-04-24)
 
 ## Next Up
 
-Start the next milestone when ready:
+Review and merge PR #33 when ready:
+
+`https://github.com/monkeyin92/skills-broker/pull/33`
+
+After merge, start the next milestone:
 
 `$gsd-new-milestone`
 
